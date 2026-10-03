@@ -405,9 +405,7 @@ export function RadarView() {
               );
             }
           }}
-        >
-          <i />
-        </div>
+        />
         <TrafficChart />
         <AudienceRankings />
       </div>

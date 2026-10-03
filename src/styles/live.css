@@ -885,17 +885,6 @@
   cursor: ns-resize;
   touch-action: none;
 }
-.insights-resize i {
-  height: 3px;
-  width: 42px;
-  background: #3a5551;
-  border-radius: 3px;
-}
-.insights-resize:hover i,
-.insights-resize:focus-visible i {
-  background: #85dcbc;
-  width: 60px;
-}
 @media (min-width: 1800px) {
   .insights {
     height: 340px;
@@ -944,3 +933,10 @@
     flex-basis: auto;
   }
 }
+
+.map-toolbar .place-names-toggle { order:-1; }
+.maplibregl-ctrl-bottom-right { right:140px!important; bottom:24px!important; }
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin:0; }
+.insights-resize:hover { background:#85dcbc0a; }
+.insights-resize:focus-visible { outline:1px solid #85dcbc; outline-offset:-4px; }
+@media (max-width:740px) { .maplibregl-ctrl-bottom-right { right:134px!important; bottom:20px!important; } }

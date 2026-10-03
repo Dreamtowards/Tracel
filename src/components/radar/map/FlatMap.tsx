@@ -87,6 +87,35 @@ function cityGroups(visitors: Record<string, Visitor>, selectedId?: string) {
   return { data, groups };
 }
 
+// Approximate city activity areas, not administrative boundaries.
+function cityActivity(
+  visitors: Record<string, Visitor>,
+  selectedId?: string,
+): GeoJSON.FeatureCollection {
+  const { data } = cityGroups(visitors, selectedId);
+  return {
+    type: "FeatureCollection",
+    features: data.features.map((feature) => {
+      const [longitude, latitude] = feature.geometry.coordinates;
+      const radiusKm = 12;
+      const ring = Array.from({ length: 65 }, (_, i) => {
+        const angle = (i / 64) * Math.PI * 2;
+        return [
+          longitude +
+            (Math.cos(angle) * radiusKm) /
+              (111.32 * Math.cos((latitude * Math.PI) / 180)),
+          latitude + (Math.sin(angle) * radiusKm) / 110.57,
+        ];
+      });
+      return {
+        type: "Feature",
+        properties: feature.properties,
+        geometry: { type: "Polygon", coordinates: [ring] },
+      };
+    }),
+  };
+}
+
 // ISO numeric IDs used by the bundled Natural Earth country polygons.
 const countryIds: Record<string, string> = {
   JP: "392",
@@ -163,6 +192,12 @@ export default function FlatMap({
       (
         current?.getSource("country-activity") as GeoJSONSource | undefined
       )?.setData(countryActivity(state.visitors) as GeoJSON.FeatureCollection);
+      (
+        current?.getSource("city-activity") as GeoJSONSource | undefined
+      )?.setData(cityActivity(state.visitors, state.selectedVisitor?.id));
+      (current?.getSource("city-glow") as GeoJSONSource | undefined)?.setData(
+        cityGroups(state.visitors, state.selectedVisitor?.id).data,
+      );
       source.setData(
         cityGroups(state.visitors, state.selectedVisitor?.id).data,
       );
@@ -193,7 +228,7 @@ export default function FlatMap({
     map.current = current;
     current.touchZoomRotate.disableRotation();
     const attribution = new maplibregl.AttributionControl({ compact: true });
-    current.addControl(attribution, "top-left");
+    current.addControl(attribution, "bottom-right");
     const attributionElement = current
       .getContainer()
       .querySelector<HTMLDetailsElement>(".maplibregl-ctrl-attrib");
@@ -262,30 +297,73 @@ export default function FlatMap({
         },
         current.getStyle().layers.find((layer) => layer.type === "symbol")?.id,
       );
+      current.addSource("city-activity", {
+        type: "geojson",
+        data: cityActivity(state.visitors, state.selectedVisitor?.id),
+      });
       current.addLayer(
         {
-          id: "country-activity-border",
-          type: "line",
-          source: "country-activity",
-          maxzoom: 7,
+          id: "city-activity-fill",
+          type: "fill",
+          source: "city-activity",
+          minzoom: 5,
           paint: {
-            "line-color": "#85dcbc",
-            "line-width": 0.8,
-            "line-opacity": [
-              "interpolate",
-              ["linear"],
-              ["get", "count"],
-              1,
-              0.15,
-              8,
-              0.5,
-              20,
-              0.8,
+            "fill-color": "#85dcbc",
+            "fill-opacity": [
+              "case",
+              ["get", "selected"],
+              0.28,
+              [
+                "interpolate",
+                ["linear"],
+                ["get", "count"],
+                1,
+                0.12,
+                5,
+                0.25,
+                15,
+                0.4,
+              ],
             ],
           },
         },
         current.getStyle().layers.find((layer) => layer.type === "symbol")?.id,
       );
+      current.addSource("city-glow", {
+        type: "geojson",
+        data: cityGroups(state.visitors, state.selectedVisitor?.id).data,
+      });
+      current.addLayer({
+        id: "city-activity-glow",
+        type: "circle",
+        source: "city-glow",
+        paint: {
+          "circle-color": "#85dcbc",
+          "circle-blur": 0.9,
+          "circle-opacity": [
+            "interpolate",
+            ["linear"],
+            ["get", "count"],
+            1,
+            0.2,
+            5,
+            0.38,
+            15,
+            0.55,
+          ],
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["get", "count"],
+            1,
+            30,
+            5,
+            48,
+            15,
+            75,
+          ],
+        },
+      });
       current.addSource("visitors", {
         type: "geojson",
         data: cityGroups(state.visitors, state.selectedVisitor?.id).data,
@@ -312,8 +390,7 @@ export default function FlatMap({
             "#dcffee",
           ],
           "circle-opacity": 0.84,
-          "circle-stroke-color": "#b6f4d8",
-          "circle-stroke-width": 1,
+          "circle-stroke-width": 0,
           "circle-radius": ["step", ["get", "visitors"], 12, 5, 15, 15, 19],
         },
       });
@@ -384,8 +461,7 @@ export default function FlatMap({
             15,
             14,
           ],
-          "circle-stroke-color": "#1c4135",
-          "circle-stroke-width": 2,
+          "circle-stroke-width": 0,
         },
       });
       if (current.getStyle().glyphs) {
@@ -527,7 +603,26 @@ export default function FlatMap({
         const style = (await response.json()) as StyleSpecification;
         if (!alive || signal.aborted) return;
         remote = true;
+        // The style background is land; the water layer supplies the ocean.
         for (const layer of style.layers) {
+          if (layer.type === "background")
+            layer.paint = { ...layer.paint, "background-color": "#172328" };
+          if (layer.type === "fill" && layer.id === "water")
+            layer.paint = { ...layer.paint, "fill-color": "#080d10" };
+          if (layer.type === "line" && layer.id === "waterway")
+            layer.paint = { ...layer.paint, "line-color": "#080d10" };
+          if (
+            layer.type === "fill" &&
+            (layer.id.startsWith("landcover_") ||
+              layer.id.startsWith("landuse_"))
+          )
+            layer.paint = {
+              ...layer.paint,
+              "fill-color":
+                layer.id.includes("wood") || layer.id.includes("park")
+                  ? "#1c302c"
+                  : "#1b292e",
+            };
           if (layer.type === "symbol" && layer.layout?.["text-field"])
             layer.paint = {
               ...layer.paint,
