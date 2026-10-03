@@ -9,6 +9,7 @@ const dimensions: { value: RankingDimension; label: string }[] = [
   { value: "city", label: "Cities" },
   { value: "browser", label: "Browsers" },
   { value: "source", label: "Sources" },
+  { value: "page", label: "Pages" },
 ];
 
 export function AudienceRankings() {
@@ -37,7 +38,11 @@ export function AudienceRankings() {
               (item) => item.value === dimension,
             );
             const next =
-              dimensions[(index + (event.key === "ArrowRight" ? 1 : 3)) % 4];
+              dimensions[
+                (index +
+                  (event.key === "ArrowRight" ? 1 : dimensions.length - 1)) %
+                  dimensions.length
+              ];
             setDimension(next.value);
             (
               event.currentTarget.querySelector(

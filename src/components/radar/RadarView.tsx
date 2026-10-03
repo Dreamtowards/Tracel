@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Map as MapIcon,
+  ALargeSmall,
   Crosshair,
   Globe2,
   Maximize,
@@ -72,6 +73,9 @@ export function RadarView() {
   const [fullScreen, setFullScreen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [insightsHeight, setInsightsHeight] = useState<number | null>(null);
+  const resizeStart = useRef<{ y: number; height: number } | null>(null);
+  const [showPlaceNames, setShowPlaceNames] = useState(true);
   const [view, setView] = useState<"map" | "globe">("map");
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -119,6 +123,73 @@ export function RadarView() {
             {paused ? "PAUSED" : "LIVE"}
           </span>
           <Clock />
+          <div className="simulation-controls">
+            <Button
+              variant="ghost"
+              aria-label={paused ? "Resume simulation" : "Pause simulation"}
+              onClick={() => setPaused(!paused)}
+            >
+              {paused ? <Play size={12} /> : <Pause size={12} />}
+              <span>{paused ? "Resume" : "Pause"}</span>
+            </Button>
+            <span className="control-separator" />
+            <div className="speed-controls" aria-label="Simulation speed">
+              {[1, 5, 20].map((value) => (
+                <button
+                  key={value}
+                  className={speed === value ? "active" : ""}
+                  aria-pressed={speed === value}
+                  aria-label={`Simulation speed ${value}×`}
+                  onClick={() => setSpeed(value)}
+                >
+                  {value}×
+                </button>
+              ))}
+            </div>
+            <span className="control-separator" />
+            <div className="simulation-menu">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Simulation tools"
+                aria-expanded={controlsOpen}
+                onClick={() => setControlsOpen(!controlsOpen)}
+              >
+                <SlidersHorizontal size={14} />
+              </Button>
+              {controlsOpen && (
+                <div className="simulation-popover">
+                  <span className="eyebrow">SIMULATION TOOLS</span>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      spawn();
+                      setControlsOpen(false);
+                    }}
+                  >
+                    <Plus size={14} />
+                    Spawn visitor
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      reset();
+                      setControlsOpen(false);
+                      setResetKey((value) => value + 1);
+                    }}
+                  >
+                    <RotateCcw size={14} />
+                    Reset simulation
+                  </Button>
+                  <p>
+                    Speed changes simulated time.
+                    <br />
+                    UTC remains real time.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
           <Button
             variant="ghost"
             size="icon"
@@ -137,8 +208,7 @@ export function RadarView() {
             view === "map" ? "Live visitor map" : "Live visitor globe"
           }
         >
-          <div className="view-heading">
-            <h1>Live overview</h1>
+          <div className="map-toolbar">
             <div
               className="view-switch"
               role="group"
@@ -159,6 +229,25 @@ export function RadarView() {
                 Globe
               </button>
             </div>
+            {view === "map" && (
+              <button
+                className="place-names-toggle"
+                aria-pressed={showPlaceNames}
+                onClick={() => setShowPlaceNames(!showPlaceNames)}
+                aria-label={
+                  showPlaceNames
+                    ? "Hide map place names"
+                    : "Show map place names"
+                }
+                title={
+                  showPlaceNames
+                    ? "Hide map place names"
+                    : "Show map place names"
+                }
+              >
+                <ALargeSmall size={18} />
+              </button>
+            )}
           </div>
           <div className="globe-stage">
             {view === "globe" && (
@@ -177,68 +266,71 @@ export function RadarView() {
               />
             ) : (
               <FlatMap
+                showPlaceNames={showPlaceNames}
                 reducedMotion={reducedMotion}
                 resetKey={resetKey}
                 zoom={zoom}
               />
             )}
           </div>
-          <div className="globe-legend">
-            <span>
-              <i className="online" />
-              Online
-            </span>
-            <span>
-              <i className="idle" />
-              Idle
-            </span>
-            <span>
-              <i className="offline" />
-              Leaving
-            </span>
-          </div>
-          <div className="globe-instructions">
-            <span className="drag-icon">↔</span>
-            {view === "map" ? "Drag to pan" : "Drag to orbit"}
-            <span>·</span>
-            Scroll to zoom<span>·</span>Select a visitor
-          </div>
-          <div className="globe-controls">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Zoom in"
-              title="Zoom in"
-              onClick={() =>
-                setZoom((value) => (value === -0.65 ? -0.6501 : -0.65))
-              }
-            >
-              <Plus size={16} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Zoom out"
-              title="Zoom out"
-              onClick={() =>
-                setZoom((value) => (value === 0.65 ? 0.6501 : 0.65))
-              }
-            >
-              <Minus size={16} />
-            </Button>
-            <span />
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Reset geographic view"
-              title="Reset view"
-              onClick={() => {
-                useRadarStore.getState().select(null);
-                setResetKey((value) => value + 1);
-              }}
-            >
-              <Crosshair size={16} />
-            </Button>
+          <div className="map-bottom-bar">
+            <div className="globe-legend">
+              <span>
+                <i className="online" />
+                Online
+              </span>
+              <span>
+                <i className="idle" />
+                Idle
+              </span>
+              <span>
+                <i className="offline" />
+                Leaving
+              </span>
+            </div>
+            <div className="globe-instructions">
+              <span className="drag-icon">↔</span>
+              {view === "map" ? "Drag to pan" : "Drag to orbit"}
+              <span>·</span>
+              Scroll to zoom<span>·</span>Select a visitor
+            </div>
+            <div className="globe-controls">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Zoom in"
+                title="Zoom in"
+                onClick={() =>
+                  setZoom((value) => (value === -0.65 ? -0.6501 : -0.65))
+                }
+              >
+                <Plus size={16} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Zoom out"
+                title="Zoom out"
+                onClick={() =>
+                  setZoom((value) => (value === 0.65 ? 0.6501 : 0.65))
+                }
+              >
+                <Minus size={16} />
+              </Button>
+              <span />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Reset geographic view"
+                title="Reset view"
+                onClick={() => {
+                  useRadarStore.getState().select(null);
+                  setResetKey((value) => value + 1);
+                }}
+              >
+                <Crosshair size={16} />
+              </Button>
+            </div>
           </div>
           {notice && (
             <button className="preview-notice" onClick={() => setNotice("")}>
@@ -249,82 +341,77 @@ export function RadarView() {
         <VisitorPanel />
         <EventFeed />
       </div>
-      <div className="insights">
+      <div
+        className="insights"
+        style={
+          insightsHeight === null
+            ? undefined
+            : { height: insightsHeight, minHeight: insightsHeight }
+        }
+      >
+        <div
+          className="insights-resize"
+          role="separator"
+          aria-label="Resize analytics panel"
+          aria-orientation="horizontal"
+          aria-valuemin={240}
+          aria-valuemax={560}
+          aria-valuenow={insightsHeight ?? 320}
+          tabIndex={0}
+          title="Drag to resize analytics"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            resizeStart.current = {
+              y: event.clientY,
+              height:
+                event.currentTarget.parentElement!.getBoundingClientRect()
+                  .height,
+            };
+          }}
+          onPointerMove={(event) => {
+            if (resizeStart.current)
+              setInsightsHeight(
+                Math.max(
+                  240,
+                  Math.min(
+                    Math.max(240, Math.min(560, window.innerHeight - 400)),
+                    resizeStart.current.height +
+                      resizeStart.current.y -
+                      event.clientY,
+                  ),
+                ),
+              );
+          }}
+          onPointerUp={() => {
+            resizeStart.current = null;
+          }}
+          onPointerCancel={() => {
+            resizeStart.current = null;
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+              event.preventDefault();
+              setInsightsHeight(
+                Math.max(
+                  240,
+                  Math.min(
+                    560,
+                    (insightsHeight ??
+                      event.currentTarget.parentElement!.getBoundingClientRect()
+                        .height) + (event.key === "ArrowUp" ? 20 : -20),
+                  ),
+                ),
+              );
+            }
+          }}
+        >
+          <i />
+        </div>
         <TrafficChart />
         <AudienceRankings />
       </div>
-      <footer className="app-footer">
-        <div className="footer-caption">
-          <span>LOCAL SIMULATION</span>
-        </div>
-        <div className="simulation-controls">
-          <Button
-            variant="ghost"
-            aria-label={paused ? "Resume simulation" : "Pause simulation"}
-            onClick={() => setPaused(!paused)}
-          >
-            {paused ? <Play size={12} /> : <Pause size={12} />}
-            <span>{paused ? "Resume" : "Pause"}</span>
-          </Button>
-          <span className="control-separator" />
-          <div className="speed-controls" aria-label="Simulation speed">
-            {[1, 5, 20].map((value) => (
-              <button
-                key={value}
-                className={speed === value ? "active" : ""}
-                aria-pressed={speed === value}
-                aria-label={`Simulation speed ${value}×`}
-                onClick={() => setSpeed(value)}
-              >
-                {value}×
-              </button>
-            ))}
-          </div>
-          <span className="control-separator" />
-          <div className="simulation-menu">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Simulation tools"
-              aria-expanded={controlsOpen}
-              onClick={() => setControlsOpen(!controlsOpen)}
-            >
-              <SlidersHorizontal size={14} />
-            </Button>
-            {controlsOpen && (
-              <div className="simulation-popover">
-                <span className="eyebrow">SIMULATION TOOLS</span>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    spawn();
-                    setControlsOpen(false);
-                  }}
-                >
-                  <Plus size={14} />
-                  Spawn visitor
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    reset();
-                    setControlsOpen(false);
-                    setResetKey((value) => value + 1);
-                  }}
-                >
-                  <RotateCcw size={14} />
-                  Reset simulation
-                </Button>
-                <p>
-                  Speed changes simulated time.
-                  <br />
-                  UTC remains real time.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </footer>
+
       <span className="sr-only" role="status" aria-live="polite">
         {paused ? "Simulation paused" : "Simulation running"}.{" "}
         {selected

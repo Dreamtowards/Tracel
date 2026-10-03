@@ -19,7 +19,7 @@ Open http://127.0.0.1:3000. Production: `npm run build` then `npm start`.
 - Pause/resume or switch between 1×, 5× and 20×. Speed advances simulated time; the header clock shows real UTC.
 - Simulation tools provide reset and spawn. Reset restores the initial 12-visitor scene. Hidden tabs suspend simulation and rendering to avoid catch-up bursts.
 - Fullscreen supports using the surface on a second display. Narrow screens use an overlay visitor panel.
-- Traffic shows 5 or 10 minutes of simulated time. Blue bars count page views and navigation per 15-second bucket; the green line counts concurrent visitors (online + idle) at each bucket end. Hover or focus a bucket for exact values. Legend buttons toggle each series.
+- Traffic shows 5 or 10 minutes of simulated time. The blue line counts page views and navigation per 15-second bucket; the green line counts concurrent visitors (online + idle) at each bucket end. Hover or focus a bucket for exact values. Legend buttons toggle each series.
 - Audience rankings switch between countries, cities, browsers and sources. Counts and percentages refer to current online + idle visitors, not cumulative sessions. Offline visitors are excluded.
 
 ## Verify
@@ -37,3 +37,5 @@ Visitor markers and pulses use instanced meshes, geographic land uses one point 
 The globe uses Natural Earth public-domain geographic data distributed by `world-atlas`. `node scripts/prepare-geography.mjs` regenerates the bundled point cloud and borders. The flat map uses MapLibre and OpenFreeMap's dark vector basemap with OpenStreetMap/OpenMapTiles attribution. City and street detail requires a network connection; bundled world outlines provide an offline fallback. Visitor telemetry remains entirely local and is never sent to the basemap service.
 
 `predev` and `prebuild` prepare matching MapLibre worker modules in the ignored `public/maplibre/` directory, as required by the Next.js bundler. Traffic records retain ten minutes of history independently of the bounded event feed.
+
+The map toolbar floats over the map. Place names toggles background labels while keeping visitor city labels visible. Simulation controls live in the top-right header. Pages ranks current online and idle visitors by their current pathname.

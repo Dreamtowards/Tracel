@@ -35,7 +35,8 @@ export function trafficSeries(
   return buckets;
 }
 
-export type RankingDimension = "country" | "city" | "browser" | "source";
+export type RankingDimension =
+  "country" | "city" | "browser" | "source" | "page";
 export interface RankingRow {
   name: string;
   detail: string;
@@ -67,7 +68,9 @@ export function rankVisitors(
             ]
           : dimension === "browser"
             ? [visitor.client.browser, visitor.client.browser, ""]
-            : [visitor.acquisition.source, visitor.acquisition.source, ""];
+            : dimension === "page"
+              ? [visitor.currentPage.pathname, visitor.currentPage.pathname, ""]
+              : [visitor.acquisition.source, visitor.acquisition.source, ""];
     const group = groups.get(key) ?? { name, detail, count: 0 };
     group.count++;
     groups.set(key, group);

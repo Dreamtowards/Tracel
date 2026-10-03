@@ -8,6 +8,7 @@ import type {
   StyleSpecification,
 } from "maplibre-gl";
 import type { FeatureCollection, Point } from "geojson";
+import countries from "@/radar/countries.json";
 import geography from "@/radar/geography.json";
 import { useRadarStore } from "@/radar/store";
 import type { Visitor } from "@/radar/types";
@@ -86,12 +87,56 @@ function cityGroups(visitors: Record<string, Visitor>, selectedId?: string) {
   return { data, groups };
 }
 
+// ISO numeric IDs used by the bundled Natural Earth country polygons.
+const countryIds: Record<string, string> = {
+  JP: "392",
+  SG: "702",
+  CN: "156",
+  HK: "344",
+  KR: "410",
+  US: "840",
+  CA: "124",
+  GB: "826",
+  FR: "250",
+  DE: "276",
+  NL: "528",
+  AU: "036",
+  IN: "356",
+  AE: "784",
+  BR: "076",
+  ZA: "710",
+  SE: "752",
+  TW: "158",
+};
+function countryActivity(visitors: Record<string, Visitor>) {
+  const counts = new Map<string, number>();
+  for (const visitor of Object.values(visitors)) {
+    if (visitor.status === "offline") continue;
+    const id = countryIds[visitor.location.countryCode];
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return {
+    type: "FeatureCollection" as const,
+    features: countries.features
+      .filter((feature) => counts.has(String(feature.id)))
+      .map((feature) => ({
+        ...feature,
+        properties: {
+          ...feature.properties,
+          count: counts.get(String(feature.id))!,
+        },
+      })),
+  };
+}
+
 export default function FlatMap({
   reducedMotion,
+  showPlaceNames,
   resetKey,
   zoom,
 }: {
   reducedMotion: boolean;
+  showPlaceNames: boolean;
   resetKey: number;
   zoom: number;
 }) {
@@ -102,6 +147,8 @@ export default function FlatMap({
     "loading" | "detailed" | "offline" | "unavailable"
   >("loading");
   const [mapZoom, setMapZoom] = useState(1);
+  const placeNames = useRef(showPlaceNames);
+  placeNames.current = showPlaceNames;
   const motion = useRef(reducedMotion);
   motion.current = reducedMotion;
   const loadDetails = useRef<(() => void) | null>(null);
@@ -113,6 +160,9 @@ export default function FlatMap({
     const source = current?.getSource("visitors") as GeoJSONSource | undefined;
     if (source) {
       const state = useRadarStore.getState();
+      (
+        current?.getSource("country-activity") as GeoJSONSource | undefined
+      )?.setData(countryActivity(state.visitors) as GeoJSON.FeatureCollection);
       source.setData(
         cityGroups(state.visitors, state.selectedVisitor?.id).data,
       );
@@ -142,10 +192,28 @@ export default function FlatMap({
     }
     map.current = current;
     current.touchZoomRotate.disableRotation();
-    current.addControl(
-      new maplibregl.AttributionControl({ compact: true }),
-      "bottom-right",
-    );
+    const attribution = new maplibregl.AttributionControl({ compact: true });
+    current.addControl(attribution, "top-left");
+    const attributionElement = current
+      .getContainer()
+      .querySelector<HTMLDetailsElement>(".maplibregl-ctrl-attrib");
+    const collapseAttribution = new MutationObserver(() => {
+      if (
+        attributionElement &&
+        !attributionElement.classList.contains("maplibregl-attrib-empty") &&
+        attributionElement.classList.contains("maplibregl-compact")
+      ) {
+        attributionElement.open = false;
+        attributionElement.classList.remove("maplibregl-compact-show");
+        collapseAttribution.disconnect();
+      }
+    });
+    if (attributionElement)
+      collapseAttribution.observe(attributionElement, {
+        attributes: true,
+        attributeFilter: ["class", "open"],
+      });
+
     current.addControl(
       new maplibregl.ScaleControl({ maxWidth: 90, unit: "metric" }),
       "bottom-left",
@@ -165,6 +233,59 @@ export default function FlatMap({
     const addVisitorLayers = () => {
       if (current.getSource("visitors")) return;
       const state = useRadarStore.getState();
+      current.addSource("country-activity", {
+        type: "geojson",
+        data: countryActivity(state.visitors) as GeoJSON.FeatureCollection,
+      });
+      current.addLayer(
+        {
+          id: "country-activity-fill",
+          type: "fill",
+          source: "country-activity",
+          maxzoom: 7,
+          paint: {
+            "fill-color": "#72d8ad",
+            "fill-opacity": [
+              "interpolate",
+              ["linear"],
+              ["get", "count"],
+              1,
+              0.045,
+              3,
+              0.1,
+              8,
+              0.19,
+              20,
+              0.3,
+            ],
+          },
+        },
+        current.getStyle().layers.find((layer) => layer.type === "symbol")?.id,
+      );
+      current.addLayer(
+        {
+          id: "country-activity-border",
+          type: "line",
+          source: "country-activity",
+          maxzoom: 7,
+          paint: {
+            "line-color": "#85dcbc",
+            "line-width": 0.8,
+            "line-opacity": [
+              "interpolate",
+              ["linear"],
+              ["get", "count"],
+              1,
+              0.15,
+              8,
+              0.5,
+              20,
+              0.8,
+            ],
+          },
+        },
+        current.getStyle().layers.find((layer) => layer.type === "symbol")?.id,
+      );
       current.addSource("visitors", {
         type: "geojson",
         data: cityGroups(state.visitors, state.selectedVisitor?.id).data,
@@ -179,7 +300,17 @@ export default function FlatMap({
         source: "visitors",
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": "#71cba8",
+          "circle-color": [
+            "interpolate",
+            ["linear"],
+            ["get", "visitors"],
+            2,
+            "#62b797",
+            8,
+            "#a5f0cc",
+            20,
+            "#dcffee",
+          ],
           "circle-opacity": 0.84,
           "circle-stroke-color": "#b6f4d8",
           "circle-stroke-width": 1,
@@ -193,8 +324,29 @@ export default function FlatMap({
         filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-color": "#85dcbc",
-          "circle-opacity": ["case", ["get", "selected"], 0.24, 0.09],
-          "circle-radius": ["case", ["get", "selected"], 17, 13],
+          "circle-opacity": [
+            "case",
+            ["get", "selected"],
+            0.3,
+            [
+              "interpolate",
+              ["linear"],
+              ["get", "count"],
+              1,
+              0.12,
+              5,
+              0.28,
+              15,
+              0.45,
+            ],
+          ],
+          "circle-blur": 0.5,
+          "circle-radius": [
+            "case",
+            ["get", "selected"],
+            24,
+            ["interpolate", ["linear"], ["get", "count"], 1, 16, 5, 28, 15, 42],
+          ],
         },
       });
       current.addLayer({
@@ -208,10 +360,30 @@ export default function FlatMap({
             ["get", "selected"],
             "#dcffee",
             ["get", "online"],
-            "#85dcbc",
+            [
+              "interpolate",
+              ["linear"],
+              ["get", "count"],
+              1,
+              "#85dcbc",
+              5,
+              "#b5f7d6",
+              15,
+              "#edfff5",
+            ],
             "#79988b",
           ],
-          "circle-radius": ["case", [">", ["get", "count"], 1], 8, 5],
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["get", "count"],
+            1,
+            5,
+            5,
+            9,
+            15,
+            14,
+          ],
           "circle-stroke-color": "#1c4135",
           "circle-stroke-width": 2,
         },
@@ -243,14 +415,38 @@ export default function FlatMap({
             "text-anchor": "top",
           },
           paint: {
-            "text-color": "#9cdbc2",
+            "text-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "count"],
+              1,
+              "#9cdbc2",
+              5,
+              "#c6ffe2",
+              15,
+              "#f2fff9",
+            ],
             "text-halo-color": "#0a1514",
             "text-halo-width": 1.5,
           },
         });
       }
     };
-    current.on("style.load", addVisitorLayers);
+    current.on("style.load", () => {
+      for (const layer of current.getStyle().layers) {
+        if (
+          layer.type === "symbol" &&
+          layer.source !== "visitors" &&
+          layer.layout?.["text-field"]
+        )
+          current.setLayoutProperty(
+            layer.id,
+            "visibility",
+            placeNames.current ? "visible" : "none",
+          );
+      }
+      addVisitorLayers();
+    });
     current.on("zoomend", () => setMapZoom(current.getZoom()));
     current.on("click", "visitor-clusters", async (event) => {
       const feature = event.features?.[0];
@@ -373,12 +569,30 @@ export default function FlatMap({
       pending?.abort();
       unsubscribe();
       observer.disconnect();
+      collapseAttribution.disconnect();
       popup.current?.remove();
       current.remove();
       map.current = null;
       loadDetails.current = null;
     };
   }, [updateData]);
+
+  useEffect(() => {
+    const current = map.current;
+    if (!current?.isStyleLoaded()) return;
+    for (const layer of current.getStyle().layers) {
+      if (
+        layer.type === "symbol" &&
+        layer.source !== "visitors" &&
+        layer.layout?.["text-field"]
+      )
+        current.setLayoutProperty(
+          layer.id,
+          "visibility",
+          showPlaceNames ? "visible" : "none",
+        );
+    }
+  }, [showPlaceNames, status]);
 
   useEffect(() => {
     const visitor = useRadarStore.getState().selectedVisitor;
@@ -442,10 +656,6 @@ export default function FlatMap({
           )}
         </div>
       )}
-      <span className="map-zoom-label mono">
-        {mapZoom >= 10 ? "CITY" : mapZoom >= 4 ? "REGION" : "WORLD"} / Z{" "}
-        {mapZoom.toFixed(1)}
-      </span>
     </div>
   );
 }

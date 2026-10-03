@@ -5,20 +5,21 @@ import { useRadarStore } from "@/radar/store";
 import { BUCKET_MS, trafficSeries } from "@/radar/analytics";
 import { time } from "@/radar/format";
 
-const H = 136,
-  LEFT = 30,
+const LEFT = 30,
   RIGHT = 12,
   TOP = 10,
   BOTTOM = 24;
 
 export function TrafficChart() {
   const plot = useRef<HTMLDivElement>(null);
+  const [H, setPlotHeight] = useState(186);
   const [W, setPlotWidth] = useState(760);
   useEffect(() => {
     if (!plot.current) return;
-    const observer = new ResizeObserver(([entry]) =>
-      setPlotWidth(Math.max(280, entry.contentRect.width)),
-    );
+    const observer = new ResizeObserver(([entry]) => {
+      setPlotWidth(Math.max(280, entry.contentRect.width));
+      setPlotHeight(Math.max(120, entry.contentRect.height));
+    });
     observer.observe(plot.current);
     return () => observer.disconnect();
   }, []);
@@ -52,12 +53,13 @@ export function TrafficChart() {
   const x = (index: number) =>
     LEFT + ((index + 0.5) * width) / Math.max(1, series.length);
   const y = (value: number) => TOP + height - (value / ceiling) * height;
-  const path = series
-    .map(
-      (bucket, index) =>
-        `${index ? "L" : "M"}${x(index)},${y(bucket.visitors)}`,
-    )
-    .join(" ");
+  const linePath = (field: "pageViews" | "visitors") =>
+    series
+      .map(
+        (bucket, index) =>
+          `${index ? "L" : "M"}${x(index)},${y(bucket[field])}`,
+      )
+      .join(" ");
   const selected = hover !== null ? series[hover] : undefined;
   const views = series.reduce((sum, bucket) => sum + bucket.pageViews, 0);
   return (
@@ -116,6 +118,34 @@ export function TrafficChart() {
           aria-label={`Traffic over the last ${windowMs / 60000} minutes: ${views} page views, ${active} visitors currently online. Page views are totals per 15 seconds; visitors include online and idle sessions.`}
           preserveAspectRatio="none"
         >
+          <defs>
+            <linearGradient id="views-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#6c95b3" stopOpacity=".28" />
+              <stop offset="100%" stopColor="#6c95b3" stopOpacity=".02" />
+            </linearGradient>
+            <linearGradient id="visitors-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#85dcbc" stopOpacity=".2" />
+              <stop offset="100%" stopColor="#85dcbc" stopOpacity=".02" />
+            </linearGradient>
+          </defs>
+          {showViews && series.length > 0 && (
+            <path
+              d={
+                linePath("pageViews") +
+                ` L${x(series.length - 1)},${y(0)} L${x(0)},${y(0)} Z`
+              }
+              fill="url(#views-fill)"
+            />
+          )}
+          {showVisitors && series.length > 0 && (
+            <path
+              d={
+                linePath("visitors") +
+                ` L${x(series.length - 1)},${y(0)} L${x(0)},${y(0)} Z`
+              }
+              fill="url(#visitors-fill)"
+            />
+          )}
           {Array.from({ length: 5 }, (_, i) => (
             <g key={i}>
               <line
@@ -135,26 +165,14 @@ export function TrafficChart() {
               </text>
             </g>
           ))}
-          {showViews &&
-            series.map((bucket, i) => (
-              <rect
-                key={bucket.timestamp}
-                x={x(i) - (width / series.length) * 0.3}
-                y={y(bucket.pageViews)}
-                width={(width / series.length) * 0.6}
-                height={(height * bucket.pageViews) / ceiling}
-                rx="1"
-                className="chart-bar"
-              />
-            ))}
+          {showViews && series.length > 0 && (
+            <path
+              d={linePath("pageViews")}
+              className="chart-line chart-views-line"
+            />
+          )}
           {showVisitors && series.length > 0 && (
-            <>
-              <path
-                d={`${path} L${x(series.length - 1)},${y(0)} L${x(0)},${y(0)} Z`}
-                className="chart-area"
-              />
-              <path d={path} className="chart-line" />
-            </>
+            <path d={linePath("visitors")} className="chart-line" />
           )}
           {[0, 0.25, 0.5, 0.75, 1].map((fraction, i) => {
             const index = Math.round((series.length - 1) * fraction);
@@ -180,6 +198,14 @@ export function TrafficChart() {
                 y2={H - BOTTOM}
                 className="chart-crosshair"
               />
+              {showViews && (
+                <circle
+                  cx={x(hover!)}
+                  cy={y(selected.pageViews)}
+                  r="3"
+                  className="chart-current-dot chart-views-dot"
+                />
+              )}
               {showVisitors && (
                 <circle
                   cx={x(hover!)}
