@@ -95,15 +95,11 @@ export function EventFeed() {
     <aside className="event-panel" aria-label="Live events and visitors">
       <div className="panel-heading">
         <div>
-          <span className="eyebrow">ACTIVITY STREAM</span>
           <h2>
             Live events{" "}
             <span className={`status-dot ${paused ? "paused" : ""}`} />
           </h2>
         </div>
-        <span className="panel-count mono">
-          {events.length.toString().padStart(2, "0")}
-        </span>
       </div>
       <div
         className="feed-tabs"

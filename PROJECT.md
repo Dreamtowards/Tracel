@@ -1563,3 +1563,21 @@ SaaS infrastructure
 ```
 
 **Build the experience first.**
+
+---
+
+# 40. Live 页面迭代 — 2026-10-03
+
+在当前模拟数据 MVP 中追加：
+
+- 默认使用可拖动、缩放到城市与道路的平面地图，并可切换到原有 3D Globe。
+- 两种地理视图共享 Visitor 选择、详情和 Journey；点击地图聚合点展开，同城多个 Visitor 可以单独选择。
+- 移除 GLOBAL OBSERVATION、标题下说明、装饰性编号等冗余文字。
+- 底部数字指标区域改为 Traffic 时间趋势图，支持最近 5 / 10 分钟模拟时间。
+- Page views 使用 15 秒时间桶，计入首次页面访问和 navigation；访客曲线表示每个时间桶末的在线 Visitor 数量（online + idle），不表示独立访客 UV。
+- Audience 提供国家、城市、浏览器、来源四个排名维度。数量与占比基于当前 online + idle Visitor，排除 offline。
+- 图表保留十分钟历史，独立于 Event Feed 上限。暂停、倍速、重置使用同一模拟时间。
+- 平面地图使用 MapLibre + OpenFreeMap 深色底图，保留来源署名；精细底图需要网络，不可用时保留本地世界轮廓。
+- Visitor 位置仍然是模拟城市坐标；地图能够精细缩放，不代表 Visitor 的精确位置。
+
+以上是本轮新增范围；仍不接入真实采集、数据库或账号系统。

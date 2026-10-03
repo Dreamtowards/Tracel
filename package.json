@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/prepare-map-worker.mjs",
     "dev": "next dev --hostname 127.0.0.1",
+    "prebuild": "node scripts/prepare-map-worker.mjs",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
@@ -16,6 +18,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
+    "maplibre-gl": "^6.11.2",
     "next": "^16.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

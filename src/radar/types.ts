@@ -69,7 +69,17 @@ export interface StreamSnapshot {
   visitors: Record<string, Visitor>;
   events: RadarEvent[];
   recentEventTimes: number[];
+  trafficRecords: TrafficRecord[];
   now: number;
+}
+export interface TrafficRecord {
+  timestamp: number;
+  type: "visitor_joined" | "visitor_left" | "page_view" | "navigation";
+}
+export interface TrafficBucket {
+  timestamp: number;
+  pageViews: number;
+  visitors: number;
 }
 export interface VisitorStream {
   subscribe(callback: (event: RadarEvent) => void): () => void;

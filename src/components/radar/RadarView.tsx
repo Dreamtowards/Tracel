@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Activity,
+  Map as MapIcon,
   Crosshair,
   Globe2,
   Maximize,
@@ -19,6 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { EventFeed } from "./feed/EventFeed";
 import { VisitorPanel } from "./visitor/VisitorPanel";
+import { TrafficChart } from "./telemetry/TrafficChart";
+import { AudienceRankings } from "./telemetry/AudienceRankings";
 import { useRadarStore } from "@/radar/store";
 import { useSimulation } from "@/radar/use-simulation";
 import { time } from "@/radar/format";
@@ -29,6 +31,15 @@ const Globe = dynamic(() => import("./globe/Globe"), {
     <div className="globe-loading">
       <ScanLine size={28} />
       <span>INITIALIZING OBSERVATION</span>
+    </div>
+  ),
+});
+const FlatMap = dynamic(() => import("./map/FlatMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="globe-loading">
+      <MapIcon size={25} />
+      <span>Loading map…</span>
     </div>
   ),
 });
@@ -48,82 +59,6 @@ function Clock() {
   );
 }
 
-function Metrics() {
-  const visitors = useRadarStore((state) => state.visitors);
-  const eventTimes = useRadarStore((state) => state.recentEventTimes);
-  const now = useRadarStore((state) => state.now);
-  const paused = useRadarStore((state) => state.paused);
-  const active = Object.values(visitors).filter((v) => v.status !== "offline");
-  const online = active.filter((v) => v.status === "online").length;
-  const countries = new Set(active.map((v) => v.location.countryCode)).size;
-  const minuteEvents = eventTimes.filter((at) => at <= now && at > now - 60000);
-  const bars = useMemo(
-    () =>
-      Array.from(
-        { length: 24 },
-        (_, i) =>
-          eventTimes.filter(
-            (at) => at > now - (24 - i) * 2500 && at <= now - (23 - i) * 2500,
-          ).length,
-      ),
-    [eventTimes, now],
-  );
-  return (
-    <div className="telemetry" aria-label="Live telemetry">
-      <div className="metric">
-        <span className="metric-label">
-          <ScanLine size={13} />
-          VISITORS
-        </span>
-        <div className="metric-value">
-          {active.length.toString().padStart(2, "0")}
-          <span className="metric-caption">
-            <i />
-            {online} active <span>· {active.length - online} idle</span>
-          </span>
-        </div>
-      </div>
-      <div className="metric">
-        <span className="metric-label">
-          <Activity size={13} />
-          EVENTS / MIN
-        </span>
-        <div className="metric-value">
-          {minuteEvents.length.toString().padStart(2, "0")}
-          <div className="event-spark" aria-hidden="true">
-            {bars.map((value, i) => (
-              <i
-                key={i}
-                style={{ height: `${Math.max(3, Math.min(30, value * 5))}px` }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="metric">
-        <span className="metric-label">
-          <Globe2 size={13} />
-          COUNTRIES
-        </span>
-        <div className="metric-value">
-          {countries.toString().padStart(2, "0")}
-          <span className="metric-caption">Across the globe</span>
-        </div>
-      </div>
-      <div className="metric metric-status">
-        <span className="metric-label">OBSERVATION STATUS</span>
-        <div className="metric-value status-value">
-          <span className={`status-dot ${paused ? "paused" : ""}`} />
-          {paused ? "Paused" : "Live"}
-          <span className="metric-caption">
-            {paused ? "Simulation on hold" : "Receiving events"}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function RadarView() {
   const { reset, spawn } = useSimulation();
   const selected = useRadarStore((state) => state.selectedVisitor);
@@ -137,6 +72,7 @@ export function RadarView() {
   const [fullScreen, setFullScreen] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [view, setView] = useState<"map" | "globe">("map");
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReducedMotion(query.matches);
@@ -160,22 +96,21 @@ export function RadarView() {
     }
   }
   return (
-    <div className={`radar-app ${selected ? "visitor-selected" : ""}`}>
+    <div
+      className={`radar-app radar-expanded ${selected ? "visitor-selected" : ""} ${view === "map" ? "map-mode" : "globe-mode"}`}
+    >
       <header className="app-header">
         <a className="brand" href="/" aria-label="Tracel home">
           <span className="brand-symbol">
             <Crosshair size={25} strokeWidth={1.3} />
           </span>
-          <span>
-            TRACEL<span className="brand-version mono">/ 01</span>
-          </span>
+          <span>TRACEL</span>
         </a>
         <div className="site-identity">
           <span className="site-icon">
             <Globe2 size={14} />
           </span>
           <span>elytra.dev</span>
-          <span className="site-label">OBSERVED SITE</span>
         </div>
         <div className="header-right">
           <span className="demo-badge">SIMULATED DATA</span>
@@ -196,36 +131,57 @@ export function RadarView() {
         </div>
       </header>
       <div className="workspace">
-        <main className="globe-view" aria-label="Live visitor globe">
+        <main
+          className="globe-view"
+          aria-label={
+            view === "map" ? "Live visitor map" : "Live visitor globe"
+          }
+        >
           <div className="view-heading">
-            <div>
-              <div className="eyebrow">
-                <span className="tiny-line" />
-                GLOBAL OBSERVATION
-              </div>
-              <h1>
-                Live overview<span className="heading-dot">.</span>
-              </h1>
-              <p>Visitors on elytra.dev, right now.</p>
+            <h1>Live overview</h1>
+            <div
+              className="view-switch"
+              role="group"
+              aria-label="Geographic view"
+            >
+              <button
+                aria-pressed={view === "map"}
+                onClick={() => setView("map")}
+              >
+                <MapIcon size={14} />
+                Map
+              </button>
+              <button
+                aria-pressed={view === "globe"}
+                onClick={() => setView("globe")}
+              >
+                <Globe2 size={14} />
+                Globe
+              </button>
             </div>
-            <span className="view-index mono">01 / LIVE</span>
           </div>
           <div className="globe-stage">
-            <div className="globe-reticle" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <i />
-            </div>
-            <Globe
-              reducedMotion={reducedMotion}
-              resetKey={resetKey}
-              zoom={zoom}
-            />
-          </div>
-          <div className="globe-coordinate mono">
-            <span>GEO / WGS 84</span>
-            <span>LAT 90° N — 90° S</span>
+            {view === "globe" && (
+              <div className="globe-reticle" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <i />
+              </div>
+            )}
+            {view === "globe" ? (
+              <Globe
+                reducedMotion={reducedMotion}
+                resetKey={resetKey}
+                zoom={zoom}
+              />
+            ) : (
+              <FlatMap
+                reducedMotion={reducedMotion}
+                resetKey={resetKey}
+                zoom={zoom}
+              />
+            )}
           </div>
           <div className="globe-legend">
             <span>
@@ -242,7 +198,9 @@ export function RadarView() {
             </span>
           </div>
           <div className="globe-instructions">
-            <span className="drag-icon">↔</span>Drag to orbit<span>·</span>
+            <span className="drag-icon">↔</span>
+            {view === "map" ? "Drag to pan" : "Drag to orbit"}
+            <span>·</span>
             Scroll to zoom<span>·</span>Select a visitor
           </div>
           <div className="globe-controls">
@@ -272,8 +230,8 @@ export function RadarView() {
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Reset globe view"
-              title="Reset globe view"
+              aria-label="Reset geographic view"
+              title="Reset view"
               onClick={() => {
                 useRadarStore.getState().select(null);
                 setResetKey((value) => value + 1);
@@ -291,12 +249,12 @@ export function RadarView() {
         <VisitorPanel />
         <EventFeed />
       </div>
-      <Metrics />
+      <div className="insights">
+        <TrafficChart />
+        <AudienceRankings />
+      </div>
       <footer className="app-footer">
         <div className="footer-caption">
-          <span className="footer-cross">+</span>
-          <span>TRACEL LIVE</span>
-          <span className="footer-divider">/</span>
           <span>LOCAL SIMULATION</span>
         </div>
         <div className="simulation-controls">

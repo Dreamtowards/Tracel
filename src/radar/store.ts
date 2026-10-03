@@ -15,6 +15,7 @@ export const useRadarStore = create<RadarState>((set) => ({
   visitors: {},
   events: [],
   recentEventTimes: [],
+  trafficRecords: [],
   now: 0,
   selectedVisitor: null,
   paused: false,

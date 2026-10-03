@@ -5,6 +5,7 @@ import type {
   JourneyType,
   RadarEvent,
   StreamSnapshot,
+  TrafficRecord,
   Visitor,
   VisitorStream,
 } from "../types";
@@ -26,6 +27,7 @@ export class MockVisitorStream implements VisitorStream {
   private visitors: Record<string, Visitor> = {};
   private events: RadarEvent[] = [];
   private recentEventTimes: number[] = [];
+  private trafficRecords: TrafficRecord[] = [];
   private nextActions = new Map<string, number>();
   private listeners = new Set<(event: RadarEvent) => void>();
   private nextSpawn: number;
@@ -67,6 +69,10 @@ export class MockVisitorStream implements VisitorStream {
       events: [...this.events],
       recentEventTimes: this.recentEventTimes.filter(
         (at) => at > this.now - 60000 && at <= this.now,
+      ),
+      trafficRecords: this.trafficRecords.filter(
+        (record) =>
+          record.timestamp >= Math.floor((this.now - 600000) / 15000) * 15000,
       ),
       now: this.now,
     };
@@ -116,6 +122,14 @@ export class MockVisitorStream implements VisitorStream {
     };
     this.events = [event, ...this.events].slice(0, FEED_LIMIT);
     this.recentEventTimes.push(timestamp);
+    if (
+      type === "visitor_joined" ||
+      type === "visitor_left" ||
+      type === "page_view" ||
+      type === "navigation"
+    ) {
+      this.trafficRecords.push({ timestamp, type });
+    }
     this.listeners.forEach((listener) => listener(event));
     return updated;
   }
@@ -237,6 +251,10 @@ export class MockVisitorStream implements VisitorStream {
     this.events = this.events.slice(0, FEED_LIMIT);
     this.recentEventTimes = this.recentEventTimes.filter(
       (at) => at > this.now - 60000,
+    );
+    this.trafficRecords = this.trafficRecords.filter(
+      (record) =>
+        record.timestamp >= Math.floor((this.now - 600000) / 15000) * 15000,
     );
   }
 }

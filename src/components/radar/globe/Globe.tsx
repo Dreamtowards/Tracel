@@ -390,7 +390,7 @@ function Camera({
       );
   }, [lastSelectedId, camera]);
   useEffect(() => {
-    target.current = position(18, 105, distance);
+    if (!useRadarStore.getState().selectedVisitor) target.current = position(18, 105, distance);
   }, [resetKey, distance]);
   useEffect(() => {
     if (zoom !== 0)
