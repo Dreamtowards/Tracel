@@ -46,7 +46,7 @@ Tracel 更关注：
 ### 必须实现
 
 - 3D Globe
-- 实时 Visitor / Contact
+- 实时 Visitor
 - Visitor 出现与消失
 - Visitor 地理位置
 - 实时 Event Feed
@@ -139,7 +139,7 @@ shadcn/ui 仅用于：
 ```text
 Globe
 → Realtime presence
-→ Contact
+→ Visitor
 → Journey
 → Detail
 → Supporting metrics
@@ -249,7 +249,7 @@ Desktop 优先。
 │ TRACEL       ELYTRA.DEV                   21:42:17 UTC      │
 ├────────────────────────────────────────────┬────────────────┤
 │                                            │                │
-│                                            │ LIVE SIGNALS   │
+│                                            │ LIVE EVENTS   │
 │                                            │                │
 │                 3D GLOBE                   │ Tokyo          │
 │                                            │ Chrome         │
@@ -260,7 +260,7 @@ Desktop 优先。
 │                                            │ → /projects    │
 │                                            │                │
 ├────────────────────────────────────────────┴────────────────┤
-│  CONTACTS  14        SIGNALS/MIN  37        STATUS  LIVE    │
+│  VISITORS  14        EVENTS/MIN  37        STATUS  LIVE    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -304,19 +304,13 @@ Globe 至少需要：
 
 ---
 
-## 8. Contact Marker
+## 8. Visitor Marker
 
-一个 Visitor 在视觉层称为：
+访客在界面、文案与代码中统一称为 **Visitor**。
 
-> **Contact**
+实时动态统一称为 **Event**。
 
-代码层仍然使用：
-
-```ts
-Visitor
-```
-
-每个 Contact 根据：
+每个 Visitor 根据：
 
 ```ts
 latitude
@@ -325,7 +319,7 @@ longitude
 
 显示在 Globe 上。
 
-### Active Contact
+### Active Visitor
 
 显示：
 
@@ -334,14 +328,14 @@ longitude
 - subtle glow
 - optional label
 
-新 Contact 出现时：
+新 Visitor 出现时：
 
 ```text
 small point
    ↓
 pulse ring expands
    ↓
-CONTACT DETECTED
+VISITOR DETECTED
    ↓
 settles into active state
 ```
@@ -356,7 +350,7 @@ settles into active state
 
 ---
 
-## 9. Contact States
+## 9. Visitor States
 
 Visitor 状态：
 
@@ -655,14 +649,14 @@ Speed
 
 ```text
 Reset Simulation
-Spawn Contact
+Spawn Visitor
 ```
 
 这些主要用于开发和视觉测试。
 
 ---
 
-# 17. Live Signal Feed
+# 17. Live Event Feed
 
 右侧或其他适当区域显示实时事件。
 
@@ -703,13 +697,13 @@ Direct
 Feed 中不同事件可以略有差异：
 
 ```text
-CONTACT DETECTED
+VISITOR DETECTED
 
 PAGE VIEW
 
 NAVIGATION
 
-CONTACT LOST
+VISITOR LOST
 ```
 
 但不要过度使用告警语言。
@@ -718,10 +712,10 @@ CONTACT LOST
 
 # 18. Visitor Selection
 
-点击 Globe 上 Contact：
+点击 Globe 上 Visitor：
 
 ```text
-Contact Marker
+Visitor Marker
       ↓
 Selected Visitor
       ↓
@@ -744,7 +738,7 @@ Visitor Detail Panel
 ## Identity
 
 ```text
-CONTACT
+VISITOR
 8F3A91
 ```
 
@@ -861,10 +855,10 @@ CURRENT
 第一版：
 
 ```text
-CONTACTS
+VISITORS
 14
 
-SIGNALS / MIN
+EVENTS / MIN
 37
 
 COUNTRIES
@@ -923,7 +917,7 @@ Motion 是 MVP 的重点。
 - smooth zoom
 - smooth camera transitions
 
-### Contact
+### Visitor
 
 - spawn pulse
 - fade
@@ -943,7 +937,7 @@ Motion 是 MVP 的重点。
 
 ### Numbers
 
-Active Contacts 等数字变化时：
+Active Visitors 等数字变化时：
 
 - subtle transition
 - 不需要老虎机式动画
@@ -964,7 +958,7 @@ Active Contacts 等数字变化时：
 100+
 ```
 
-Contact 同时存在，也应该保持流畅。
+Visitor 同时存在，也应该保持流畅。
 
 注意：
 
@@ -989,13 +983,13 @@ components/
    │  ├─ Globe.tsx
    │  ├─ Earth.tsx
    │  ├─ Atmosphere.tsx
-   │  ├─ ContactLayer.tsx
-   │  ├─ ContactMarker.tsx
+   │  ├─ VisitorLayer.tsx
+   │  ├─ VisitorMarker.tsx
    │  └─ GlobeCamera.tsx
 
    ├─ feed/
-   │  ├─ SignalFeed.tsx
-   │  └─ SignalItem.tsx
+   │  ├─ EventFeed.tsx
+   │  └─ EventItem.tsx
 
    ├─ visitor/
    │  ├─ VisitorPanel.tsx
@@ -1091,9 +1085,9 @@ Visitor 3
 使用类似：
 
 ```text
-CONTACT A8F2
-CONTACT 73D1
-CONTACT C912
+VISITOR A8F2
+VISITOR 73D1
+VISITOR C912
 ```
 
 页面路径使用真实感较强的数据：
@@ -1185,7 +1179,7 @@ visitor left
 即便暂时没有新事件：
 
 - Globe 仍然缓慢转动；
-- Active Contact 仍然存在；
+- Active Visitor 仍然存在；
 - Clock 在运行；
 - Existing visitors 可以偶尔 navigation；
 - UI 有 subtle living state。
@@ -1282,15 +1276,15 @@ TRACEL
 
 LIVE
 
-CONTACTS
-SIGNALS
+VISITORS
+EVENTS
 JOURNEY
 LOCATION
 CLIENT
 SESSION
 
-CONTACT DETECTED
-CONTACT LOST
+VISITOR DETECTED
+VISITOR LOST
 ```
 
 避免：
@@ -1338,13 +1332,13 @@ Here you can see all your amazing analytics!
 
 ---
 
-## Phase 3 — Contacts
+## Phase 3 — Visitors
 
 完成：
 
 - mock city coordinates
 - visitor generation
-- contact marker
+- visitor marker
 - spawn animation
 - active state
 - remove animation
@@ -1371,7 +1365,7 @@ Here you can see all your amazing analytics!
 
 - header
 - realtime metrics
-- Signal Feed
+- Event Feed
 - Visitor Detail
 - Journey Timeline
 
@@ -1431,8 +1425,8 @@ visitor leaves
 
 用户能够：
 
-1. 看到 Globe 上的 Contact；
-2. 点击一个 Contact；
+1. 看到 Globe 上的 Visitor；
+2. 点击一个 Visitor；
 3. 查看 Location；
 4. 查看 Client；
 5. 查看 Current Page；
@@ -1459,7 +1453,7 @@ Mock 数据必须具有：
 正常 Demo：
 
 ```text
-10–50 active contacts
+10–50 active visitors
 ```
 
 必须保持流畅。
@@ -1483,7 +1477,7 @@ Mock 数据必须具有：
 和：
 
 ```text
-让 Globe / Contact / Journey 更漂亮
+让 Globe / Visitor / Journey 更漂亮
 ```
 
 优先选择后者。
@@ -1550,8 +1544,8 @@ TRACEL
    └── RADAR
         │
         ├── Globe
-        ├── Contacts
-        ├── Signals
+        ├── Visitors
+        ├── Events
         ├── Visitor Detail
         ├── Journey
         └── Mock Realtime Simulation
