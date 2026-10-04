@@ -128,7 +128,11 @@ export class MockVisitorStream implements VisitorStream {
       type === "page_view" ||
       type === "navigation"
     ) {
-      this.trafficRecords.push({ timestamp, type });
+      this.trafficRecords.push({
+        timestamp,
+        type,
+        location: { ...visitor.location },
+      });
     }
     this.listeners.forEach((listener) => listener(event));
     return updated;

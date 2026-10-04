@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import type {
   GeoJSONSource,
@@ -64,23 +64,26 @@ function cityGroups(visitors: Record<string, Visitor>, selectedId?: string) {
     const key = `${visitor.location.countryCode}:${visitor.location.city}`;
     groups.set(key, [...(groups.get(key) ?? []), visitor]);
   }
+  const activity = geographicActivity();
   const data: FeatureCollection<Point> = {
     type: "FeatureCollection",
-    features: [...groups].map(([key, members]) => ({
+    features: [...activity.cities].map(([key, item]) => ({
       type: "Feature",
       geometry: {
         type: "Point",
-        coordinates: [
-          members[0].location.longitude,
-          members[0].location.latitude,
-        ],
+        coordinates: [item.location.longitude, item.location.latitude],
       },
       properties: {
         key,
-        city: members[0].location.city,
-        count: members.length,
-        selected: members.some((visitor) => visitor.id === selectedId),
-        online: members.some((visitor) => visitor.status === "online"),
+        city: item.location.city,
+        count: item.visitors,
+        views: item.views,
+        selected: (groups.get(key) ?? []).some(
+          (visitor) => visitor.id === selectedId,
+        ),
+        online: (groups.get(key) ?? []).some(
+          (visitor) => visitor.status === "online",
+        ),
       },
     })),
   };
@@ -137,25 +140,65 @@ const countryIds: Record<string, string> = {
   SE: "752",
   TW: "158",
 };
-function countryActivity(visitors: Record<string, Visitor>) {
-  const counts = new Map<string, number>();
-  for (const visitor of Object.values(visitors)) {
-    if (visitor.status === "offline") continue;
-    const id = countryIds[visitor.location.countryCode];
-    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+function geographicActivity() {
+  const state = useRadarStore.getState();
+  const cities = new Map<
+    string,
+    { location: Visitor["location"]; views: number; visitors: number }
+  >();
+  const touch = (location: Visitor["location"]) => {
+    const key = location.countryCode + ":" + location.city;
+    if (!cities.has(key)) cities.set(key, { location, views: 0, visitors: 0 });
+    return cities.get(key)!;
+  };
+  for (const visitor of Object.values(state.visitors))
+    if (visitor.status !== "offline") touch(visitor.location).visitors++;
+  for (const record of state.trafficRecords)
+    if (
+      record.location &&
+      record.timestamp >= state.now - 600000 &&
+      record.timestamp <= state.now &&
+      (record.type === "page_view" || record.type === "navigation")
+    )
+      touch(record.location).views++;
+  const regions = new Map<string, { views: number; visitors: number }>();
+  for (const city of cities.values()) {
+    const id = countryIds[city.location.countryCode];
+    if (!id) continue;
+    const value = regions.get(id) ?? { views: 0, visitors: 0 };
+    value.views += city.views;
+    value.visitors += city.visitors;
+    regions.set(id, value);
   }
+  return { cities, regions };
+}
+function countryActivity(_visitors: Record<string, Visitor>) {
+  const { regions } = geographicActivity();
   return {
     type: "FeatureCollection" as const,
     features: countries.features
-      .filter((feature) => counts.has(String(feature.id)))
+      .filter((feature) => String(feature.id) !== "010")
       .map((feature) => ({
         ...feature,
         properties: {
           ...feature.properties,
-          count: counts.get(String(feature.id))!,
+          ...(regions.get(String(feature.id)) ?? { views: 0, visitors: 0 }),
         },
       })),
   };
+}
+function heatColor(max: number): maplibregl.ExpressionSpecification {
+  return [
+    "interpolate",
+    ["linear"],
+    ["get", "views"],
+    0,
+    "#25292c",
+    1,
+    "#346b55",
+    Math.max(2, max),
+    "#9af0ca",
+  ];
 }
 
 export default function FlatMap({
@@ -175,6 +218,25 @@ export default function FlatMap({
   const [status, setStatus] = useState<
     "loading" | "detailed" | "offline" | "unavailable"
   >("loading");
+  const records = useRadarStore((state) => state.trafficRecords);
+  const visitorState = useRadarStore((state) => state.visitors);
+  const now = useRadarStore((state) => state.now);
+  const distribution = useMemo(() => {
+    const stats = geographicActivity();
+    return {
+      countries: countries.features.map(
+        (feature) => stats.regions.get(String(feature.id))?.views ?? 0,
+      ),
+      cities: [...stats.cities.values()].map((city) => city.views),
+    };
+  }, [records, visitorState, now]);
+  const [hover, setHover] = useState<{
+    name: string;
+    views: number;
+    visitors: number;
+    x: number;
+    y: number;
+  } | null>(null);
   const [mapZoom, setMapZoom] = useState(1);
   const placeNames = useRef(showPlaceNames);
   placeNames.current = showPlaceNames;
@@ -198,9 +260,27 @@ export default function FlatMap({
       (current?.getSource("city-glow") as GeoJSONSource | undefined)?.setData(
         cityGroups(state.visitors, state.selectedVisitor?.id).data,
       );
-      source.setData(
-        cityGroups(state.visitors, state.selectedVisitor?.id).data,
+      if (current?.getLayer("country-activity-fill"))
+        current.setPaintProperty(
+          "country-activity-fill",
+          "fill-color",
+          heatColor(
+            Math.max(
+              1,
+              ...[...geographicActivity().regions.values()].map(
+                (region) => region.views,
+              ),
+            ),
+          ),
+        );
+      const activeCities = cityGroups(
+        state.visitors,
+        state.selectedVisitor?.id,
+      ).data;
+      activeCities.features = activeCities.features.filter(
+        (feature) => Number(feature.properties?.count) > 0,
       );
+      source.setData(activeCities);
     }
   }, []);
 
@@ -279,20 +359,16 @@ export default function FlatMap({
           source: "country-activity",
           maxzoom: 7,
           paint: {
-            "fill-color": "#72d8ad",
-            "fill-opacity": [
-              "interpolate",
-              ["linear"],
-              ["get", "count"],
-              1,
-              0.045,
-              3,
-              0.1,
-              8,
-              0.19,
-              20,
-              0.3,
-            ],
+            "fill-color": heatColor(
+              Math.max(
+                1,
+                ...[...geographicActivity().regions.values()].map(
+                  (region) => region.views,
+                ),
+              ),
+            ),
+            "fill-opacity": ["case", [">", ["get", "views"], 0], 0.88, 0],
+            "fill-antialias": false,
           },
         },
         current.getStyle().layers.find((layer) => layer.type === "symbol")?.id,
@@ -316,9 +392,11 @@ export default function FlatMap({
               [
                 "interpolate",
                 ["linear"],
-                ["get", "count"],
+                ["get", "views"],
+                0,
+                0,
                 1,
-                0.12,
+                0.24,
                 5,
                 0.25,
                 15,
@@ -343,9 +421,11 @@ export default function FlatMap({
           "circle-opacity": [
             "interpolate",
             ["linear"],
-            ["get", "count"],
+            ["get", "views"],
+            0,
+            0,
             1,
-            0.2,
+            0.3,
             5,
             0.38,
             15,
@@ -364,9 +444,16 @@ export default function FlatMap({
           ],
         },
       });
+      const activeCities = cityGroups(
+        state.visitors,
+        state.selectedVisitor?.id,
+      ).data;
+      activeCities.features = activeCities.features.filter(
+        (feature) => Number(feature.properties?.count) > 0,
+      );
       current.addSource("visitors", {
         type: "geojson",
-        data: cityGroups(state.visitors, state.selectedVisitor?.id).data,
+        data: activeCities,
         cluster: true,
         clusterRadius: 28,
         clusterMaxZoom: 8,
@@ -524,6 +611,42 @@ export default function FlatMap({
       addVisitorLayers();
     });
     current.on("zoomend", () => setMapZoom(current.getZoom()));
+    current.on("mousemove", (event) => {
+      const layers = [
+        "city-activity-fill",
+        "city-activity-glow",
+        "country-activity-fill",
+      ].filter((id) => current.getLayer(id));
+      const features = current.queryRenderedFeatures(event.point, { layers });
+      const feature =
+        features.find((feature) => feature.layer.id.startsWith("city-")) ??
+        features[0];
+      if (!feature) {
+        setHover(null);
+        return;
+      }
+      const props = feature.properties;
+      setHover({
+        name: String(props.city ?? props.name),
+        views: Number(props.views ?? 0),
+        visitors: Number(props.visitors ?? props.count ?? 0),
+        x: Math.max(
+          8,
+          Math.min(
+            current.getContainer().clientWidth - 192,
+            event.point.x + 16,
+          ),
+        ),
+        y: Math.max(
+          8,
+          Math.min(
+            current.getContainer().clientHeight - 120,
+            event.point.y + 16,
+          ),
+        ),
+      });
+    });
+    current.getCanvas().addEventListener("mouseleave", () => setHover(null));
     current.on("click", "visitor-clusters", async (event) => {
       const feature = event.features?.[0];
       if (!feature || feature.geometry.type !== "Point") return;
@@ -606,7 +729,7 @@ export default function FlatMap({
         // The style background is land; the water layer supplies the ocean.
         for (const layer of style.layers) {
           if (layer.type === "background")
-            layer.paint = { ...layer.paint, "background-color": "#172328" };
+            layer.paint = { ...layer.paint, "background-color": "#25292c" };
           if (layer.type === "fill" && layer.id === "water")
             layer.paint = { ...layer.paint, "fill-color": "#080d10" };
           if (layer.type === "line" && layer.id === "waterway")
@@ -620,8 +743,8 @@ export default function FlatMap({
               ...layer.paint,
               "fill-color":
                 layer.id.includes("wood") || layer.id.includes("park")
-                  ? "#1c302c"
-                  : "#1b292e",
+                  ? "#2a3030"
+                  : "#272d30",
             };
           if (layer.type === "symbol" && layer.layout?.["text-field"])
             layer.paint = {
@@ -652,6 +775,8 @@ export default function FlatMap({
     void load();
     const unsubscribe = useRadarStore.subscribe((state, previous) => {
       if (
+        state.trafficRecords !== previous.trafficRecords ||
+        state.now !== previous.now ||
         state.visitors !== previous.visitors ||
         state.selectedVisitor?.id !== previous.selectedVisitor?.id
       )
@@ -720,6 +845,19 @@ export default function FlatMap({
       );
   }, [zoom, reducedMotion]);
 
+  const values = mapZoom < 5 ? distribution.countries : distribution.cities;
+  const maxViews = Math.max(1, ...values);
+  const bins = Array.from({ length: 16 }, () => 0);
+  values.forEach(
+    (value) => bins[Math.min(15, Math.floor((value / maxViews) * 15))]++,
+  );
+  const peak = Math.max(1, ...bins.map((value) => Math.log1p(value)));
+  const histogram = bins
+    .map(
+      (value, index) =>
+        `${index ? "L" : "M"}${index * 10},${28 - (Math.log1p(value) / peak) * 24}`,
+    )
+    .join(" ");
   return (
     <div
       className="flat-map"
@@ -731,6 +869,56 @@ export default function FlatMap({
         className="map-canvas"
         aria-label="Interactive world map. Drag to pan; scroll or double click to zoom to cities."
       />
+      {hover && (
+        <div
+          className="map-stats-tooltip"
+          role="tooltip"
+          style={{ left: hover.x, top: hover.y }}
+        >
+          <strong>{hover.name}</strong>
+          <div>
+            <span>
+              Views <small>10m</small>
+            </span>
+            <b>{hover.views}</b>
+          </div>
+          <div>
+            <span>
+              Visitors <small>now</small>
+            </span>
+            <b>{hover.visitors}</b>
+          </div>
+        </div>
+      )}
+      <div
+        className="map-heat-legend"
+        aria-label={`${mapZoom < 5 ? "Country" : "City"} page views in the last 10 minutes, 0 to ${Math.max(0, ...values)}`}
+      >
+        <div className="heat-legend-heading">
+          <span>Views · 10m</span>
+          <small>{mapZoom < 5 ? "Countries" : "Cities"}</small>
+        </div>
+        <svg
+          viewBox="0 0 150 30"
+          aria-label="Distribution of regions by page views"
+        >
+          <path d={histogram + " L150,30 L0,30 Z"} fill="#85dcbc16" />
+          <path d={histogram} fill="none" stroke="#a5cbb8" strokeWidth="1" />
+        </svg>
+        <div
+          className="heat-gradient"
+          style={{
+            background:
+              maxViews <= 1
+                ? "linear-gradient(to right,#25292c,#346b55)"
+                : `linear-gradient(to right,#25292c 0%,#346b55 ${100 / maxViews}%,#9af0ca 100%)`,
+          }}
+        />
+        <div className="heat-legend-labels">
+          <span>0</span>
+          <span>{Math.max(0, ...values)} views</span>
+        </div>
+      </div>
       {status === "unavailable" && (
         <div className="globe-fallback">
           <span>MAP VIEW UNAVAILABLE</span>

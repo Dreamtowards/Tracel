@@ -73,6 +73,7 @@ export interface StreamSnapshot {
   now: number;
 }
 export interface TrafficRecord {
+  location?: Location;
   timestamp: number;
   type: "visitor_joined" | "visitor_left" | "page_view" | "navigation";
 }

@@ -934,9 +934,111 @@
   }
 }
 
-.map-toolbar .place-names-toggle { order:-1; }
-.maplibregl-ctrl-bottom-right { right:140px!important; bottom:24px!important; }
-.maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin:0; }
-.insights-resize:hover { background:#85dcbc0a; }
-.insights-resize:focus-visible { outline:1px solid #85dcbc; outline-offset:-4px; }
-@media (max-width:740px) { .maplibregl-ctrl-bottom-right { right:134px!important; bottom:20px!important; } }
+.map-toolbar .place-names-toggle {
+  order: -1;
+}
+.maplibregl-ctrl-bottom-right {
+  right: 140px !important;
+  bottom: 24px !important;
+}
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl {
+  margin: 0;
+}
+.insights-resize:hover {
+  background: #85dcbc0a;
+}
+.insights-resize:focus-visible {
+  outline: 1px solid #85dcbc;
+  outline-offset: -4px;
+}
+@media (max-width: 740px) {
+  .maplibregl-ctrl-bottom-right {
+    right: 134px !important;
+    bottom: 20px !important;
+  }
+}
+.map-stats-tooltip {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  width: 180px;
+  padding: 12px;
+  background: #0c171bf2;
+  border: 1px solid #34423f;
+  border-radius: 4px;
+  color: #c9e2d6;
+  box-shadow: 0 8px 25px #0004;
+  font-size: 11px;
+}
+.map-stats-tooltip strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.map-stats-tooltip div {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 7px;
+}
+.map-stats-tooltip small {
+  font-size: 9px;
+  color: #718d8d;
+  margin-left: 4px;
+}
+.map-stats-tooltip b {
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+.map-heat-legend {
+  position: absolute;
+  z-index: 7;
+  left: 18px;
+  bottom: 68px;
+  width: 164px;
+  padding: 10px 10px 8px;
+  background: #091115df;
+  border: 1px solid #273333;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.heat-legend-heading,
+.heat-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #98afa9;
+  gap: 8px;
+}
+.heat-legend-heading small {
+  font-size: 8px;
+  color: #718588;
+}
+.map-heat-legend svg {
+  display: block;
+  width: 100%;
+  height: 27px;
+  margin-top: 7px;
+}
+.heat-gradient {
+  height: 5px;
+  background: linear-gradient(
+    to right,
+    #25292c 0%,
+    #25292c 5%,
+    #346b55 6%,
+    #9af0ca 100%
+  );
+  border-radius: 1px;
+}
+.heat-legend-labels {
+  margin-top: 5px;
+  font-family: var(--font-mono);
+}
+@media (max-width: 740px) {
+  .map-heat-legend {
+    left: 12px;
+    bottom: 62px;
+    width: 150px;
+  }
+}
