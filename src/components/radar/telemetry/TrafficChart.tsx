@@ -120,12 +120,20 @@ export function TrafficChart() {
         >
           <defs>
             <linearGradient id="views-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#6c95b3" stopOpacity=".28" />
-              <stop offset="100%" stopColor="#6c95b3" stopOpacity=".02" />
+              <stop
+                offset="0%"
+                stopColor="var(--tracel-live)"
+                stopOpacity=".09"
+              />
+              <stop offset="100%" stopColor="#79d8bd" stopOpacity="0" />
             </linearGradient>
             <linearGradient id="visitors-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#85dcbc" stopOpacity=".2" />
-              <stop offset="100%" stopColor="#85dcbc" stopOpacity=".02" />
+              <stop
+                offset="0%"
+                stopColor="var(--tracel-info)"
+                stopOpacity=".07"
+              />
+              <stop offset="100%" stopColor="#6f9fbe" stopOpacity="0" />
             </linearGradient>
           </defs>
           {showViews && series.length > 0 && (

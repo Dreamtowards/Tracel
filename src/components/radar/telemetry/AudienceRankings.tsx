@@ -75,7 +75,9 @@ export function AudienceRankings() {
         <ol className="ranking-list">
           {rows.slice(0, 5).map((row, i) => (
             <li key={`${row.detail}:${row.name}`}>
-              <span className="ranking-position mono">{i + 1}</span>
+              <span className="ranking-position mono">
+                {String(i + 1).padStart(2, "0")}
+              </span>
               <div className="ranking-name">
                 <span title={row.name}>
                   {row.detail && <small>{row.detail}</small>}

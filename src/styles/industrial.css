@@ -1,0 +1,491 @@
+/* STYLE_GUIDE.md: functional color roles and a flat instrument surface. */
+:root {
+  --tracel-bg: #070b0d;
+  --tracel-surface-1: #0b1013;
+  --tracel-surface-2: #10161a;
+  --tracel-surface-3: #151c21;
+  --tracel-border: #263138;
+  --tracel-border-subtle: #1b252b;
+  --tracel-grid: #182229;
+  --tracel-text: #e7ecef;
+  --tracel-text-secondary: #9ba9b1;
+  --tracel-text-muted: #65747d;
+  --tracel-live: #79d8bd;
+  --tracel-live-dim: #3e806f;
+  --tracel-accent: #e86d32;
+  --tracel-accent-dim: #8f4326;
+  --tracel-info: #6f9fbe;
+  --tracel-danger: #d5584d;
+  --background: var(--tracel-bg);
+  --foreground: var(--tracel-text);
+  --muted: var(--tracel-text-muted);
+  --line: var(--tracel-border-subtle);
+  --panel: var(--tracel-surface-1);
+  --accent: var(--tracel-accent);
+  --font-interface:
+    "IBM Plex Sans Condensed", "Arial Narrow", "Segoe UI", sans-serif;
+  --font-sans: "Segoe UI", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, monospace;
+}
+.radar-app {
+  max-width: none;
+  border-color: var(--tracel-border-subtle);
+}
+.app-header,
+.radar-expanded .app-header {
+  height: 64px;
+  min-height: 64px;
+  background: var(--tracel-bg);
+  padding: 0 24px;
+}
+.brand {
+  font-family: var(--font-interface);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+}
+.brand-symbol {
+  color: var(--tracel-text-secondary);
+}
+.header-right,
+.simulation-controls,
+.view-switch,
+.feed-tabs,
+.ranking-tabs,
+.range-switch,
+.ui-button {
+  font-family: var(--font-interface);
+}
+.demo-badge {
+  font-family: var(--font-interface);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 2px;
+  color: var(--tracel-text-secondary);
+  border-color: var(--tracel-border);
+}
+.header-live {
+  color: var(--tracel-live);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+.utc-clock {
+  color: var(--tracel-text-secondary);
+}
+.status-dot {
+  background: var(--tracel-live);
+  box-shadow: none;
+}
+.status-dot.paused,
+.status-dot.idle {
+  background: var(--tracel-text-muted);
+}
+::selection {
+  background: #e86d3233;
+  color: var(--tracel-text);
+}
+.ui-button,
+.view-switch,
+.view-switch button,
+.range-switch button,
+.speed-controls button,
+.place-names-toggle {
+  border-radius: 2px;
+  box-shadow: none;
+}
+.view-switch {
+  background: var(--tracel-surface-1);
+  border-color: var(--tracel-border);
+  padding: 2px;
+  gap: 0;
+}
+.view-switch button {
+  font-size: 13px;
+  padding: 7px 12px;
+  color: var(--tracel-text-secondary);
+  border-bottom: 1px solid transparent;
+}
+.view-switch button[aria-pressed="true"] {
+  color: var(--tracel-accent);
+  background: transparent;
+  border-bottom-color: var(--tracel-accent);
+}
+.view-switch button:hover,
+.ui-button:hover {
+  background: var(--tracel-surface-3);
+  color: var(--tracel-text);
+}
+.radar-expanded .place-names-toggle {
+  color: var(--tracel-accent);
+  border-color: var(--tracel-border);
+  background: var(--tracel-surface-1);
+}
+.radar-expanded .place-names-toggle[aria-pressed="false"] {
+  color: var(--tracel-text-muted);
+}
+.radar-expanded .speed-controls button.active,
+.range-switch button[aria-pressed="true"] {
+  color: var(--tracel-accent);
+  border-color: var(--tracel-accent-dim);
+  background: transparent;
+}
+.feed-tabs > button.active,
+.ranking-tabs button[aria-selected="true"] {
+  color: var(--tracel-accent);
+  border-bottom-color: var(--tracel-accent);
+}
+.simulation-popover,
+.chart-tooltip,
+.map-stats-tooltip,
+.maplibregl-popup-content {
+  box-shadow: none !important;
+  border-radius: 2px !important;
+  background: var(--tracel-surface-2) !important;
+  border-color: var(--tracel-border) !important;
+}
+.globe-view {
+  background: var(--tracel-bg);
+}
+.globe-view::before,
+.globe-reticle {
+  display: none;
+}
+.globe-city {
+  text-shadow: none;
+  color: var(--tracel-text-secondary);
+  font-size: 12px;
+}
+.globe-city.selected {
+  color: var(--tracel-accent);
+}
+.maplibregl-canvas:focus-visible {
+  outline-color: var(--tracel-accent);
+}
+.globe-controls,
+.radar-expanded .map-bottom-bar .globe-legend {
+  background: var(--tracel-surface-1);
+  border-color: var(--tracel-border);
+  border-radius: 2px;
+}
+.globe-legend .online {
+  background: var(--tracel-live);
+}
+.globe-legend .idle {
+  background: var(--tracel-live-dim);
+}
+.map-heat-legend {
+  border-radius: 2px;
+  background: var(--tracel-surface-1);
+  border-color: var(--tracel-border-subtle);
+}
+.event-panel,
+.detail-panel,
+.insights {
+  background: var(--tracel-surface-1);
+}
+.radar-expanded .panel-heading {
+  height: 56px;
+  padding: 0 24px;
+}
+.panel-heading h2,
+.radar-expanded .panel-heading h2,
+.insight-heading h2 {
+  font-family: var(--font-interface);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.traffic-panel,
+.audience-panel {
+  padding: 24px;
+}
+.insight-heading {
+  gap: 16px;
+}
+.chart-summary strong {
+  color: var(--tracel-text);
+  font-size: 18px;
+}
+.chart-summary,
+.audience-scope {
+  color: var(--tracel-text-secondary);
+  font-size: 11px;
+}
+.chart-legend button {
+  color: var(--tracel-text-secondary);
+  font-size: 12px;
+}
+.chart-legend .views-key,
+.views-key {
+  background: var(--tracel-live);
+}
+.chart-legend .visitors-key,
+.visitors-key {
+  background: var(--tracel-info);
+}
+.chart-line {
+  stroke: var(--tracel-info);
+  stroke-width: 1.5;
+}
+.chart-views-line {
+  stroke: var(--tracel-live);
+}
+.chart-current-dot {
+  fill: var(--tracel-info);
+  stroke: var(--tracel-surface-1);
+}
+.chart-views-dot {
+  fill: var(--tracel-live);
+}
+.chart-crosshair {
+  stroke: var(--tracel-accent);
+}
+.chart-grid {
+  stroke: var(--tracel-grid);
+  stroke-dasharray: 2 4;
+}
+.chart-axis {
+  fill: var(--tracel-text-muted);
+  font-size: 10px;
+}
+.event-item {
+  padding: 16px 24px;
+  animation-duration: 180ms;
+  border-bottom-color: var(--tracel-border-subtle);
+}
+.event-item:hover,
+.visitor-row:hover {
+  background: var(--tracel-surface-2);
+}
+.event-item.is-selected,
+.visitor-row.is-selected {
+  background: #e86d320a;
+  border-left-color: var(--tracel-accent);
+}
+.event-type {
+  font-family: var(--font-interface);
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--tracel-text-secondary);
+}
+.event-type.arrival {
+  color: var(--tracel-live);
+}
+.event-location {
+  margin-top: 8px;
+}
+.event-location strong {
+  color: var(--tracel-text);
+  font-size: 14px;
+}
+.country-code {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  color: var(--tracel-text-secondary);
+  min-width: 20px;
+  font-size: 10px;
+}
+.event-top time,
+.visitor-short {
+  font-size: 10px;
+  color: var(--tracel-text-muted);
+}
+.event-client {
+  color: var(--tracel-text-secondary);
+  font-size: 11px;
+  margin-top: 8px;
+}
+.event-path {
+  color: var(--tracel-text-secondary);
+  margin-top: 8px;
+  font-size: 11px;
+}
+.source-name {
+  font-size: 10px;
+  color: var(--tracel-text-muted);
+}
+.ranking-tabs {
+  gap: 24px;
+}
+.ranking-tabs button {
+  font-size: 12px;
+}
+.ranking-list li {
+  min-height: 32px;
+  border-bottom: 1px solid var(--tracel-border-subtle);
+  gap: 12px;
+}
+.ranking-name > span {
+  font-size: 12px;
+  color: var(--tracel-text-secondary);
+}
+.ranking-name small {
+  color: var(--tracel-text-muted);
+}
+.ranking-position {
+  font-size: 10px;
+  min-width: 18px;
+}
+.ranking-list strong {
+  color: var(--tracel-text);
+  font-size: 12px;
+}
+.ranking-share {
+  color: var(--tracel-text-secondary);
+  font-size: 11px;
+}
+.ranking-track {
+  height: 1px;
+  background: transparent;
+}
+.ranking-track i {
+  height: 1px;
+  background: var(--tracel-live-dim);
+}
+.detail-heading,
+.detail-section h3 {
+  font-family: var(--font-interface);
+}
+.visitor-identity h2 {
+  color: var(--tracel-accent);
+}
+.visitor-status {
+  color: var(--tracel-live);
+}
+.insights-resize:focus-visible {
+  outline-color: var(--tracel-accent);
+}
+@media (min-width: 1800px) {
+  .radar-expanded .app-header {
+    height: 64px;
+    min-height: 64px;
+  }
+  .traffic-panel,
+  .audience-panel {
+    padding: 24px;
+  }
+  .insight-heading h2 {
+    font-size: 17px;
+  }
+  .ranking-list li {
+    min-height: 32px;
+  }
+  .chart-legend button,
+  .ranking-tabs button,
+  .ranking-name > span {
+    font-size: 12px;
+  }
+  .chart-summary strong {
+    font-size: 18px;
+  }
+}
+@media (max-width: 740px) {
+  .radar-expanded .app-header {
+    height: auto;
+    min-height: 64px;
+    padding: 12px 16px;
+  }
+  .traffic-panel,
+  .audience-panel {
+    padding: 20px 16px;
+  }
+  .ranking-tabs {
+    gap: 0;
+  }
+  .view-switch button {
+    font-size: 12px;
+    padding: 7px 9px;
+  }
+  .chart-summary strong {
+    font-size: 14px;
+  }
+  .chart-summary {
+    font-size: 10px;
+  }
+}
+/* One hue per theme: data and selection use different intensity, not different hues. */
+:root {
+  --tracel-live: #69adf5;
+  --tracel-live-dim: #355d84;
+  --tracel-accent: #a1cfff;
+  --tracel-accent-dim: #355d84;
+  --tracel-info: #91a5ba;
+}
+.theme-options {
+  display: flex;
+  gap: 4px;
+  padding: 0 8px 12px;
+}
+.theme-options button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--tracel-border);
+  border-radius: 2px;
+  background: transparent;
+  padding: 7px 8px;
+  font-family: var(--font-interface);
+  font-size: 12px;
+  color: var(--tracel-text-secondary);
+}
+.theme-options button[aria-pressed="true"] {
+  border-color: var(--tracel-accent);
+  color: var(--tracel-accent);
+}
+.theme-options i {
+  width: 7px;
+  height: 7px;
+}
+.simulation-tools-label {
+  padding-top: 12px;
+  border-top: 1px solid var(--tracel-border-subtle);
+}
+.event-item.is-selected,
+.visitor-row.is-selected {
+  background: color-mix(
+    in srgb,
+    var(--tracel-live) 7%,
+    var(--tracel-surface-1)
+  );
+}
+.globe-legend .online {
+  background: var(--tracel-live);
+}
+.globe-legend .idle {
+  background: var(--tracel-live-dim);
+}
+.map-stats-tooltip,
+.map-stats-tooltip strong,
+.chart-tooltip,
+.map-visitor-picker,
+.map-visitor-picker strong {
+  color: var(--tracel-text);
+}
+.map-visitor-picker button {
+  color: var(--tracel-live);
+  border-color: var(--tracel-border);
+  background: var(--tracel-surface-2);
+}
+.map-visitor-picker button:hover {
+  background: var(--tracel-surface-3);
+}
+.map-connection-state {
+  color: var(--tracel-text-secondary);
+  background: var(--tracel-surface-2);
+  border-color: var(--tracel-border);
+}
+.map-connection-state button {
+  color: var(--tracel-accent);
+}
+.detail-location .coordinates,
+.visitor-status.online {
+  color: var(--tracel-live);
+}
+.globe-controls .ui-button {
+  color: var(--tracel-text-secondary);
+}
+.insights-resize:hover {
+  background: color-mix(in srgb, var(--tracel-live) 4%, transparent);
+}

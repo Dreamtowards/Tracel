@@ -24,6 +24,7 @@ import { TrafficChart } from "./telemetry/TrafficChart";
 import { AudienceRankings } from "./telemetry/AudienceRankings";
 import { useRadarStore } from "@/radar/store";
 import { useSimulation } from "@/radar/use-simulation";
+import { themePalettes, type ThemeColor } from "@/radar/theme";
 import { time } from "@/radar/format";
 
 const Globe = dynamic(() => import("./globe/Globe"), {
@@ -31,7 +32,7 @@ const Globe = dynamic(() => import("./globe/Globe"), {
   loading: () => (
     <div className="globe-loading">
       <ScanLine size={28} />
-      <span>INITIALIZING OBSERVATION</span>
+      <span>Loading globe…</span>
     </div>
   ),
 });
@@ -62,6 +63,9 @@ function Clock() {
 
 export function RadarView() {
   const { reset, spawn } = useSimulation();
+  const themeColor = useRadarStore((state) => state.themeColor);
+  const setThemeColor = useRadarStore((state) => state.setThemeColor);
+  const palette = themePalettes[themeColor];
   const selected = useRadarStore((state) => state.selectedVisitor);
   const paused = useRadarStore((state) => state.paused);
   const speed = useRadarStore((state) => state.speed);
@@ -78,6 +82,11 @@ export function RadarView() {
   const [showPlaceNames, setShowPlaceNames] = useState(true);
   const [view, setView] = useState<"map" | "globe">("map");
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem("tracel-theme");
+      if (saved && Object.hasOwn(themePalettes, saved))
+        setThemeColor(saved as ThemeColor);
+    } catch {}
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReducedMotion(query.matches);
     const change = () => setReducedMotion(query.matches);
@@ -101,6 +110,18 @@ export function RadarView() {
   }
   return (
     <div
+      data-theme={themeColor}
+      style={
+        {
+          "--tracel-live": palette.live,
+          "--tracel-live-dim": palette.dim,
+          "--tracel-accent": palette.selected,
+          "--tracel-accent-dim": palette.dim,
+          "--tracel-info": palette.info,
+          "--theme-heat": palette.heat,
+          "--theme-bright": palette.bright,
+        } as React.CSSProperties
+      }
       className={`radar-app radar-expanded ${selected ? "visitor-selected" : ""} ${view === "map" ? "map-mode" : "globe-mode"}`}
     >
       <header className="app-header">
@@ -117,10 +138,10 @@ export function RadarView() {
           <span>elytra.dev</span>
         </div>
         <div className="header-right">
-          <span className="demo-badge">SIMULATED DATA</span>
+          <span className="demo-badge">Simulated</span>
           <span className="header-live">
             <span className={`status-dot ${paused ? "paused" : ""}`} />
-            {paused ? "PAUSED" : "LIVE"}
+            {paused ? "Paused" : "Live"}
           </span>
           <Clock />
           <div className="simulation-controls">
@@ -151,7 +172,8 @@ export function RadarView() {
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Simulation tools"
+                aria-label="Display and simulation settings"
+                title="Display and simulation settings"
                 aria-expanded={controlsOpen}
                 onClick={() => setControlsOpen(!controlsOpen)}
               >
@@ -159,7 +181,35 @@ export function RadarView() {
               </Button>
               {controlsOpen && (
                 <div className="simulation-popover">
-                  <span className="eyebrow">SIMULATION TOOLS</span>
+                  <span className="eyebrow">Theme color</span>
+                  <div
+                    className="theme-options"
+                    role="group"
+                    aria-label="Theme color"
+                  >
+                    {(Object.keys(themePalettes) as ThemeColor[]).map(
+                      (color) => (
+                        <button
+                          key={color}
+                          aria-pressed={themeColor === color}
+                          onClick={() => {
+                            setThemeColor(color);
+                            try {
+                              localStorage.setItem("tracel-theme", color);
+                            } catch {}
+                          }}
+                        >
+                          <i
+                            style={{ background: themePalettes[color].live }}
+                          />
+                          {themePalettes[color].label}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                  <span className="eyebrow simulation-tools-label">
+                    Simulation
+                  </span>
                   <Button
                     variant="ghost"
                     onClick={() => {
@@ -250,14 +300,6 @@ export function RadarView() {
             )}
           </div>
           <div className="globe-stage">
-            {view === "globe" && (
-              <div className="globe-reticle" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-                <i />
-              </div>
-            )}
             {view === "globe" ? (
               <Globe
                 reducedMotion={reducedMotion}

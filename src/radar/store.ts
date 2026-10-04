@@ -1,9 +1,13 @@
 import { create } from "zustand";
 import type { StreamSnapshot, Visitor } from "./types";
 
+import type { ThemeColor } from "./theme";
+
 interface RadarState extends StreamSnapshot {
   selectedVisitor: Visitor | null;
   paused: boolean;
+  themeColor: ThemeColor;
+  setThemeColor: (themeColor: ThemeColor) => void;
   speed: number;
   sync: (snapshot: StreamSnapshot) => void;
   select: (visitor: Visitor | null) => void;
@@ -19,6 +23,8 @@ export const useRadarStore = create<RadarState>((set) => ({
   now: 0,
   selectedVisitor: null,
   paused: false,
+  themeColor: "blue",
+  setThemeColor: (themeColor) => set({ themeColor }),
   speed: 1,
   sync: (snapshot) =>
     set((state) => ({

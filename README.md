@@ -19,7 +19,7 @@ Open http://127.0.0.1:3000. Production: `npm run build` then `npm start`.
 - Pause/resume or switch between 1×, 5× and 20×. Speed advances simulated time; the header clock shows real UTC.
 - Simulation tools provide reset and spawn. Reset restores the initial 12-visitor scene. Hidden tabs suspend simulation and rendering to avoid catch-up bursts.
 - Fullscreen supports using the surface on a second display. Narrow screens use an overlay visitor panel.
-- Traffic shows 5 or 10 minutes of simulated time. The blue line counts page views and navigation per 15-second bucket; the green line counts concurrent visitors (online + idle) at each bucket end. Hover or focus a bucket for exact values. Legend buttons toggle each series.
+- Traffic shows 5 or 10 minutes of simulated time. The mint line counts page views and navigation per 15-second bucket; the steel-blue line counts concurrent visitors (online + idle) at each bucket end. Hover or focus a bucket for exact values. Legend buttons toggle each series.
 - Audience rankings switch between countries, cities, browsers and sources. Counts and percentages refer to current online + idle visitors, not cumulative sessions. Offline visitors are excluded.
 
 ## Verify
@@ -39,3 +39,7 @@ The globe uses Natural Earth public-domain geographic data distributed by `world
 `predev` and `prebuild` prepare matching MapLibre worker modules in the ignored `public/maplibre/` directory, as required by the Next.js bundler. Traffic records retain ten minutes of history independently of the bounded event feed.
 
 The map toolbar floats over the map. Place names toggles background labels while keeping visitor city labels visible. Simulation controls live in the top-right header. Pages ranks current online and idle visitors by their current pathname.
+
+Visual styling follows `STYLE_GUIDE.md`: IBM Plex Sans Condensed for compact controls, IBM Plex Mono for telemetry, mint for live data, and sparse orange for selection and focus. Functional theme overrides live in `src/styles/industrial.css`.
+
+The default accent is blue. Use the top-right display and simulation menu to switch Blue, Cyan, or Violet; the palette applies to controls, charts, map activity, and globe markers. The choice is saved locally.

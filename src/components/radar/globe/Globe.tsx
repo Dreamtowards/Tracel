@@ -29,6 +29,7 @@ import {
   Vector3,
 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import { themePalettes } from "@/radar/theme";
 import { useRadarStore } from "@/radar/store";
 import geography from "@/radar/geography.json";
 import type { Visitor } from "@/radar/types";
@@ -93,14 +94,14 @@ function Earth() {
     <>
       <mesh onClick={(event) => event.stopPropagation()}>
         <sphereGeometry args={[2, 96, 64]} />
-        <meshPhongMaterial color="#0b1519" shininess={5} specular="#183234" />
+        <meshPhongMaterial color="#10161a" shininess={5} specular="#1b2733" />
       </mesh>
       <lineSegments geometry={grid}>
         <lineBasicMaterial color="#314548" transparent opacity={0.19} />
       </lineSegments>
       <points geometry={land}>
         <pointsMaterial
-          color="#93b8b2"
+          color="#9ba9b1"
           size={0.015}
           sizeAttenuation
           transparent
@@ -108,7 +109,7 @@ function Earth() {
         />
       </points>
       <lineSegments geometry={borders}>
-        <lineBasicMaterial color="#5e8581" transparent opacity={0.3} />
+        <lineBasicMaterial color="#65747d" transparent opacity={0.3} />
       </lineSegments>
       <mesh material={atmosphere}>
         <sphereGeometry args={[2.09, 64, 48]} />
@@ -188,6 +189,7 @@ function VisitorLayer({ reducedMotion }: { reducedMotion: boolean }) {
   useFrame(() => {
     if (!points.current || !rings.current || !targets.current) return;
     const now = useRadarStore.getState().now;
+    const palette = themePalettes[useRadarStore.getState().themeColor];
     let ringCount = 0;
     visitors.forEach((visitor, i) => {
       const p = placements[i];
@@ -204,13 +206,13 @@ function VisitorLayer({ reducedMotion }: { reducedMotion: boolean }) {
       temp.updateMatrix();
       points.current!.setMatrixAt(i, temp.matrix);
       color.set(
-        visitor.status === "idle"
-          ? "#5f8a80"
-          : visitor.status === "offline"
-            ? "#485a57"
-            : isSelected
-              ? "#d9fff0"
-              : "#7de4be",
+        isSelected
+          ? palette.selected
+          : visitor.status === "idle"
+            ? palette.dim
+            : visitor.status === "offline"
+              ? "#485a57"
+              : palette.live,
       );
       color.multiplyScalar(fade);
       points.current!.setColorAt(i, color);
@@ -227,7 +229,7 @@ function VisitorLayer({ reducedMotion }: { reducedMotion: boolean }) {
         temp.updateMatrix();
         rings.current!.setMatrixAt(ringCount, temp.matrix);
         color
-          .set(isSelected ? "#92ebca" : "#67d5ad")
+          .set(isSelected ? palette.selected : palette.live)
           .multiplyScalar(isSelected ? 0.8 : Math.max(0, 1 - (age % 2) / 2));
         rings.current!.setColorAt(ringCount++, color);
       }
@@ -390,7 +392,8 @@ function Camera({
       );
   }, [lastSelectedId, camera]);
   useEffect(() => {
-    if (!useRadarStore.getState().selectedVisitor) target.current = position(18, 105, distance);
+    if (!useRadarStore.getState().selectedVisitor)
+      target.current = position(18, 105, distance);
   }, [resetKey, distance]);
   useEffect(() => {
     if (zoom !== 0)
@@ -483,15 +486,7 @@ export default function Globe({
   const [visible, setVisible] = useState(true);
   const visitorRecord = useRadarStore((state) => state.visitors);
   const selected = useRadarStore((state) => state.selectedVisitor);
-  const labelVisitors = useMemo(
-    () =>
-      selected
-        ? [selected]
-        : Object.values(visitorRecord)
-            .filter((v) => v.status === "online")
-            .slice(0, 5),
-    [selected, visitorRecord],
-  );
+  const labelVisitors = useMemo(() => (selected ? [selected] : []), [selected]);
   const labelElements = useRef(new Map<string, HTMLSpanElement>());
   useEffect(() => {
     const update = () => setVisible(!document.hidden);
@@ -516,7 +511,7 @@ export default function Globe({
         <directionalLight
           position={[5, 5, 5]}
           intensity={1.5}
-          color="#b8d8d2"
+          color="#e7ecef"
         />
         <Earth />
         <VisitorLayer reducedMotion={reducedMotion} />

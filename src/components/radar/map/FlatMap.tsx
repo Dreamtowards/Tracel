@@ -10,6 +10,7 @@ import type {
 import type { FeatureCollection, Point } from "geojson";
 import countries from "@/radar/countries.json";
 import geography from "@/radar/geography.json";
+import { themePalettes } from "@/radar/theme";
 import { useRadarStore } from "@/radar/store";
 import type { Visitor } from "@/radar/types";
 
@@ -201,6 +202,32 @@ function heatColor(max: number): maplibregl.ExpressionSpecification {
   ];
 }
 
+const mapColorRoles: Record<string, keyof (typeof themePalettes)["blue"]> = {
+  "#e86d32": "selected",
+  "#79d8bd": "live",
+  "#85dcbc": "live",
+  "#346b55": "heat",
+  "#9af0ca": "bright",
+  "#62b797": "live",
+  "#79988b": "dim",
+  "#9cdbc2": "live",
+  "#a5cbb8": "info",
+  "#a5f0cc": "bright",
+  "#b5f7d6": "bright",
+  "#c5eee0": "bright",
+  "#c6ffe2": "bright",
+  "#edfff5": "bright",
+  "#f2fff9": "bright",
+};
+function themePaint(value: unknown): any {
+  if (Array.isArray(value)) return value.map(themePaint);
+  if (typeof value === "string" && mapColorRoles[value])
+    return themePalettes[useRadarStore.getState().themeColor][
+      mapColorRoles[value]
+    ];
+  return value;
+}
+
 export default function FlatMap({
   reducedMotion,
   showPlaceNames,
@@ -212,6 +239,21 @@ export default function FlatMap({
   resetKey: number;
   zoom: number;
 }) {
+  const themeColor = useRadarStore((state) => state.themeColor);
+  const palette = themePalettes[themeColor];
+  const basePaints = useRef(new Map<string, Record<string, unknown>>());
+  const applyTheme = useCallback(() => {
+    const current = map.current;
+    if (!current) return;
+    for (const [id, paint] of basePaints.current)
+      if (current.getLayer(id))
+        for (const [property, value] of Object.entries(paint))
+          current.setPaintProperty(
+            id,
+            property as Parameters<MapLibreMap["setPaintProperty"]>[1],
+            themePaint(value),
+          );
+  }, []);
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const popup = useRef<maplibregl.Popup | null>(null);
@@ -264,11 +306,13 @@ export default function FlatMap({
         current.setPaintProperty(
           "country-activity-fill",
           "fill-color",
-          heatColor(
-            Math.max(
-              1,
-              ...[...geographicActivity().regions.values()].map(
-                (region) => region.views,
+          themePaint(
+            heatColor(
+              Math.max(
+                1,
+                ...[...geographicActivity().regions.values()].map(
+                  (region) => region.views,
+                ),
               ),
             ),
           ),
@@ -367,7 +411,7 @@ export default function FlatMap({
                 ),
               ),
             ),
-            "fill-opacity": ["case", [">", ["get", "views"], 0], 0.88, 0],
+            "fill-opacity": ["case", [">", ["get", "views"], 0], 0.24, 0],
             "fill-antialias": false,
           },
         },
@@ -384,7 +428,7 @@ export default function FlatMap({
           source: "city-activity",
           minzoom: 5,
           paint: {
-            "fill-color": "#85dcbc",
+            "fill-color": ["case", ["get", "selected"], "#e86d32", "#79d8bd"],
             "fill-opacity": [
               "case",
               ["get", "selected"],
@@ -416,7 +460,7 @@ export default function FlatMap({
         type: "circle",
         source: "city-glow",
         paint: {
-          "circle-color": "#85dcbc",
+          "circle-color": ["case", ["get", "selected"], "#e86d32", "#79d8bd"],
           "circle-blur": 0.9,
           "circle-opacity": [
             "interpolate",
@@ -425,22 +469,22 @@ export default function FlatMap({
             0,
             0,
             1,
-            0.3,
+            0.18,
             5,
-            0.38,
+            0.2,
             15,
-            0.55,
+            0.28,
           ],
           "circle-radius": [
             "interpolate",
             ["linear"],
             ["get", "count"],
             1,
-            30,
+            18,
             5,
-            48,
+            26,
             15,
-            75,
+            36,
           ],
         },
       });
@@ -474,7 +518,7 @@ export default function FlatMap({
             8,
             "#a5f0cc",
             20,
-            "#dcffee",
+            "#c5eee0",
           ],
           "circle-opacity": 0.84,
           "circle-stroke-width": 0,
@@ -522,7 +566,7 @@ export default function FlatMap({
           "circle-color": [
             "case",
             ["get", "selected"],
-            "#dcffee",
+            "#e86d32",
             ["get", "online"],
             [
               "interpolate",
@@ -569,7 +613,11 @@ export default function FlatMap({
           id: "visitor-city-label",
           type: "symbol",
           source: "visitors",
-          filter: ["!", ["has", "point_count"]],
+          filter: [
+            "all",
+            ["!", ["has", "point_count"]],
+            ["any", ["get", "selected"], [">=", ["get", "count"], 3]],
+          ],
           layout: {
             "text-field": ["get", "city"],
             "text-font": ["Noto Sans Regular"],
@@ -579,15 +627,20 @@ export default function FlatMap({
           },
           paint: {
             "text-color": [
-              "interpolate",
-              ["linear"],
-              ["get", "count"],
-              1,
-              "#9cdbc2",
-              5,
-              "#c6ffe2",
-              15,
-              "#f2fff9",
+              "case",
+              ["get", "selected"],
+              "#e86d32",
+              [
+                "interpolate",
+                ["linear"],
+                ["get", "count"],
+                1,
+                "#9cdbc2",
+                5,
+                "#c6ffe2",
+                15,
+                "#f2fff9",
+              ],
             ],
             "text-halo-color": "#0a1514",
             "text-halo-width": 1.5,
@@ -609,6 +662,19 @@ export default function FlatMap({
           );
       }
       addVisitorLayers();
+      basePaints.current.clear();
+      for (const layer of current.getStyle().layers)
+        if (
+          "source" in layer &&
+          [
+            "country-activity",
+            "city-activity",
+            "city-glow",
+            "visitors",
+          ].includes(String(layer.source))
+        )
+          basePaints.current.set(layer.id, { ...layer.paint });
+      applyTheme();
     });
     current.on("zoomend", () => setMapZoom(current.getZoom()));
     current.on("mousemove", (event) => {
@@ -795,7 +861,12 @@ export default function FlatMap({
       map.current = null;
       loadDetails.current = null;
     };
-  }, [updateData]);
+  }, [updateData, applyTheme]);
+
+  useEffect(() => {
+    applyTheme();
+    updateData();
+  }, [themeColor, applyTheme, updateData]);
 
   useEffect(() => {
     const current = map.current;
@@ -821,7 +892,7 @@ export default function FlatMap({
     map.current.easeTo({
       center: [visitor.location.longitude, visitor.location.latitude],
       zoom: Math.max(11, map.current.getZoom()),
-      duration: reducedMotion ? 0 : 900,
+      duration: reducedMotion ? 0 : 500,
     });
     popup.current?.remove();
   }, [selectedId, reducedMotion]);
@@ -902,16 +973,25 @@ export default function FlatMap({
           viewBox="0 0 150 30"
           aria-label="Distribution of regions by page views"
         >
-          <path d={histogram + " L150,30 L0,30 Z"} fill="#85dcbc16" />
-          <path d={histogram} fill="none" stroke="#a5cbb8" strokeWidth="1" />
+          <path
+            d={histogram + " L150,30 L0,30 Z"}
+            fill="var(--tracel-live)"
+            fillOpacity=".09"
+          />
+          <path
+            d={histogram}
+            fill="none"
+            stroke="var(--tracel-info)"
+            strokeWidth="1"
+          />
         </svg>
         <div
           className="heat-gradient"
           style={{
             background:
               maxViews <= 1
-                ? "linear-gradient(to right,#25292c,#346b55)"
-                : `linear-gradient(to right,#25292c 0%,#346b55 ${100 / maxViews}%,#9af0ca 100%)`,
+                ? `linear-gradient(to right,#25292c,${palette.heat})`
+                : `linear-gradient(to right,#25292c 0%,${palette.heat} ${100 / maxViews}%,${palette.bright} 100%)`,
           }}
         />
         <div className="heat-legend-labels">
