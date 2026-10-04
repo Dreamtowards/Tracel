@@ -4,13 +4,13 @@ import { trafficSeries, rankVisitors, BUCKET_MS } from "../src/radar/analytics";
 import { MockVisitorStream } from "../src/radar/simulation/simulation";
 import type { TrafficRecord } from "../src/radar/types";
 
-test("traffic separates page views from presence and excludes lifecycle noise", () => {
+test("traffic counts unique viewing visitors and excludes lifecycle noise", () => {
   const records: TrafficRecord[] = [
     { timestamp: 1000, type: "visitor_joined" },
-    { timestamp: 1000, type: "page_view" },
+    { timestamp: 1000, type: "page_view", visitorId: "a" },
     { timestamp: 16000, type: "visitor_joined" },
-    { timestamp: 16000, type: "page_view" },
-    { timestamp: 20000, type: "navigation" },
+    { timestamp: 16000, type: "page_view", visitorId: "b" },
+    { timestamp: 20000, type: "navigation", visitorId: "b" },
     { timestamp: 35000, type: "visitor_left" },
   ];
   const series = trafficSeries(records, 1, 40000, 45000);
@@ -22,8 +22,8 @@ test("traffic separates page views from presence and excludes lifecycle noise", 
     ]),
     [
       [0, 1, 1],
-      [15000, 2, 2],
-      [30000, 0, 1],
+      [15000, 2, 1],
+      [30000, 0, 0],
     ],
   );
 });
@@ -38,7 +38,10 @@ test("each navigation is counted in exactly one bucket, including boundaries", (
     series.map((bucket) => bucket.pageViews),
     [0, 1, 1],
   );
-  assert.ok(series.every((bucket) => bucket.visitors === 3));
+  assert.deepEqual(
+    series.map((bucket) => bucket.visitors),
+    [0, 1, 1],
+  );
   assert.ok(series.every((bucket) => bucket.timestamp % BUCKET_MS === 0));
   assert.equal(trafficSeries(records, 3, 0).length, 0);
 });
@@ -83,7 +86,19 @@ test("chart history survives feed truncation and stays bounded over time", () =>
     series.reduce((sum, bucket) => sum + bucket.pageViews, 0),
     actualViews,
   );
-  assert.equal(series.at(-1)?.visitors, active);
+  const lastStart = series.at(-1)!.timestamp;
+  const expectedVisitors = new Set(
+    snapshot.trafficRecords
+      .filter(
+        (record) =>
+          record.timestamp >= lastStart &&
+          record.timestamp <= snapshot.now &&
+          (record.type === "page_view" || record.type === "navigation"),
+      )
+      .map((record) => record.visitorId),
+  ).size;
+  assert.equal(series.at(-1)?.visitors, expectedVisitors);
+  assert.ok(series.every((bucket) => bucket.pageViews >= bucket.visitors));
   for (let i = 0; i < 1200; i++) engine.advance(1000);
   const later = engine.snapshot();
   assert.ok(

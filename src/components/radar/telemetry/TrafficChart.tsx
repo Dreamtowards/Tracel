@@ -103,7 +103,7 @@ export function TrafficChart() {
           onClick={() => setShowVisitors(!showVisitors)}
         >
           <i className="visitors-key" />
-          Online visitors
+          Visitors / 15s
         </button>
         <span>UTC · simulated time</span>
       </div>
@@ -115,34 +115,17 @@ export function TrafficChart() {
         <svg
           viewBox={`0 0 ${W} ${H}`}
           role="group"
-          aria-label={`Traffic over the last ${windowMs / 60000} minutes: ${views} page views, ${active} visitors currently online. Page views are totals per 15 seconds; visitors include online and idle sessions.`}
+          aria-label={`Traffic over the last ${windowMs / 60000} minutes: ${views} page views, ${active} visitors currently online. Page views are totals per 15 seconds; visitors are unique sessions that viewed a page in the same 15-second bucket.`}
           preserveAspectRatio="none"
         >
-          <defs>
-            <linearGradient id="views-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stopColor="var(--tracel-live)"
-                stopOpacity=".09"
-              />
-              <stop offset="100%" stopColor="#79d8bd" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="visitors-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stopColor="var(--tracel-info)"
-                stopOpacity=".07"
-              />
-              <stop offset="100%" stopColor="#6f9fbe" stopOpacity="0" />
-            </linearGradient>
-          </defs>
           {showViews && series.length > 0 && (
             <path
               d={
                 linePath("pageViews") +
                 ` L${x(series.length - 1)},${y(0)} L${x(0)},${y(0)} Z`
               }
-              fill="url(#views-fill)"
+              fill="color-mix(in srgb, var(--tracel-live) 55%, #e7ecef)"
+              fillOpacity=".18"
             />
           )}
           {showVisitors && series.length > 0 && (
@@ -151,7 +134,8 @@ export function TrafficChart() {
                 linePath("visitors") +
                 ` L${x(series.length - 1)},${y(0)} L${x(0)},${y(0)} Z`
               }
-              fill="url(#visitors-fill)"
+              fill="var(--tracel-live)"
+              fillOpacity=".34"
             />
           )}
           {Array.from({ length: 5 }, (_, i) => (
@@ -234,7 +218,7 @@ export function TrafficChart() {
               fill="transparent"
               tabIndex={index === (hover ?? 0) ? 0 : -1}
               role="button"
-              aria-label={`${time(bucket.timestamp)}: ${bucket.pageViews} page views, ${bucket.visitors} online visitors`}
+              aria-label={`${time(bucket.timestamp)}: ${bucket.pageViews} page views, ${bucket.visitors} viewing visitors`}
               onPointerEnter={() => setHover(index)}
               onFocus={() => setHover(index)}
               onBlur={() => setHover(null)}

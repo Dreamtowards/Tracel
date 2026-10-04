@@ -49,7 +49,7 @@ export class MockVisitorStream implements VisitorStream {
   private pick<T>(values: T[]): T {
     return values[Math.floor(this.random() * values.length)];
   }
-  private wait(min = 5000, max = 20000) {
+  private wait(min = 3000, max = 8000) {
     return min + this.random() * (max - min);
   }
   private id() {
@@ -129,6 +129,7 @@ export class MockVisitorStream implements VisitorStream {
       type === "navigation"
     ) {
       this.trafficRecords.push({
+        visitorId: visitor.id,
         timestamp,
         type,
         location: { ...visitor.location },
@@ -164,7 +165,7 @@ export class MockVisitorStream implements VisitorStream {
     visitor = this.emit(visitor, "visitor_joined", firstSeen);
     visitor = this.emit(visitor, "page_view", firstSeen + (initial ? 800 : 0));
     if (initial) {
-      const count = Math.floor(this.random() * 3) + 1;
+      const count = Math.floor(this.random() * 5) + 3;
       for (let step = 0; step < count; step++) {
         const timestamp =
           firstSeen +

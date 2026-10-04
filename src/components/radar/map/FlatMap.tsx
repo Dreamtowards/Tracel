@@ -49,7 +49,7 @@ function outlineStyle(): StyleSpecification {
         type: "line",
         source: "outlines",
         paint: {
-          "line-color": "#415c5e",
+          "line-color": "#080d10",
           "line-width": 0.7,
           "line-opacity": 0.65,
         },
@@ -798,6 +798,8 @@ export default function FlatMap({
             layer.paint = { ...layer.paint, "background-color": "#25292c" };
           if (layer.type === "fill" && layer.id === "water")
             layer.paint = { ...layer.paint, "fill-color": "#080d10" };
+          if (layer.type === "line" && layer["source-layer"] === "boundary")
+            layer.paint = { ...layer.paint, "line-color": "#080d10" };
           if (layer.type === "line" && layer.id === "waterway")
             layer.paint = { ...layer.paint, "line-color": "#080d10" };
           if (
@@ -891,7 +893,11 @@ export default function FlatMap({
     map.current.resize();
     map.current.easeTo({
       center: [visitor.location.longitude, visitor.location.latitude],
-      zoom: Math.max(11, map.current.getZoom()),
+      zoom: ["US", "CA", "CN", "AU", "BR", "IN"].includes(
+        visitor.location.countryCode,
+      )
+        ? 3
+        : 4,
       duration: reducedMotion ? 0 : 500,
     });
     popup.current?.remove();

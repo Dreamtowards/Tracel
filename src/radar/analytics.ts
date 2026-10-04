@@ -1,11 +1,10 @@
 import type { TrafficBucket, TrafficRecord, Visitor } from "./types";
 
 export const BUCKET_MS = 15000;
-/** Page views include initial page loads and navigation, never lifecycle events.
- * Visitor values are concurrent presence (online + idle) at each bucket end. */
+/** Compare page views and unique viewing visitors over the same 15-second bucket. */
 export function trafficSeries(
   records: TrafficRecord[],
-  activeNow: number,
+  _activeNow: number,
   now: number,
   windowMs = 600000,
 ): TrafficBucket[] {
@@ -14,23 +13,21 @@ export function trafficSeries(
   const first = last - windowMs + BUCKET_MS;
   const buckets: TrafficBucket[] = [];
   for (let timestamp = first; timestamp <= last; timestamp += BUCKET_MS) {
-    const end = Math.min(timestamp + BUCKET_MS, now);
-    let visitors = activeNow;
     let pageViews = 0;
-    for (const record of records) {
-      if (record.timestamp > now) continue;
-      if (record.timestamp > end) {
-        if (record.type === "visitor_joined") visitors--;
-        if (record.type === "visitor_left") visitors++;
-      }
+    const visitors = new Set<string>();
+    records.forEach((record, index) => {
       if (
-        record.timestamp >= timestamp &&
-        record.timestamp < timestamp + BUCKET_MS &&
-        (record.type === "page_view" || record.type === "navigation")
+        record.timestamp > now ||
+        record.timestamp < timestamp ||
+        record.timestamp >= timestamp + BUCKET_MS
       )
+        return;
+      if (record.type === "page_view" || record.type === "navigation") {
         pageViews++;
-    }
-    buckets.push({ timestamp, pageViews, visitors: Math.max(0, visitors) });
+        visitors.add(record.visitorId ?? `unknown-${index}`);
+      }
+    });
+    buckets.push({ timestamp, pageViews, visitors: visitors.size });
   }
   return buckets;
 }

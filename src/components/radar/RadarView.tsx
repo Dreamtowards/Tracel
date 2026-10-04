@@ -79,7 +79,7 @@ export function RadarView() {
   const [notice, setNotice] = useState("");
   const [insightsHeight, setInsightsHeight] = useState<number | null>(null);
   const resizeStart = useRef<{ y: number; height: number } | null>(null);
-  const [showPlaceNames, setShowPlaceNames] = useState(true);
+  const [showPlaceNames, setShowPlaceNames] = useState(false);
   const [view, setView] = useState<"map" | "globe">("map");
   useEffect(() => {
     try {

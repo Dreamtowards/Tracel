@@ -489,3 +489,141 @@
 .insights-resize:hover {
   background: color-mix(in srgb, var(--tracel-live) 4%, transparent);
 }
+/* Rectilinear controls and solid telemetry areas. */
+.radar-app
+  :is(
+    button,
+    .view-switch,
+    .demo-badge,
+    .globe-controls,
+    .globe-legend,
+    .chart-tooltip,
+    .map-stats-tooltip,
+    .simulation-popover,
+    .map-heat-legend,
+    .maplibregl-popup-content,
+    .country-code,
+    .current-tag,
+    .theme-options,
+    .ranking-track,
+    .ranking-track i,
+    .preview-notice
+  ) {
+  border-radius: 0 !important;
+}
+.radar-app .status-dot,
+.radar-app .globe-legend i {
+  border-radius: 50% !important;
+}
+.chart-line {
+  stroke: var(--tracel-live);
+}
+.chart-views-line {
+  stroke: var(--theme-bright, #92c7ff);
+}
+.chart-legend .visitors-key,
+.visitors-key {
+  background: var(--tracel-live);
+}
+.chart-legend .views-key,
+.views-key {
+  background: var(--theme-bright, #92c7ff);
+}
+.chart-current-dot {
+  fill: var(--tracel-live);
+}
+.chart-views-dot {
+  fill: var(--theme-bright, #92c7ff);
+}
+.ranking-list li {
+  border-bottom: 0;
+}
+.ranking-track,
+.ranking-track i {
+  height: 3px;
+}
+.ranking-track {
+  background: transparent;
+  margin-top: 5px;
+}
+.ranking-track i {
+  background: var(--tracel-live);
+  opacity: 0.7;
+}
+
+/* Complete percentage tracks and consistent theme details. */
+.ranking-track {
+  background: var(--tracel-border);
+}
+.chart-views-line {
+  stroke: color-mix(in srgb, var(--tracel-live) 55%, #e7ecef);
+  stroke-dasharray: 5 3;
+}
+.chart-views-dot {
+  fill: color-mix(in srgb, var(--tracel-live) 55%, #e7ecef);
+}
+.chart-legend .views-key,
+.views-key {
+  background: color-mix(in srgb, var(--tracel-live) 55%, #e7ecef);
+}
+.maplibregl-ctrl-scale {
+  color: var(--tracel-live) !important;
+  border-color: var(--tracel-live-dim) !important;
+  background: var(--tracel-surface-1) !important;
+}
+.map-stats-tooltip small,
+.chart-tooltip time {
+  color: color-mix(
+    in srgb,
+    var(--tracel-live) 45%,
+    var(--tracel-text-secondary)
+  );
+}
+.journey-list li {
+  border-left-color: var(--tracel-border);
+}
+.journey-node {
+  color: var(--tracel-live-dim);
+  background: var(--tracel-surface-1);
+}
+.journey-list .current .journey-node,
+.journey-list .current strong,
+.current-tag {
+  color: var(--tracel-live);
+}
+.current-tag {
+  background: color-mix(in srgb, var(--tracel-live) 8%, transparent);
+  border-color: var(--tracel-live-dim);
+}
+.journey-dwell {
+  color: color-mix(in srgb, var(--tracel-live) 50%, var(--tracel-text-muted));
+}
+.location-coordinates {
+  color: color-mix(
+    in srgb,
+    var(--tracel-live) 45%,
+    var(--tracel-text-secondary)
+  );
+}
+.maplibregl-ctrl-attrib.maplibregl-compact:not([open]),
+.maplibregl-ctrl-attrib-button {
+  border-radius: 50% !important;
+}
+.journey-list {
+  border-left-color: var(--tracel-border);
+}
+.journey-top,
+.journey-description {
+  color: var(--tracel-text-secondary);
+}
+.journey-list strong {
+  color: var(--tracel-text);
+}
+.journey-list .current strong {
+  color: var(--tracel-live);
+}
+.maplibregl-ctrl-scale {
+  color: var(--tracel-text-secondary) !important;
+  border-color: var(--tracel-border) !important;
+  background: var(--tracel-surface-1) !important;
+}
