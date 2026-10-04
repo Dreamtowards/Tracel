@@ -45,6 +45,8 @@ export interface Visitor {
   acquisition: { referrer: string | null; source: string };
   currentPage: Page;
   status: VisitorStatus;
+  visitCount?: number;
+  previousSessionDurationMs?: number;
   firstSeen: number;
   lastSeen: number;
   sessionStartedAt: number;

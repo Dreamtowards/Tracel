@@ -140,7 +140,10 @@ export class MockVisitorStream implements VisitorStream {
   }
 
   spawn(initial = false) {
-    const firstSeen = initial ? this.now - this.wait(20000, 120000) : this.now;
+    const sessionStartedAt = initial ? this.now - this.wait(20000, 120000) : this.now;
+    const visitCount = this.random() < 0.4 ? 2 + Math.floor(this.random() * 7) : 1;
+    const firstSeen = visitCount > 1 ? sessionStartedAt - this.wait(86400000, 45 * 86400000) : sessionStartedAt;
+    const previousSessionDurationMs = visitCount > 1 ? (visitCount - 1) * this.wait(60000, 420000) : 0;
     // Sequential city assignment gives the initial view geographic variety.
     const location = initial
       ? cities[Object.keys(this.visitors).length % cities.length]
@@ -158,18 +161,20 @@ export class MockVisitorStream implements VisitorStream {
       currentPage: entry,
       status: "online",
       firstSeen,
-      lastSeen: firstSeen,
-      sessionStartedAt: firstSeen,
+      visitCount,
+      previousSessionDurationMs,
+      lastSeen: sessionStartedAt,
+      sessionStartedAt,
       journey: [],
     };
-    visitor = this.emit(visitor, "visitor_joined", firstSeen);
-    visitor = this.emit(visitor, "page_view", firstSeen + (initial ? 800 : 0));
+    visitor = this.emit(visitor, "visitor_joined", sessionStartedAt);
+    visitor = this.emit(visitor, "page_view", sessionStartedAt + (initial ? 800 : 0));
     if (initial) {
       const count = Math.floor(this.random() * 5) + 3;
       for (let step = 0; step < count; step++) {
         const timestamp =
-          firstSeen +
-          ((this.now - firstSeen - 2000) * (step + 1)) / (count + 1);
+          sessionStartedAt +
+          ((this.now - sessionStartedAt - 2000) * (step + 1)) / (count + 1);
         visitor = this.emit(
           visitor,
           "navigation",
@@ -218,7 +223,7 @@ export class MockVisitorStream implements VisitorStream {
           this.nextActions.delete(nextId);
           continue;
         }
-        const age = this.now - visitor.firstSeen;
+        const age = this.now - visitor.sessionStartedAt;
         if (age > 240000 || (age > 70000 && this.random() < 0.18)) {
           this.emit(visitor, "visitor_left", this.now);
           this.nextActions.delete(nextId);

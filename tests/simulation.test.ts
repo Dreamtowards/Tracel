@@ -13,7 +13,13 @@ test("seeded visitors have coherent journeys and plausible clients", () => {
       visitor.currentPage.pathname,
       visitor.journey.at(-1)?.pathname,
     );
-    assert.equal(visitor.firstSeen, visitor.journey[0].timestamp);
+    assert.equal(visitor.sessionStartedAt, visitor.journey[0].timestamp);
+    assert.ok(visitor.firstSeen <= visitor.sessionStartedAt);
+    assert.ok((visitor.visitCount ?? 1) >= 1);
+    if ((visitor.visitCount ?? 1) > 1) {
+      assert.ok(visitor.firstSeen < visitor.sessionStartedAt);
+      assert.ok((visitor.previousSessionDurationMs ?? 0) > 0);
+    }
     for (let i = 1; i < visitor.journey.length; i++)
       assert.ok(
         visitor.journey[i].timestamp >= visitor.journey[i - 1].timestamp,

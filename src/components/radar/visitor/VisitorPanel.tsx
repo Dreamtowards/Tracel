@@ -16,7 +16,15 @@ import {
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useRadarStore } from "@/radar/store";
-import { time, duration, coordinate, elapsed } from "@/radar/format";
+import {
+  time,
+  duration,
+  coordinate,
+  elapsed,
+  firstSeenAgo,
+  localDateTime,
+  totalDuration,
+} from "@/radar/format";
 import type { JourneyType } from "@/radar/types";
 
 const journeyLabels: Record<JourneyType, string> = {
@@ -57,7 +65,7 @@ export function VisitorPanel() {
   return (
     <aside className="detail-panel" aria-labelledby="visitor-heading">
       <div className="detail-heading">
-        <span className="eyebrow">VISITOR DETAILS</span>
+        <span className="eyebrow">Visitor details</span>
         <Button
           id="close-visitor"
           variant="ghost"
@@ -79,18 +87,40 @@ export function VisitorPanel() {
             {visitor.status.toUpperCase()}
           </span>
         </div>
-        <div className="session-line">
-          <span>
-            SESSION <b>{duration(sessionNow - visitor.sessionStartedAt)}</b>
-          </span>
-          <span>
-            FIRST SEEN <b>{time(visitor.firstSeen)}</b>
-          </span>
-        </div>
+        <dl className="visitor-summary">
+          <div>
+            <dt>Visits</dt>
+            <dd>{visitor.visitCount ?? 1}</dd>
+          </div>
+          <div title="Previous sessions plus this session's elapsed time, including idle time">
+            <dt>Total time</dt>
+            <dd>
+              {totalDuration(
+                (visitor.previousSessionDurationMs ?? 0) +
+                  sessionNow - visitor.sessionStartedAt,
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>This session</dt>
+            <dd>{duration(sessionNow - visitor.sessionStartedAt)}</dd>
+          </div>
+          <div>
+            <dt>First visit</dt>
+            <dd>
+              <time
+                dateTime={new Date(visitor.firstSeen).toISOString()}
+                title={localDateTime(visitor.firstSeen)}
+              >
+                {firstSeenAgo(visitor.firstSeen, now)}
+              </time>
+            </dd>
+          </div>
+        </dl>
         <section className="detail-section">
           <h3>
             <Globe2 size={13} />
-            LOCATION
+            Location
           </h3>
           <div className="location-title">
             {visitor.location.city}
@@ -109,7 +139,7 @@ export function VisitorPanel() {
             ) : (
               <Monitor size={13} />
             )}
-            CLIENT
+            Client
           </h3>
           <div className="client-primary">
             <span>
@@ -148,7 +178,7 @@ export function VisitorPanel() {
           <div>
             <h3>
               <ExternalLink size={13} />
-              SOURCE
+              Source
             </h3>
             <p>{visitor.acquisition.source}</p>
             {visitor.acquisition.referrer && (
@@ -160,7 +190,7 @@ export function VisitorPanel() {
           <div>
             <h3>
               <CornerDownRight size={13} />
-              CURRENT PAGE
+              Current page
             </h3>
             <p className="current-page mono">{visitor.currentPage.pathname}</p>
             <span className="secondary">{visitor.currentPage.title}</span>
@@ -169,7 +199,7 @@ export function VisitorPanel() {
         <section className="detail-section journey-section">
           <h3>
             <Route size={13} />
-            JOURNEY{" "}
+            Journey{" "}
             <span>
               {visitor.journey.length.toString().padStart(2, "0")} EVENTS
             </span>

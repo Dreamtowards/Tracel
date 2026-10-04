@@ -216,7 +216,7 @@ function VisitorLayer({ reducedMotion }: { reducedMotion: boolean }) {
       );
       color.multiplyScalar(fade);
       points.current!.setColorAt(i, color);
-      const age = (now - visitor.firstSeen) / 1000;
+      const age = (now - visitor.sessionStartedAt) / 1000;
       if (
         ringCount < 12 &&
         fade > 0 &&

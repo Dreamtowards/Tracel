@@ -16,7 +16,8 @@ Open http://127.0.0.1:3000. Production: `npm run build` then `npm start`.
 - Switch between the default flat map and the 3D globe. The map pans and zooms down to city and street detail; the globe supports orbit and zoom.
 - Click a cluster to expand it. A city with multiple visitors opens a visitor picker. Selecting a visitor from either view or the list focuses their city.
 - Select a globe visitor, an event, or a visitor in the Visitors tab to inspect location, client, source and full journey. Escape closes the panel.
-- Pause/resume or switch between 1×, 5× and 20×. Speed advances simulated time; the header clock shows real UTC.
+- Visitor details include visit count, approximate total session time and relative first visit, with the full date on hover. Historical visits are simulated; total time includes idle time.
+- Pause/resume or switch between 1×, 5× and 20×. Speed advances simulated time; the header clock shows real local time. Event, journey and chart timestamps use the browser's local timezone.
 - Simulation tools provide reset and spawn. Reset restores the initial 12-visitor scene. Hidden tabs suspend simulation and rendering to avoid catch-up bursts.
 - Fullscreen supports using the surface on a second display. Narrow screens use an overlay visitor panel.
 - Traffic shows 5 or 10 minutes of simulated time. Views counts page loads and navigation per 15-second bucket; Visitors counts unique sessions viewing a page in that same bucket. Hover or focus a bucket for exact values. Legend buttons toggle each series.

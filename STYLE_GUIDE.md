@@ -322,13 +322,7 @@ Uppercase is reserved for short machine-like labels.
 Good:
 
 ```text
-TRACEL
-RADAR
-LIVE
-STATUS
 UTC
-PAGE VIEWS
-ONLINE
 ```
 
 Normal case should be used for readable content:
@@ -338,9 +332,6 @@ Live events
 Traffic
 Audience
 San Francisco
-Visitor arrived
-Page view
-Google Search
 Windows 11
 ```
 

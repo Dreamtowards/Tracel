@@ -25,7 +25,7 @@ import { AudienceRankings } from "./telemetry/AudienceRankings";
 import { useRadarStore } from "@/radar/store";
 import { useSimulation } from "@/radar/use-simulation";
 import { themePalettes, type ThemeColor } from "@/radar/theme";
-import { time } from "@/radar/format";
+import { time, localTimeZone } from "@/radar/format";
 
 const Globe = dynamic(() => import("./globe/Globe"), {
   ssr: false,
@@ -56,7 +56,7 @@ function Clock() {
   return (
     <span className="utc-clock mono">
       {now ? time(now) : "--:--:--"}
-      <span>UTC</span>
+      <span title={now ? localTimeZone() : undefined}>Local</span>
     </span>
   );
 }
@@ -234,7 +234,7 @@ export function RadarView() {
                   <p>
                     Speed changes simulated time.
                     <br />
-                    UTC remains real time.
+                    Local clock remains real time.
                   </p>
                 </div>
               )}

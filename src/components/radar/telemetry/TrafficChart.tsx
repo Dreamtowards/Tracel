@@ -105,7 +105,7 @@ export function TrafficChart() {
           <i className="visitors-key" />
           Visitors / 15s
         </button>
-        <span>UTC · simulated time</span>
+        <span>Local · simulated time</span>
       </div>
       <div
         className="traffic-plot"
