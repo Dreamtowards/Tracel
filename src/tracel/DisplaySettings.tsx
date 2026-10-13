@@ -1,0 +1,111 @@
+import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
+
+export type TimelineAppearance = {
+  padding: number;
+  backgroundHeight: number;
+  contextOpacity: number;
+  durationLabels: boolean;
+};
+export const defaultAppearance: TimelineAppearance = {
+  padding: 3,
+  backgroundHeight: 20,
+  contextOpacity: 72,
+  durationLabels: true,
+};
+
+export function DisplaySettings({
+  value,
+  onChange,
+  onClose,
+}: {
+  value: TimelineAppearance;
+  onChange: (value: TimelineAppearance) => void;
+  onClose: () => void;
+}) {
+  return (
+    <section
+      className="tx-display-settings"
+      aria-label="Timeline display settings"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+    >
+      <header>
+        <span>
+          <SlidersHorizontal size={15} /> Timeline appearance
+        </span>
+        <button
+          className="tx-icon-button"
+          aria-label="Close display settings"
+          onClick={onClose}
+        >
+          <X size={15} />
+        </button>
+      </header>
+      <p>Less space. More context. Changes apply immediately.</p>
+      <label>
+        Lane vertical padding <output>{value.padding} px</output>
+        <input
+          aria-label="Lane vertical padding"
+          type="range"
+          min={0}
+          max={12}
+          value={value.padding}
+          onChange={(e) =>
+            onChange({ ...value, padding: Number(e.target.value) })
+          }
+        />
+        <small>Applied above and below each lane’s content.</small>
+      </label>
+      <label>
+        Background row height <output>{value.backgroundHeight} px</output>
+        <input
+          aria-label="Background row height"
+          type="range"
+          min={16}
+          max={32}
+          step={2}
+          value={value.backgroundHeight}
+          onChange={(e) =>
+            onChange({ ...value, backgroundHeight: Number(e.target.value) })
+          }
+        />
+      </label>
+      <label>
+        Context brightness <output>{value.contextOpacity}%</output>
+        <input
+          aria-label="Context brightness"
+          type="range"
+          min={35}
+          max={100}
+          value={value.contextOpacity}
+          onChange={(e) =>
+            onChange({ ...value, contextOpacity: Number(e.target.value) })
+          }
+        />
+      </label>
+      <label className="tx-setting-check">
+        <span>
+          Show duration in app lanes
+          <small>When there is enough horizontal space.</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={value.durationLabels}
+          onChange={(e) =>
+            onChange({ ...value, durationLabels: e.target.checked })
+          }
+        />
+      </label>
+      <footer>
+        <button
+          className="tx-text-button"
+          onClick={() => onChange(defaultAppearance)}
+        >
+          <RotateCcw size={12} /> Reset defaults
+        </button>
+        <span>Session preferences</span>
+      </footer>
+    </section>
+  );
+}

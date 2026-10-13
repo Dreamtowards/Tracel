@@ -46,6 +46,7 @@ import {
   metricInfo,
 } from "./model";
 import { Timeline } from "./Timeline";
+import { DisplaySettings, defaultAppearance } from "./DisplaySettings";
 import "./explorer.css";
 
 function AppIcon({ id, size = 15 }: { id: string; size?: number }) {
@@ -64,8 +65,8 @@ function AppIcon({ id, size = 15 }: { id: string; size?: number }) {
 export default function Explorer() {
   const [data, setData] = useState<Capture | null>(null);
   const [view, setView] = useState<Range>({
-    start: 6 * DAY + 9 * 3600,
-    end: 6 * DAY + 18 * 3600,
+    start: 6 * DAY + 6 * 3600,
+    end: 7 * DAY,
   });
   const [selection, setSelection] = useState<Range | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
@@ -75,6 +76,8 @@ export default function Explorer() {
   );
   const [inspector, setInspector] = useState(true);
   const [help, setHelp] = useState(false);
+  const [settings, setSettings] = useState(false);
+  const [appearance, setAppearance] = useState(defaultAppearance);
   const [day, setDay] = useState(6);
   const [preset, setPreset] = useState("Day");
   useEffect(() => {
@@ -127,7 +130,7 @@ export default function Explorer() {
         ? data.bounds
         : nextPreset === "1 hour"
           ? { start: d * DAY + 10.5 * 3600, end: d * DAY + 11.5 * 3600 }
-          : { start: d * DAY + 9 * 3600, end: d * DAY + 18 * 3600 },
+          : { start: d * DAY + 6 * 3600, end: (d + 1) * DAY },
     );
   };
   const changeView = (next: Range) => {
@@ -312,6 +315,23 @@ export default function Explorer() {
               ))}
             </div>
             <div className="tx-toolbar-space" />
+            <div className="tx-settings-anchor">
+              <button
+                className={`tx-button ${settings ? "tx-settings-active" : ""}`}
+                aria-label="Display settings"
+                aria-expanded={settings}
+                onClick={() => setSettings(!settings)}
+              >
+                <SlidersHorizontal size={14} /> Display
+              </button>
+              {settings && (
+                <DisplaySettings
+                  value={appearance}
+                  onChange={setAppearance}
+                  onClose={() => setSettings(false)}
+                />
+              )}
+            </div>
             <div className="tx-segmented tx-tools">
               <button
                 title="Select range"
@@ -514,6 +534,7 @@ export default function Explorer() {
                 selection={selection}
                 mode={mode}
                 focus={focus}
+                appearance={appearance}
                 onView={changeView}
                 onSelect={setSelection}
                 onFocus={setFocus}
@@ -551,6 +572,12 @@ export default function Explorer() {
                   )}
                 </div>
                 <div className="tx-range">
+                  <strong>
+                    {duration(range.end - range.start)}{" "}
+                    <small>
+                      {selection ? "Selected duration" : "Visible duration"}
+                    </small>
+                  </strong>
                   <div>
                     {dateLabel(range.start)}
                     {Math.floor(range.start / DAY) !==
@@ -561,10 +588,6 @@ export default function Explorer() {
                       {clock(range.start, true)} — {clock(range.end, true)}
                     </span>
                   </div>
-                  <strong>{duration(range.end - range.start)}</strong>
-                  <span>
-                    {selection ? "Selected duration" : "Visible duration"}
-                  </span>
                   {selection && (
                     <button
                       className="tx-button"

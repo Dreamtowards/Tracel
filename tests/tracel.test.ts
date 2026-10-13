@@ -44,7 +44,7 @@ test("zero audio is observed data, sleep and capture gaps are missing data", () 
   const silent = analyze(data, { start: at(9), end: at(9.1) });
   assert.equal(silent.metrics.audio.average, 0);
   assert.ok(silent.metrics.audio.coverage > 0);
-  const asleep = analyze(data, { start: at(20), end: at(21) });
+  const asleep = analyze(data, { start: at(3), end: at(4) });
   assert.equal(asleep.metrics.cpu.average, null);
   assert.equal(asleep.metrics.cpu.peak, null);
   assert.equal(asleep.metrics.cpu.coverage, 0);

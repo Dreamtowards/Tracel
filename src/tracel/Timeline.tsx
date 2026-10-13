@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
+import type { TimelineAppearance } from "./DisplaySettings";
 import {
   Capture,
   Range,
@@ -33,6 +34,7 @@ type Props = {
   selection: Range | null;
   mode: "select" | "pan";
   focus: string | null;
+  appearance: TimelineAppearance;
   onView: (r: Range) => void;
   onSelect: (r: Range | null) => void;
   onFocus: (id: string | null) => void;
@@ -45,12 +47,13 @@ export function Timeline({
   selection,
   mode,
   focus,
+  appearance,
   onView,
   onSelect,
   onFocus,
 }: Props) {
   const [closed, setClosed] = useState<string[]>([]);
-  const [expanded, setExpanded] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState<string[]>(["foreground"]);
   const [heights, setHeights] = useState<Record<string, number>>({});
   const [width, setWidth] = useState(900);
   const host = useRef<HTMLDivElement>(null),
@@ -81,7 +84,7 @@ export function Timeline({
         id: "foreground",
         name: "Foreground app",
         subtitle: "Window in focus",
-        height: 62,
+        height: 34 + appearance.padding * 2,
         kind: "app",
       });
       if (expanded.includes("foreground"))
@@ -89,14 +92,14 @@ export function Timeline({
           id: "context",
           name: "Window context",
           subtitle: "Files · URLs · projects",
-          height: 40,
+          height: 24 + appearance.padding * 2,
           kind: "context",
         });
       all.push({
         id: "background",
         name: "Background apps",
         subtitle: "Running applications",
-        height: 34,
+        height: 26 + appearance.padding * 2,
         kind: "background",
       });
       if (expanded.includes("background"))
@@ -105,10 +108,15 @@ export function Timeline({
             id: `bg-${app.id}`,
             name: app.name,
             appId: app.id,
-            height: 29,
+            height: appearance.backgroundHeight,
             kind: "background",
           });
-      all.push({ id: "afk", name: "Idle / AFK", height: 32, kind: "afk" });
+      all.push({
+        id: "afk",
+        name: "Idle / AFK",
+        height: 18 + appearance.padding * 2,
+        kind: "afk",
+      });
     }
     all.push({
       id: "performance",
@@ -181,7 +189,7 @@ export function Timeline({
           id: "media",
           name: "Now playing",
           subtitle: "Media sessions",
-          height: 42,
+          height: 24 + appearance.padding * 2,
           kind: "media",
         },
       );
@@ -192,7 +200,7 @@ export function Timeline({
       y += height;
       return row;
     });
-  }, [closed, expanded, heights, data]);
+  }, [closed, expanded, heights, data, appearance]);
   const totalHeight = tracks.reduce((s, t) => s + t.height, 32);
   const toggle = (id: string, group: boolean) =>
     (group ? setClosed : setExpanded)((previous) =>
@@ -295,6 +303,7 @@ export function Timeline({
       }
       for (const row of tracks) {
         const { y, height } = row;
+        const pad = Math.min(appearance.padding, Math.max(0, (height - 8) / 2));
         ctx.strokeStyle = "#242b2e";
         ctx.beginPath();
         ctx.moveTo(0, y + height - 0.5);
@@ -337,7 +346,7 @@ export function Timeline({
                 ctx.fillStyle =
                   data.apps.find((a) => a.id === event.appId)!.color +
                   (focus && focus !== event.appId ? "33" : "bb");
-                ctx.fillRect(px, y + 13, 4, height - 26);
+                ctx.fillRect(px, y + pad, 4, height - pad * 2);
               }
             }
           } else
@@ -345,11 +354,16 @@ export function Timeline({
               const app = data.apps.find((a) => a.id === event.appId)!;
               ctx.globalAlpha = focus && focus !== app.id ? 0.22 : 1;
               if (row.kind === "app") {
-                rect(event, y + 12, height - 24, app.color + "99", app.name);
+                const label =
+                  appearance.durationLabels &&
+                  x(event.end) - x(event.start) > 130
+                    ? `${app.name} · ${duration(event.end - event.start)}`
+                    : app.name;
+                rect(event, y + pad, height - pad * 2, app.color + "99", label);
                 ctx.fillStyle = app.color;
                 ctx.fillRect(
                   Math.max(0, x(event.start)),
-                  y + 12,
+                  y + pad,
                   Math.max(
                     1,
                     Math.min(width, x(event.end)) -
@@ -362,10 +376,13 @@ export function Timeline({
                 for (const context of event.contexts)
                   rect(
                     context,
-                    y + 6,
-                    height - 12,
-                    app.color + "30",
-                    span < 7200 ? context.title : "",
+                    y + pad,
+                    height - pad * 2,
+                    app.color +
+                      Math.round((appearance.contextOpacity / 100) * 255)
+                        .toString(16)
+                        .padStart(2, "0"),
+                    context.title,
                   );
               ctx.globalAlpha = 1;
             }
@@ -377,42 +394,43 @@ export function Timeline({
             ))
               rect(
                 lifetime,
-                y + 10,
-                height - 20,
-                data.apps.find((a) => a.id === row.appId)!.color + "55",
+                y + pad,
+                height - pad * 2,
+                data.apps.find((a) => a.id === row.appId)!.color + "99",
               );
           else {
-            for (let px = 0; px < width; px += 3) {
-              const t = view.start + (px / width) * span;
-              const fg = data.activity.find(
-                (a) => a.start <= t && a.end > t,
-              )?.appId;
-              const count = data.background.filter(
-                (b) => b.start <= t && b.end > t && b.appId !== fg,
-              ).length;
-              if (count) {
-                ctx.fillStyle = "#657b83";
-                ctx.fillRect(px, y + height - 8 - count * 2, 3, count * 2);
-              }
-            }
+            const stripe = (height - pad * 2) / data.apps.length;
+            data.apps.forEach((app, index) => {
+              const top = y + pad + index * stripe;
+              ctx.globalAlpha = focus && focus !== app.id ? 0.25 : 1;
+              for (const lifetime of data.background.filter(
+                (b) => b.appId === app.id,
+              ))
+                rect(lifetime, top, Math.max(1, stripe - 1), app.color + "bd");
+              for (const event of data.activity.filter(
+                (a) => a.appId === app.id,
+              ))
+                rect(event, top, Math.max(1, stripe - 1), "#101416");
+              ctx.globalAlpha = 1;
+            });
           }
           // Running lifetimes exclude foreground slices in the expanded rows.
           if (row.appId)
             for (const event of data.activity.filter(
               (a) => a.appId === row.appId,
             ))
-              rect(event, y + 10, height - 20, "#101416");
+              rect(event, y + pad, height - pad * 2, "#101416");
         }
         if (row.kind === "afk")
           for (const event of data.afk)
-            rect(event, y + 9, height - 18, "#bba16d55", "AFK");
+            rect(event, y + pad, height - pad * 2, "#bba16d77", "AFK");
         if (row.kind === "media")
           for (const event of data.media)
             rect(
               event,
-              y + 9,
-              height - 18,
-              "#6da67f35",
+              y + pad,
+              height - pad * 2,
+              "#6da67f66",
               `♫  ${event.title} · ${event.artist}`,
             );
         if (row.kind === "metric") {
@@ -423,8 +441,8 @@ export function Timeline({
             );
           for (const [keyIndex, key] of row.keys!.entries()) {
             const info = metricInfo[key];
-            const top = y + 9,
-              bottom = y + height - 8,
+            const top = y + Math.max(3, pad),
+              bottom = y + height - Math.max(2, pad),
               h = bottom - top;
             // One min/max envelope per pixel preserves spikes without drawing every sample.
             const buckets = new Map<
@@ -505,7 +523,7 @@ export function Timeline({
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", draw);
     };
-  }, [data, view, selection, tracks, width, totalHeight, focus]);
+  }, [data, view, selection, tracks, width, totalHeight, focus, appearance]);
 
   useEffect(() => {
     const element = canvas.current!;
@@ -561,7 +579,8 @@ export function Timeline({
         const context = event.contexts.find(
           (c) => c.start <= time && c.end > time,
         );
-        lines += `\n${event.windowTitle}\n${app.exe} · ${duration(event.end - event.start)}\n${context?.value ?? ""}`;
+        const interval = row.kind === "context" && context ? context : event;
+        lines = `${duration(interval.end - interval.start)}  ·  ${app.name}\n${dateLabel(interval.start)} · ${clock(interval.start, true)} — ${clock(interval.end, true)}\n${event.windowTitle}\n${app.exe}\n${context?.value ?? ""}`;
       } else if (row.keys)
         lines +=
           "\n" +
@@ -645,13 +664,16 @@ export function Timeline({
                   style={{
                     background: row.keys
                       ? metricInfo[row.keys[0]].color
-                      : "#78868c",
+                      : (data.apps.find((app) => app.id === row.appId)?.color ??
+                        "#78868c"),
                   }}
                 />
               )}
               <span>
                 {row.name}
-                {row.subtitle && <small>{row.subtitle}</small>}
+                {row.subtitle && row.height >= 38 && (
+                  <small>{row.subtitle}</small>
+                )}
               </span>
             </button>
             {row.kind !== "group" && (

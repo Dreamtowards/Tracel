@@ -1283,3 +1283,113 @@
     transition: none;
   }
 }
+
+/* Timeline appearance controls keep density independent from the viewport. */
+.tx-settings-anchor {
+  position: relative;
+}
+.tx-settings-active {
+  border-color: #7c9f89;
+  color: #cce4d4 !important;
+}
+.tx-display-settings {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 310px;
+  z-index: 30;
+  padding: 15px 18px;
+  background: #1a2226;
+  border: 1px solid #46554f;
+  border-radius: 7px;
+  box-shadow: 0 12px 40px #0007;
+}
+.tx-display-settings header,
+.tx-display-settings header > span,
+.tx-display-settings footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tx-display-settings header {
+  font-size: 12px;
+  font-weight: 500;
+}
+.tx-display-settings > p {
+  color: #94a49c;
+  font-size: 10px;
+  margin: 4px 0 20px;
+}
+.tx-display-settings > label {
+  display: block;
+  font-size: 11px;
+  margin: 17px 0;
+}
+.tx-display-settings output {
+  float: right;
+  color: #c4d9cb;
+  font:
+    11px Consolas,
+    monospace;
+}
+.tx-display-settings input[type="range"] {
+  display: block;
+  width: 100%;
+  margin: 12px 0 7px;
+  accent-color: #a4cfb7;
+  cursor: pointer;
+  height: 4px;
+}
+.tx-display-settings small {
+  display: block;
+  font-size: 9px;
+  color: #8b9da4;
+  margin-top: 4px;
+}
+.tx-display-settings label.tx-setting-check {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+}
+.tx-display-settings input[type="checkbox"] {
+  accent-color: #a4cfb7;
+  width: 15px;
+  height: 15px;
+}
+.tx-display-settings footer {
+  border-top: 1px solid #34413f;
+  padding-top: 13px;
+}
+.tx-display-settings footer > span {
+  font-size: 9px;
+  color: #809189;
+}
+.tx-range > strong {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.tx-range > strong small {
+  font-size: 9px;
+  letter-spacing: 0;
+  color: #9caea5;
+  font-weight: 400;
+}
+.tx-range > div {
+  margin-bottom: 0;
+}
+.tx-tooltip::first-line {
+  color: #ecf4ed;
+  font-weight: 600;
+  font-size: 12px;
+}
+@media (max-width: 900px) {
+  .tx-display-settings {
+    right: auto;
+    left: 0;
+  }
+}
