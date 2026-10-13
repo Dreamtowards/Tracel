@@ -9,7 +9,11 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. Production: `npm run build` then `npm start`.
+Open http://127.0.0.1:3000. Run `npm run build` for production.
+
+Production builds export a static site to `out/`. Preview it with a static HTTP server.
+To deploy to Cloudflare Pages, run `npx wrangler login` once, then `npm run deploy`.
+The deployment targets the `tracel` Pages project and its `main` production branch.
 
 ## Explore
 

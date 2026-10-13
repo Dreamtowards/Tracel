@@ -40,12 +40,66 @@
 }
 .brand {
   font-family: var(--font-interface);
-  font-size: 18px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+  gap: 0;
+  flex-shrink: 0;
+  letter-spacing: 0;
 }
 .brand-symbol {
+  width: 28px;
+  height: 28px;
+  color: var(--tracel-live);
+}
+.brand-symbol svg {
+  width: 24px;
+  height: 24px;
+}
+.site-identity {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 0;
+  border: 0;
+}
+.site-select {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  height: 28px;
+  padding: 4px 20px 4px 6px;
   color: var(--tracel-text-secondary);
+  font-family: var(--font-interface);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.3;
+  cursor: pointer;
+  color-scheme: dark;
+}
+.site-select:hover {
+  background: var(--tracel-surface-1);
+  border-color: var(--tracel-border-subtle);
+  color: var(--tracel-text);
+}
+.site-select:focus-visible {
+  outline: 1px solid var(--tracel-live);
+  outline-offset: 2px;
+}
+.site-select option {
+  background: var(--tracel-surface-2);
+  color: var(--tracel-text);
+}
+.site-identity > svg {
+  position: absolute;
+  right: 6px;
+  pointer-events: none;
+  color: var(--tracel-text-muted);
+}
+.brand:hover {
+  opacity: 0.8;
+}
+.app-header {
+  column-gap: 12px;
 }
 .header-right,
 .simulation-controls,

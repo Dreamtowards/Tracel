@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Map as MapIcon,
   ALargeSmall,
+  ChevronDown,
   Crosshair,
   Globe2,
   Maximize,
@@ -26,6 +27,12 @@ import { useRadarStore } from "@/radar/store";
 import { useSimulation } from "@/radar/use-simulation";
 import { themePalettes, type ThemeColor } from "@/radar/theme";
 import { time, localTimeZone } from "@/radar/format";
+
+const demoSites = [
+  { domain: "elytra.dev", seed: 42 },
+  { domain: "docs.elytra.dev", seed: 137 },
+  { domain: "tracel.pages.dev", seed: 256 },
+];
 
 const Globe = dynamic(() => import("./globe/Globe"), {
   ssr: false,
@@ -62,7 +69,8 @@ function Clock() {
 }
 
 export function RadarView() {
-  const { reset, spawn } = useSimulation();
+  const [siteIndex, setSiteIndex] = useState(0);
+  const { reset, spawn } = useSimulation(demoSites[siteIndex].seed);
   const themeColor = useRadarStore((state) => state.themeColor);
   const setThemeColor = useRadarStore((state) => state.setThemeColor);
   const palette = themePalettes[themeColor];
@@ -125,17 +133,29 @@ export function RadarView() {
       className={`radar-app radar-expanded ${selected ? "visitor-selected" : ""} ${view === "map" ? "map-mode" : "globe-mode"}`}
     >
       <header className="app-header">
-        <a className="brand" href="/" aria-label="Tracel home">
+        <a className="brand" href="/" aria-label="Tracel home" title="Tracel">
           <span className="brand-symbol">
-            <Crosshair size={25} strokeWidth={1.3} />
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3L22 21H2L12 3Z" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
           </span>
-          <span>TRACEL</span>
         </a>
         <div className="site-identity">
-          <span className="site-icon">
-            <Globe2 size={14} />
-          </span>
-          <span>elytra.dev</span>
+          <select
+            className="site-select"
+            aria-label="Switch website"
+            value={siteIndex}
+            style={{ width: `${demoSites[siteIndex].domain.length + 4}ch` }}
+            onChange={(event) => {
+              setSiteIndex(Number(event.target.value));
+              setResetKey((value) => value + 1);
+            }}
+          >
+            {demoSites.map((site, index) => (
+              <option key={site.domain} value={index}>{site.domain}</option>
+            ))}
+          </select>
+          <ChevronDown size={11} aria-hidden="true" />
         </div>
         <div className="header-right">
           <span className="demo-badge">Simulated</span>

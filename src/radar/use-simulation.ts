@@ -4,10 +4,10 @@ import { useEffect, useRef, useCallback } from "react";
 import { MockVisitorStream } from "./simulation/simulation";
 import { useRadarStore } from "./store";
 
-export function useSimulation() {
+export function useSimulation(seed = 42) {
   const stream = useRef<MockVisitorStream | null>(null);
   useEffect(() => {
-    const engine = new MockVisitorStream();
+    const engine = new MockVisitorStream(Date.now(), seed);
     stream.current = engine;
     useRadarStore.getState().reset(engine.snapshot());
     let previous = performance.now();
@@ -28,12 +28,12 @@ export function useSimulation() {
       clearInterval(interval);
       stream.current = null;
     };
-  }, []);
+  }, [seed]);
 
   const reset = useCallback(() => {
-    stream.current = new MockVisitorStream();
+    stream.current = new MockVisitorStream(Date.now(), seed);
     useRadarStore.getState().reset(stream.current.snapshot());
-  }, []);
+  }, [seed]);
   const spawn = useCallback(() => {
     const engine = stream.current;
     if (

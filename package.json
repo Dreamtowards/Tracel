@@ -7,6 +7,7 @@
     "dev": "next dev --hostname 127.0.0.1",
     "prebuild": "node scripts/prepare-map-worker.mjs",
     "build": "next build",
+    "deploy": "npm run build && wrangler pages deploy out --project-name tracel --branch main",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts"
@@ -38,6 +39,7 @@
     "topojson-client": "^3.1.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "world-atlas": "^2.0.2"
+    "world-atlas": "^2.0.2",
+    "wrangler": "^4.147.0"
   }
 }
