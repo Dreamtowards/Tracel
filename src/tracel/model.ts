@@ -112,12 +112,12 @@ export const metricInfo: Record<
   MetricKey,
   { name: string; color: string; max: number; unit: string }
 > = {
-  cpu: { name: "CPU", color: "#82c5aa", max: 100, unit: "%" },
-  ram: { name: "Memory", color: "#b7a0df", max: 32, unit: "GB" },
+  cpu: { name: "CPU", color: "#54bdd6", max: 100, unit: "%" },
+  ram: { name: "Memory", color: "#5485df", max: 32, unit: "GB" },
   gpu: { name: "GPU", color: "#d4ab72", max: 100, unit: "%" },
-  download: { name: "Download", color: "#80b7e5", max: 32, unit: "MB/s" },
-  upload: { name: "Upload", color: "#b29add", max: 32, unit: "MB/s" },
-  read: { name: "Read", color: "#d8b677", max: 160, unit: "MB/s" },
-  write: { name: "Write", color: "#85bcb0", max: 160, unit: "MB/s" },
-  audio: { name: "Audio", color: "#82c5aa", max: 100, unit: "%" },
+  download: { name: "Receive", color: "#d783c3", max: 32, unit: "MB/s" },
+  upload: { name: "Send", color: "#d783c3", max: 32, unit: "MB/s" },
+  read: { name: "Read", color: "#83bc68", max: 160, unit: "MB/s" },
+  write: { name: "Write", color: "#83bc68", max: 160, unit: "MB/s" },
+  audio: { name: "Audio", color: "#ae9bdd", max: 100, unit: "%" },
 };

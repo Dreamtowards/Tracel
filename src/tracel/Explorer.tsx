@@ -46,6 +46,7 @@ import {
   metricInfo,
 } from "./model";
 import { Timeline } from "./Timeline";
+import { overviewPath } from "./overview";
 import { DisplaySettings, defaultAppearance } from "./DisplaySettings";
 import "./explorer.css";
 
@@ -108,6 +109,7 @@ export default function Explorer() {
     };
   }, [help]);
   const range = selection ?? view;
+  const overview = useMemo(() => (data ? overviewPath(data) : ""), [data]);
   const stats = useMemo(
     () => (data ? analyze(data, range) : null),
     [data, range],
@@ -168,7 +170,7 @@ export default function Explorer() {
   return (
     <main className="tx-app">
       <header className="tx-header">
-        <a href="/tracel" className="tx-brand">
+        <a href="/timeline" className="tx-brand">
           <span className="tx-brand-mark">
             <Activity size={23} />
           </span>
@@ -462,26 +464,12 @@ export default function Explorer() {
                     opacity=".55"
                   />
                 ))}
-                {Array.from({ length: 7 }, (_, d) => (
-                  <path
-                    key={d}
-                    d={data.metrics
-                      .filter(
-                        (s, i) =>
-                          Math.floor(s.time / DAY) === d &&
-                          s.values &&
-                          i % 6 === 0,
-                      )
-                      .map(
-                        (s, i) =>
-                          `${i === 0 ? "M" : "L"}${(s.time / data.bounds.end) * 1400},${30 - (s.values!.cpu / 100) * 27}`,
-                      )
-                      .join(" ")}
-                    fill="none"
-                    stroke="#819f94"
-                    strokeWidth="1.2"
-                  />
-                ))}
+                <path
+                  d={overview}
+                  fill="none"
+                  stroke={metricInfo.cpu.color}
+                  strokeWidth="1.2"
+                />
               </svg>
               <div
                 className="tx-overview-window"
@@ -866,7 +854,13 @@ export default function Explorer() {
           </div>
           <section className="tx-summary-strip">
             <div>
-              <span className="tx-summary-icon">
+              <span
+                className="tx-summary-icon"
+                style={{
+                  color: metricInfo.cpu.color,
+                  background: metricInfo.cpu.color + "18",
+                }}
+              >
                 <Activity size={17} />
               </span>
               <label>
@@ -881,7 +875,13 @@ export default function Explorer() {
               </span>
             </div>
             <div>
-              <span className="tx-summary-icon tx-purple">
+              <span
+                className="tx-summary-icon"
+                style={{
+                  color: metricInfo.ram.color,
+                  background: metricInfo.ram.color + "18",
+                }}
+              >
                 <Monitor size={17} />
               </span>
               <label>
@@ -894,7 +894,13 @@ export default function Explorer() {
               <span className="tx-summary-detail">of 32 GB</span>
             </div>
             <div>
-              <span className="tx-summary-icon tx-blue">
+              <span
+                className="tx-summary-icon"
+                style={{
+                  color: metricInfo.download.color,
+                  background: metricInfo.download.color + "18",
+                }}
+              >
                 <ArrowDown size={18} />
               </span>
               <label>
@@ -905,7 +911,13 @@ export default function Explorer() {
               </label>
             </div>
             <div>
-              <span className="tx-summary-icon tx-amber">
+              <span
+                className="tx-summary-icon"
+                style={{
+                  color: metricInfo.write.color,
+                  background: metricInfo.write.color + "18",
+                }}
+              >
                 <Box size={17} />
               </span>
               <label>

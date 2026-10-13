@@ -7,6 +7,6 @@ export const metadata: Metadata = {
     "Explore application activity and system performance on one interactive timeline. A local, simulated capture.",
 };
 
-export default function TracelPage() {
+export default function TimelinePage() {
   return <Explorer />;
 }

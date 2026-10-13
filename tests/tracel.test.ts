@@ -3,9 +3,27 @@ import assert from "node:assert/strict";
 import { createCapture } from "../src/tracel/data";
 import { analyze } from "../src/tracel/analytics";
 import { DAY, clampRange, zoomRange } from "../src/tracel/model";
+import { overviewPath } from "../src/tracel/overview";
 
 const data = createCapture();
 const at = (hour: number) => 6 * DAY + hour * 3600;
+
+test("overview breaks at missing samples even between downsampled points", () => {
+  const sample = data.metrics.find((s) => s.values)!;
+  const capture = {
+    ...data,
+    bounds: { start: 0, end: 210 },
+    metrics: Array.from({ length: 7 }, (_, i) => ({
+      ...sample,
+      time: i * 30,
+      values: i === 3 ? null : { ...sample.values!, cpu: 0 },
+    })),
+  };
+  const path = overviewPath(capture);
+  assert.equal((path.match(/M/g) ?? []).length, 2);
+  assert.ok(path.includes(`M${(120 / 210) * 1400},30`));
+  assert.ok(path.startsWith("M0,30"), "Observed zero remains a real line");
+});
 
 test("capture is deterministic and contains seven days with correlated workloads", () => {
   assert.deepEqual(data, createCapture());

@@ -23,6 +23,7 @@ type Track = {
   name: string;
   subtitle?: string;
   height: number;
+  baseHeight?: number;
   kind: "group" | "app" | "context" | "background" | "afk" | "metric" | "media";
   keys?: MetricKey[];
   appId?: string;
@@ -154,7 +155,7 @@ export function Timeline({
         {
           id: "network",
           name: "Network",
-          subtitle: "↓ Download  ↑ Upload · MB/s",
+          subtitle: "Receive ━ / Send ┄ · MB/s",
           height: 62,
           kind: "metric",
           keys: ["download", "upload"],
@@ -162,7 +163,7 @@ export function Timeline({
         {
           id: "disk",
           name: "Disk",
-          subtitle: "Read / Write · MB/s",
+          subtitle: "Read ━ / Write ┄ · MB/s",
           height: 62,
           kind: "metric",
           keys: ["read", "write"],
@@ -196,7 +197,7 @@ export function Timeline({
     let y = 32;
     return all.map((track) => {
       const height = heights[track.id] ?? track.height;
-      const row = { ...track, height, y };
+      const row = { ...track, baseHeight: track.height, height, y };
       y += height;
       return row;
     });
@@ -471,23 +472,30 @@ export function Timeline({
             ctx.strokeStyle = info.color;
             ctx.lineWidth = 1;
             ctx.beginPath();
-            let previous = -2;
             for (const [px, bucket] of buckets) {
-              const py = bottom - (bucket.last / info.max) * h;
               ctx.fillRect(
                 px,
                 bottom - (bucket.max / info.max) * h,
                 1,
                 (bucket.max / info.max) * h,
               );
-              if (px !== previous + 1) ctx.moveTo(px, py);
-              else ctx.lineTo(px, py);
               ctx.moveTo(px, bottom - (bucket.min / info.max) * h);
               ctx.lineTo(px, bottom - (bucket.max / info.max) * h);
-              ctx.moveTo(px, py);
+            }
+            ctx.globalAlpha = 0.35;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            ctx.setLineDash(key === "write" || key === "upload" ? [5, 4] : []);
+            ctx.beginPath();
+            let previous = -2;
+            for (const [px, bucket] of buckets) {
+              const py = bottom - (bucket.last / info.max) * h;
+              if (px !== previous + 1) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
               previous = px;
             }
             ctx.stroke();
+            ctx.setLineDash([]);
           }
           const scale = metricInfo[row.keys![0]];
           ctx.font = "9px Consolas, monospace";
@@ -636,10 +644,12 @@ export function Timeline({
                 row.id === "foreground" ||
                 row.id === "background"
                   ? toggle(row.id, row.kind === "group")
-                  : setHeights((h) => ({
-                      ...h,
-                      [row.id]: row.height > 80 ? 48 : 110,
-                    }))
+                  : setHeights((h) => {
+                      const next = { ...h };
+                      if (row.height > row.baseHeight!) delete next[row.id];
+                      else next[row.id] = 110;
+                      return next;
+                    })
               }
               aria-expanded={
                 row.kind === "group"
@@ -689,7 +699,7 @@ export function Timeline({
                     setHeights((h) => ({
                       ...h,
                       [row.id]: Math.max(
-                        28,
+                        row.appId ? 16 : 24,
                         Math.min(
                           180,
                           row.height + (e.key === "ArrowDown" ? 10 : -10),
@@ -707,7 +717,7 @@ export function Timeline({
                   if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
                   // React clears currentTarget after dispatch; snapshot before the updater.
                   const height = Math.max(
-                    28,
+                    row.appId ? 16 : 24,
                     Math.min(
                       180,
                       Number(e.currentTarget.dataset.height) +

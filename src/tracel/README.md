@@ -1,6 +1,6 @@
 # Activity & Performance Explorer
 
-Route: `/tracel`. Uses the existing Next.js app and build/export pipeline. All styles are scoped to `tx-*`; the existing Radar page is unchanged.
+Route: `/timeline`. Uses the existing Next.js app and build/export pipeline. All styles are scoped to `tx-*`; the existing Radar page is unchanged.
 
 ## Structure
 
