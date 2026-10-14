@@ -1,0 +1,8 @@
+[package]
+name = "tracel-storage"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+tracel-core.workspace = true

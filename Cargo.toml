@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = ["crates/*", "apps/desktop/src-tauri"]
+default-members = ["crates/tracel-agent", "crates/tracel-core", "crates/tracel-storage", "crates/tracel-query"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+tracel-core = { path = "crates/tracel-core" }
+tracel-storage = { path = "crates/tracel-storage" }
+tracel-query = { path = "crates/tracel-query" }

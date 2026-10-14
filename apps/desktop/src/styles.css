@@ -1,0 +1,12 @@
+/* Host reset required by the shared UI; no Radar styles or Tailwind runtime. */
+* { box-sizing: border-box; }
+html { color-scheme: dark; background: #101416; }
+body { margin: 0; -webkit-font-smoothing: antialiased; }
+button { font: inherit; cursor: pointer; touch-action: manipulation; }
+button:disabled { cursor: default; }
+a { color: inherit; text-decoration: none; touch-action: manipulation; }
+a:focus-visible { outline: 2px solid #a4cfb7; outline-offset: -2px; }
+::selection { background: #85dcbc35; color: #e2fff3; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2d3b40; border-radius: 2px; }

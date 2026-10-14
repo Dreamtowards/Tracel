@@ -1,0 +1,9 @@
+[package]
+name = "tracel-agent"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+tracel-core.workspace = true
+tracel-storage.workspace = true

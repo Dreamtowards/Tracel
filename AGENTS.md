@@ -1,3 +1,9 @@
+# Repository guidance
+
+Read `docs/architecture.md`, `docs/data-model.md` and `docs/collectors.md` before changing boundaries. `CODEX_CONTEXT.md` preserves the original migration handoff. Web lives in `apps/web`; reusable Activity UI lives in `packages/timeline`; Desktop must stay free of Radar and Next.js. Preserve both experiences and user work.
+
+Run root `npm run typecheck`, `npm test`, `npm run build`; use `npm run check:rust` and `npm run test:rust` for native changes. Read `apps/web/AGENTS.md` for Next-specific guidance; dependencies and Next docs are normally hoisted to root node_modules.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

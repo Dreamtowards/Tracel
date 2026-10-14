@@ -1,0 +1,10 @@
+{
+  "identifier": "default",
+  "description": "Main demo window; no filesystem, shell or collector access.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}

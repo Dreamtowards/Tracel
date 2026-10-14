@@ -1,0 +1,11 @@
+[package]
+name = "tracel-desktop"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
