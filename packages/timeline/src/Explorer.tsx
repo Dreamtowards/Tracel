@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
   ArrowDown,
@@ -63,8 +63,33 @@ function AppIcon({ id, size = 15 }: { id: string; size?: number }) {
   return <Icon size={size} />;
 }
 
-export default function Explorer({ provider, homeHref = "/timeline" }: { provider: DataProvider; homeHref?: string }) {
+export type RangeExport = {
+  source: string;
+  epoch: string;
+  range: Range;
+  analytics: ReturnType<typeof analyze>;
+};
+
+export default function Explorer({
+  provider,
+  homeHref = "/timeline",
+  machineLabel,
+  headerActions,
+  localDataLabel = "All data stays in this browser",
+  onExport,
+}: {
+  provider: DataProvider;
+  homeHref?: string;
+  machineLabel?: ReactNode;
+  headerActions?: ReactNode;
+  localDataLabel?: string;
+  onExport?: (payload: RangeExport) => Promise<void>;
+}) {
   const [data, setData] = useState<Capture | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
   const [view, setView] = useState<Range>({
     start: 6 * DAY + 6 * 3600,
     end: 7 * DAY,
@@ -83,13 +108,16 @@ export default function Explorer({ provider, homeHref = "/timeline" }: { provide
   const [preset, setPreset] = useState("Day");
   useEffect(() => {
     let active = true;
-    provider.load().then((result) => {
+    setLoadError(false);
+    Promise.resolve().then(() => provider.load()).then((result) => {
       if (active) setData(result);
+    }).catch(() => {
+      if (active) setLoadError(true);
     });
     return () => {
       active = false;
     };
-  }, [provider]);
+  }, [provider, loadAttempt]);
   useEffect(() => {
     if (!help) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -118,7 +146,10 @@ export default function Explorer({ provider, homeHref = "/timeline" }: { provide
     return (
       <main className="tx-app tx-loading">
         <Activity size={28} />
-        <p>Preparing your activity timeline…</p>
+        <p role={loadError ? "alert" : "status"}>
+          {loadError ? "Could not load this capture. Please try again." : "Preparing your activity timeline…"}
+        </p>
+        {loadError && <button className="tx-button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>}
       </main>
     );
   const selectedApp = stats.apps.find((a) => a.id === focus);
@@ -144,16 +175,30 @@ export default function Explorer({ provider, homeHref = "/timeline" }: { provide
     changeView(
       zoomRange(view, factor, (view.start + view.end) / 2, data.bounds),
     );
-  const exportSelection = () => {
+  const exportSelection = async () => {
+    if (exporting) return;
+    const payload: RangeExport = {
+      source: "Tracel simulated capture",
+      epoch: data.epoch,
+      range,
+      analytics: stats,
+    };
+    setExportError(false);
+    if (onExport) {
+      setExporting(true);
+      try {
+        await onExport(payload);
+      } catch {
+        setExportError(true);
+      } finally {
+        setExporting(false);
+      }
+      return;
+    }
     const blob = new Blob(
       [
         JSON.stringify(
-          {
-            source: "Tracel simulated capture",
-            epoch: data.epoch,
-            range,
-            analytics: stats,
-          },
+          payload,
           null,
           2,
         ),
@@ -186,8 +231,9 @@ export default function Explorer({ provider, homeHref = "/timeline" }: { provide
             <i /> Demo capture
           </span>
           <span className="tx-machine">
-            DESKTOP–ALEX <span>/</span> Windows 11
+            {machineLabel ?? <>DESKTOP–ALEX <span>/</span> Windows 11</>}
           </span>
+          {headerActions}
           <button
             className="tx-icon-button"
             title="Keyboard shortcuts"
@@ -261,9 +307,12 @@ export default function Explorer({ provider, homeHref = "/timeline" }: { provide
                 timeline.
               </p>
             </div>
-            <button className="tx-button" onClick={exportSelection}>
-              <Download size={14} /> Export range
-            </button>
+            <div className="tx-export-actions">
+              <button className="tx-button" onClick={exportSelection} disabled={exporting}>
+                <Download size={14} /> {exporting ? "Saving…" : "Export range"}
+              </button>
+              {exportError && <span role="alert">Could not save the export. Please try again.</span>}
+            </div>
           </div>
           <div className="tx-toolbar">
             <div className="tx-date-controls">
@@ -930,7 +979,7 @@ export default function Explorer({ provider, homeHref = "/timeline" }: { provide
           </section>
           <footer className="tx-status">
             <span>
-              <span className="tx-live-dot" /> All data stays in this browser{" "}
+              <span className="tx-live-dot" /> {localDataLabel}{" "}
               <span>·</span> Deterministic demo
             </span>
             <span>

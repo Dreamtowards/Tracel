@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Tracel Activity — Demo",
+        "title": "Tracel Activity",
         "width": 1440,
         "height": 960,
         "minWidth": 800,
@@ -25,6 +25,14 @@
     }
   },
   "bundle": {
-    "active": false
+    "active": true,
+    "targets": ["nsis"],
+    "shortDescription": "Local activity and performance timeline",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
   }
 }

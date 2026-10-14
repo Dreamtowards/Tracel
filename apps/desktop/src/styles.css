@@ -10,3 +10,23 @@ a:focus-visible { outline: 2px solid #a4cfb7; outline-offset: -2px; }
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #2d3b40; border-radius: 2px; }
+.desktop-about-button { border: 1px solid #354047; border-radius: 4px; padding: 5px 9px; color: #b7c5be; background: transparent; font-size: 11px; white-space: nowrap; }
+.desktop-about-button:hover { background: #25312d; }
+.desktop-about { width: min(520px, calc(100vw - 40px)); border: 1px solid #354047; border-radius: 10px; padding: 28px; background: #141b1e; color: #dce2e5; font: 14px/1.6 "Segoe UI", sans-serif; box-shadow: 0 24px 100px #0008; }
+.desktop-about::backdrop { background: #060a0dbb; }
+.desktop-about-heading { display: flex; justify-content: space-between; align-items: center; font: 11px Consolas, monospace; letter-spacing: .12em; color: #a4cfb7; }
+.desktop-about-heading button { border: 0; background: transparent; color: #aab7b9; font-size: 24px; }
+.desktop-about h1 { font-size: 25px; letter-spacing: -.6px; margin: 20px 0 8px; }
+.desktop-about p { color: #9baaae; }
+.desktop-about dl { margin: 25px 0; font-size: 12px; }
+.desktop-about dl div { display: grid; grid-template-columns: 94px 1fr; border-bottom: 1px solid #293034; padding: 11px 0; gap: 12px; }
+.desktop-about dt { color: #87999e; }
+.desktop-about dd { margin: 0; }
+.desktop-about-detail { font-size: 12px; }
+.desktop-about form { display: flex; justify-content: flex-end; margin-top: 24px; }
+.desktop-about form button, .desktop-recovery button { border: 1px solid #526d5e; border-radius: 4px; padding: 8px 14px; color: #d7e6dc; background: #283c31; }
+.desktop-notice { position: fixed; bottom: 38px; right: 24px; z-index: 100; max-width: calc(100vw - 48px); padding: 12px 18px; color: #dce2e5; background: #1e3027; border: 1px solid #4e6c59; border-radius: 6px; font: 12px/1.5 "Segoe UI", sans-serif; box-shadow: 0 8px 30px #0005; }
+.desktop-notice:empty { display: none; }
+.desktop-recovery { display: grid; place-content: center; gap: 12px; min-height: 100vh; padding: 32px; color: #dce2e5; font-family: "Segoe UI", sans-serif; }
+.desktop-recovery h1, .desktop-recovery p { margin: 0; }
+@media (max-width: 1100px) { .tx-header-end .tx-machine { display: none; } }

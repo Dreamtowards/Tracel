@@ -1,9 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Explorer } from "@tracel/timeline";
-import { demoProvider } from "@tracel/timeline/mock";
+import App from "./App";
 import "./styles.css";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode><Explorer provider={demoProvider} homeHref="/" /></StrictMode>,
+  <StrictMode><App /></StrictMode>,
 );

@@ -6,9 +6,9 @@ The root is an npm and Cargo workspace. `apps/web` owns Next.js routes, Radar, M
 
 Both apps pass `@tracel/timeline/mock` to `Explorer` from `packages/timeline`. This preserves the original Canvas Timeline, selection/analytics, hover/context, collapse/resize, settings and export. The package owns React UI, domain helpers and scoped CSS. Host resets remain in each app. No native API appears in the package or Web bundle. Pure model/analytics and mock subpath exports avoid mixing the demo adapter into the main UI entry point.
 
-`tracel-core` defines UTC millisecond ranges, subjects, metrics and observation quality. `tracel-storage` defines a batch/range interface and draft SQLite migration without a runtime backend. `tracel-query` implements clipped weighted gauge means and rejects byte counters. `tracel-agent` reports scaffold status and exits. Tauri has no native commands and uses mock data only.
+`tracel-core` defines UTC millisecond ranges, subjects, metrics and observation quality. `tracel-storage` defines a batch/range interface and draft SQLite migration without a runtime backend. `tracel-query` implements clipped weighted gauge means and rejects byte counters. `tracel-agent` reports scaffold status and exits. Tauri uses mock timeline data; its native command supplies device/platform/version metadata only. Native save-dialog/filesystem plugins export JSON to a user-selected path, and window-state restores the shell's placement. No collection or telemetry query IPC is implemented.
 
-Tauri is an explicit root Cargo member sharing lockfile and target directory. Default Cargo members are the four foundation crates; --workspace adds Tauri SDK dependencies. Installer bundling is disabled.
+Tauri is an explicit root Cargo member sharing lockfile and target directory. Default Cargo members are the four foundation crates; --workspace adds Tauri SDK dependencies. The Windows client builds a per-user NSIS installer; see apps/desktop/README.md for features and validation limits.
 
 ## Future boundaries
 

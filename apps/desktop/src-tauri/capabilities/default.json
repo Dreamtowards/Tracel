@@ -1,10 +1,12 @@
 {
   "identifier": "default",
-  "description": "Main demo window; no filesystem, shell or collector access.",
+  "description": "Main client window; export writes are scoped to the file selected in the native save dialog.",
   "windows": [
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "dialog:allow-save",
+    "fs:allow-write-text-file"
   ]
 }

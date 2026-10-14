@@ -29,17 +29,17 @@ npm run dev:desktop          # Native Tauri window; requires platform SDKs
 npm run agent                # Rust scaffold; does not collect
 ```
 
-Windows native builds require Rust MSVC, Microsoft C++ Build Tools/Windows SDK and WebView2. The shell follows the [Tauri 2 configuration reference](https://v2.tauri.app/reference/config/). Installer bundling is disabled for now. Closing today's window stops its shell; independent agent lifetime is future work.
+Windows native builds require Rust MSVC, Microsoft C++ Build Tools/Windows SDK and WebView2. The client follows the [Tauri 2 configuration reference](https://v2.tauri.app/reference/config/). Native builds produce an executable and per-user NSIS installer. Closing the window exits the client; independent agent lifetime is future work. See the [Desktop release guide](apps/desktop/README.md).
 
 ## Verify and build
 
 ```sh
 npm run typecheck           # Web, Desktop and shared Timeline
-npm test                    # Original Radar and Activity tests
+npm test                    # Radar, Activity and Desktop export tests
 npm run build               # Web static export + Desktop Vite bundle
 npm run check:rust          # Entire Cargo workspace, including Tauri
 npm run test:rust
-npm run build:desktop:native # Native executable; no signed installer
+npm run build:desktop:native # Native executable + unsigned Windows setup
 ```
 
 `npm run verify` combines TypeScript, unit tests, frontend builds and Rust checks/tests. `check:core` and `test:core` target the four foundation crates without UI SDKs. Bare `cargo check`/`cargo test` default to those four crates. All five packages share root Cargo.lock and target output.

@@ -1,3 +1,14 @@
+.tx-export-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 8px;
+}
+.tx-export-actions [role="alert"] {
+  max-width: 250px;
+  color: #e4ac91;
+  font-size: 11px;
+}
 .tx-app {
   --tx-line: #293034;
   --tx-muted: #8a959b;
