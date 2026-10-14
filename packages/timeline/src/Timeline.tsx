@@ -1,7 +1,7 @@
 "use client";
 import { useI18n } from "./i18n";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
 import type { TimelineAppearance } from "./DisplaySettings";
@@ -48,7 +48,7 @@ type Props = {
   onSelect: (r: Range | null) => void;
   onFocus: (id: string | null) => void;
 };
-const LABEL = 192;
+const defaultLabelWidth = 192;
 
 export function Timeline({
   data,
@@ -63,6 +63,11 @@ export function Timeline({
   onFocus,
 }: Props) {
   const { t, duration, dateLabel } = useI18n();
+  const [labelWidth, setLabelWidth] = useState(defaultLabelWidth);
+  const labelDrag = useRef<{ x: number; width: number; scale: number } | null>(null);
+  const [hostWidth, setHostWidth] = useState(900);
+  const maximumLabelWidth = Math.max(128, Math.min(360, hostWidth - 180));
+  const LABEL = Math.min(labelWidth, maximumLabelWidth);
   const [closed, setClosed] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string[]>(["foreground"]);
   const [heights, setHeights] = useState<Record<string, number>>({});
@@ -228,12 +233,13 @@ export function Timeline({
   useEffect(() => {
     const element = host.current;
     if (!element) return;
-    const observer = new ResizeObserver((entries) =>
-      setWidth(Math.max(100, entries[0].contentRect.width - LABEL)),
-    );
+    const observer = new ResizeObserver(([entry]) => {
+      setHostWidth(entry.contentRect.width);
+      setWidth(Math.max(100, entry.contentRect.width - LABEL));
+    });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [LABEL]);
 
   useEffect(() => {
     const element = canvas.current;
@@ -294,7 +300,7 @@ export function Timeline({
         DAY * 2,
       ];
       const step = steps.find((s) => s >= span / (width / 95)) ?? DAY * 2;
-      ctx.font = "10px Consolas, monospace";
+      ctx.font = '11px "Segoe UI", "Microsoft YaHei UI", sans-serif';
       for (
         let t = Math.ceil(view.start / step) * step;
         t < view.end;
@@ -509,7 +515,7 @@ export function Timeline({
             ctx.setLineDash([]);
           }
           const scale = metricInfo[row.keys![0]];
-          ctx.font = "9px Consolas, monospace";
+          ctx.font = '10px "Segoe UI", "Microsoft YaHei UI", sans-serif';
           ctx.textAlign = "right";
           ctx.fillStyle = "#839198";
           ctx.fillText(`${scale.max} ${scale.unit}`, width - 7, y + 13);
@@ -532,7 +538,7 @@ export function Timeline({
           }
         ctx.setLineDash([]);
         ctx.fillStyle = palette.selection;
-        ctx.font = "10px Consolas, monospace";
+        ctx.font = '11px "Segoe UI", "Microsoft YaHei UI", sans-serif';
         ctx.fillText(duration(selection.end - selection.start), left + 5, 44);
       }
     };
@@ -641,10 +647,10 @@ export function Timeline({
   }
   return (
     <div className="tx-timeline-scroll">
-      <div ref={host} className="tx-timeline" style={{ height: totalHeight }}>
-        <button type="button" className="tx-axis-label" title={t("Clear selection")} aria-label={t("Clear timeline selection")} onClick={() => onSelect(null)}>
+      <div ref={host} className="tx-timeline" style={{ height: totalHeight, "--track-label-width": `${LABEL}px` } as CSSProperties}>
+        <div className="tx-axis-label">
           {t("TRACKS")}{" "}<span>UTC+08:00</span>
-        </button>
+        </div>
         {tracks.map((row) => (
           <div
             key={row.id}
@@ -749,6 +755,26 @@ export function Timeline({
             )}
           </div>
         ))}
+        <div className="tx-label-width-resizer" role="separator" tabIndex={0} aria-orientation="vertical"
+          aria-label={t("Track label width")} title={t("Drag to resize track labels · Double-click to reset")}
+          aria-valuemin={128} aria-valuemax={maximumLabelWidth} aria-valuenow={LABEL}
+          style={{ left: LABEL }}
+          onPointerDown={(event) => {
+            if (event.button !== 0 || !host.current) return;
+            event.preventDefault();
+            labelDrag.current = { x: event.clientX, width: LABEL, scale: host.current.getBoundingClientRect().width / host.current.offsetWidth };
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (labelDrag.current) setLabelWidth(Math.max(128, Math.min(maximumLabelWidth, labelDrag.current.width + (event.clientX - labelDrag.current.x) / labelDrag.current.scale)));
+          }}
+          onPointerUp={(event) => { labelDrag.current = null; event.currentTarget.releasePointerCapture(event.pointerId); }}
+          onLostPointerCapture={() => { labelDrag.current = null; }}
+          onDoubleClick={() => setLabelWidth(defaultLabelWidth)}
+          onKeyDown={(event) => {
+            const next = event.key === "ArrowLeft" ? LABEL - 8 : event.key === "ArrowRight" ? LABEL + 8 : event.key === "Home" ? 128 : event.key === "End" ? maximumLabelWidth : null;
+            if (next !== null) { event.preventDefault(); setLabelWidth(Math.max(128, Math.min(maximumLabelWidth, next))); }
+          }} />
         <canvas
           ref={canvas}
           style={{
@@ -792,6 +818,12 @@ export function Timeline({
             e.preventDefault();
             e.currentTarget.focus();
             e.currentTarget.setPointerCapture(e.pointerId);
+            const rect = e.currentTarget.getBoundingClientRect();
+            if ((e.clientY - rect.top) * totalHeight / rect.height < 32 && e.button === 0) {
+              onSelect(null);
+              if (tip.current) tip.current.style.display = "none";
+              return;
+            }
             const result = inspect(e.clientX, e.clientY);
             drag.current = {
               x: e.clientX,

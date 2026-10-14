@@ -1,5 +1,7 @@
 /** Interface copy only. Captured titles, URLs, app names and export data are never translated. */
 export const timelineZh: Readonly<Record<string, string>> = {
+  "Track label width": "轨道标签栏宽度",
+  "Drag to resize track labels · Double-click to reset": "拖动调整轨道标签栏宽度 · 双击恢复默认",
   "Clear timeline selection": "清除时间轴选区",
   "Overview viewport": "总览范围",
   "Overview range start": "总览范围起点", "Overview range end": "总览范围终点",

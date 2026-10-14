@@ -526,7 +526,7 @@ export default function Explorer({
           </div>
           <div className="tx-content">
             <section className="tx-timeline-panel">
-              <div className="tx-timeline-heading">
+              <div className="tx-timeline-heading" onClick={() => setSelection(null)}>
                 <span>
                   <span className="tx-live-dot" /> {" "}{t("Timeline")}{" "}
                   <small>

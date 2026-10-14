@@ -264,7 +264,7 @@
 .tx-text-button {
   border: 0;
   background: none;
-  color: #b2c5ba !important;
+  color: var(--tx-action-color, #b2c5ba) !important;
   display: inline-flex;
   gap: 6px;
   align-items: center;
@@ -272,7 +272,7 @@
   white-space: nowrap;
 }
 .tx-text-button:hover {
-  color: #e2f2e8 !important;
+  color: var(--tx-action-hover, #e2f2e8) !important;
 }
 .tx-toolbar {
   display: flex;
@@ -504,7 +504,7 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 192px;
+  width: var(--track-label-width, 192px);
   height: 32px;
   padding: 10px 14px;
   font:
@@ -518,7 +518,6 @@
   border-right: 1px solid var(--tx-line);
   border-bottom: 1px solid var(--tx-line);
 }
-.tx-axis-label:hover { color: #dce6e8; }
 .tx-axis-label span {
   float: right;
   font-size: 8px;
@@ -527,7 +526,7 @@
 .tx-track-label {
   position: absolute;
   left: 0;
-  width: 192px;
+  width: var(--track-label-width, 192px);
   border-bottom: 1px solid #252d31;
   border-right: 1px solid var(--tx-line);
   background: #141a1d;
@@ -1420,3 +1419,6 @@
     left: 0;
   }
 }
+
+.tx-label-width-resizer { position: absolute; top: 0; bottom: 0; width: 8px; transform: translateX(-50%); z-index: 5; cursor: col-resize; touch-action: none; }
+.tx-label-width-resizer:hover, .tx-label-width-resizer:focus-visible { background: var(--primary, #9ba8a0); opacity: .5; }

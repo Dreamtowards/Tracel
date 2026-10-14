@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { I18nProvider, useI18n } from "@tracel/timeline";
 import { desktopZh } from "./messages.zh";
 import { Button } from "./components/ui/Button";
@@ -92,7 +93,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
       />
       <div className="desktop-notice" role="status" aria-live="polite">{t(notice)}</div>
       <dialog ref={about} className="desktop-about" onClick={(event) => { if (event.target === event.currentTarget) about.current?.close(); }}>
-        <div className="desktop-about-heading"><h1>Tracel Activity</h1><Button aria-label={t("Close about client")} onClick={() => about.current?.close()}>×</Button></div>
+        <div className="desktop-about-heading"><h1>Tracel Activity</h1><Button aria-label={t("Close about client")} onClick={() => about.current?.close()}><X size={16} /></Button></div>
         <dl>
           <div><dt>{t("Client")}</dt><dd>{t(nativeClient ? "Windows desktop" : "Browser preview")}{info ? ` · ${info.version}` : ""}</dd></div>
           <div><dt>{t("Device")}</dt><dd>{info?.deviceName ?? t("This device")}</dd></div>
