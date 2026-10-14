@@ -8,6 +8,7 @@ import { Component, useEffect, useLayoutEffect, useMemo, useRef, useState, type 
 import { Explorer, type RangeExport } from "@tracel/timeline";
 import { demoProvider } from "@tracel/timeline/mock";
 import { getAppInfo, nativeClient, saveRange, type AppInfo } from "./native";
+import Utilities from "./Utilities";
 import Settings from "./Settings";
 import SystemMetrics from "./SystemMetrics";
 import { useCollection } from "./useCollection";
@@ -89,7 +90,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
         onShowTimeline={() => setPage("timeline")}
         captureLabel={t(page === "timeline" ? "Demo capture" : "Local system metrics")}
         navigation={<Navigation page={page} expanded={appearance.expanded} width={appearance.navigationWidth} onWidth={appearance.setNavigationWidth} onToggle={appearance.toggleNavigation} onNavigate={setPage} onAbout={() => about.current?.showModal()} />}
-        pageContent={page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} onAwake={collection.changeAwake} zoom={appearance.zoom} onZoom={appearance.setZoom} accent={appearance.accent} onAccent={appearance.setAccent} language={appearance.language} onLanguage={appearance.setLanguage} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
+        pageContent={page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} zoom={appearance.zoom} onZoom={appearance.setZoom} accent={appearance.accent} onAccent={appearance.setAccent} language={appearance.language} onLanguage={appearance.setLanguage} /> : page === "utilities" ? <Utilities status={collection.status} busy={collection.busy} error={collection.error} onAwake={collection.changeAwake} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
       />
       <div className="desktop-notice" role="status" aria-live="polite">{t(notice)}</div>
       <dialog ref={about} className="desktop-about" onClick={(event) => { if (event.target === event.currentTarget) about.current?.close(); }}>

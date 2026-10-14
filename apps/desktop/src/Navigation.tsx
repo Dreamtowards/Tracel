@@ -2,9 +2,9 @@ import { useI18n, type Locale } from "@tracel/timeline";
 import { Button } from "./components/ui/Button";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { navigationDefault, navigationMax, navigationMin } from "./useAppearance";
-import { Activity, ChartNoAxesCombined, Info, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
+import { Activity, ChartNoAxesCombined, Info, PanelLeftClose, PanelLeftOpen, Wrench, Settings } from "lucide-react";
 
-export type Page = "timeline" | "metrics" | "settings";
+export type Page = "timeline" | "metrics" | "utilities" | "settings";
 export default function Navigation({ page, expanded, width, onWidth, onToggle, onNavigate, onAbout }: {
   page: Page; expanded: boolean; width: number; onWidth: (width: number) => void; onToggle: () => void; onNavigate: (page: Page) => void; onAbout: () => void;
 }) {
@@ -25,6 +25,7 @@ export default function Navigation({ page, expanded, width, onWidth, onToggle, o
   const items = [
     { page: "timeline" as const, label: "Timeline explorer", text: "Timeline", Icon: Activity },
     { page: "metrics" as const, label: "System metrics", text: "System metrics", Icon: ChartNoAxesCombined },
+    { page: "utilities" as const, label: "Utilities", text: "Utilities", Icon: Wrench },
     { page: "settings" as const, label: "Settings", text: "Settings", Icon: Settings },
   ];
   return <nav ref={nav} style={{ "--nav-width": `${displayedWidth}px` } as CSSProperties} className={`desktop-navigation${expanded ? " expanded" : ""}${resizing ? " resizing" : ""}`} aria-label={t("Main navigation")}>

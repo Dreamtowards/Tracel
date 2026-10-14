@@ -1,4 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod file_usage;
 mod telemetry;
 mod tools;
 use tauri::Manager;
@@ -57,6 +58,12 @@ async fn inspect_foreground() -> Result<tracel_agent::ForegroundInfo, String> {
     .map_err(|e| e.to_string())?
 }
 #[tauri::command]
+async fn inspect_file_usage(path: String) -> Result<file_usage::FileUsage, String> {
+    tauri::async_runtime::spawn_blocking(move || file_usage::inspect(&path))
+        .await
+        .map_err(|error| error.to_string())?
+}
+#[tauri::command]
 fn display_off() -> Result<(), String> {
     // Keep old IPC callers harmless too. No timers, broadcasts, or power changes.
     Err("Display-off is disabled after a wake-up reliability issue.".into())
@@ -89,6 +96,7 @@ fn main() {
             system_history,
             set_keep_awake,
             inspect_foreground,
+            inspect_file_usage,
             display_off
         ])
         .build(tauri::generate_context!())

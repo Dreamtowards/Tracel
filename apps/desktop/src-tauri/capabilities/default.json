@@ -1,12 +1,13 @@
 {
   "identifier": "default",
-  "description": "Main client window; export writes are scoped to the file selected in the native save dialog.",
+  "description": "Main client window; file picker for on-demand usage inspection; export writes are scoped to the file selected in the native save dialog.",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
     "dialog:allow-save",
+    "dialog:allow-open",
     "fs:allow-write-text-file"
   ]
 }

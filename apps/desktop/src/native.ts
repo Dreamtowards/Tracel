@@ -35,3 +35,6 @@ export async function saveRange(payload: RangeExport, title = "Export timeline r
   await writeTextFile(path, JSON.stringify(payload, null, 2));
   return "saved";
 }
+
+export type FileUsage = { path: string; checkedAtMs: number; modifiedAtMs: number | null; processes: { processId: number; startedAtTicks: string; name: string; service: string; executable: string | null }[] };
+export const inspectFileUsers = (path: string) => invoke<FileUsage>("inspect_file_usage", { path });

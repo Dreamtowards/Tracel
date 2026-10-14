@@ -1,29 +1,15 @@
 import { useI18n, type Locale } from "@tracel/timeline";
 import { Button } from "./components/ui/Button";
-import { Card } from "./components/ui/Card";
+import { SettingsGroup, SettingToggle as Toggle } from "./components/SettingsGroup";
 import { Select } from "./components/ui/Select";
 import { accentPresets, defaultAccent } from "./theme";
-import type { ReactNode } from "react";
-import { useId, useState } from "react";
-import { Switch } from "./components/ui/Switch";
+import { useState } from "react";
 import { inspectForeground, nativeClient, type CollectionSettings, type CollectionStatus, type ForegroundInfo } from "./native";
 import { zoomLevels } from "./useAppearance";
 
-function SettingsGroup({ title, children }: { title: string; children: ReactNode }) {
-  const { t } = useI18n();
-  const id = useId();
-  return <section className="settings-group" aria-labelledby={id}><h2 id={id}>{t(title)}</h2><Card className="settings-card">{children}</Card></section>;
-}
-
-function Toggle({ label, description, checked, disabled, pending, onChange }: { label: string; description: string; checked: boolean; disabled?: boolean; pending?: boolean; onChange: (checked: boolean) => void }) {
-  const { t } = useI18n();
-  const id = useId();
-  return <div className="settings-toggle"><label htmlFor={id}><strong>{t(label)}</strong>{description && <small id={`${id}-description`}>{t(description)}</small>}</label><Switch id={id} aria-label={t(label)} aria-describedby={description ? `${id}-description` : undefined} checked={checked} disabled={disabled} aria-disabled={disabled || pending} onCheckedChange={(value) => { if (!pending) onChange(value); }} /></div>;
-}
-
-export default function Settings({ status, busy, error, onSettings, onAwake, zoom, onZoom, accent, onAccent, language, onLanguage }: {
+export default function Settings({ status, busy, error, onSettings, zoom, onZoom, accent, onAccent, language, onLanguage }: {
   status: CollectionStatus | null; busy: boolean; error: string;
-  onSettings: (settings: CollectionSettings) => Promise<void>; onAwake: (enabled: boolean) => Promise<void>;
+  onSettings: (settings: CollectionSettings) => Promise<void>;
   language: Locale; onLanguage: (language: Locale) => void;
   zoom: number; onZoom: (zoom: number) => void; accent: string; onAccent: (accent: string) => void;
 }) {
@@ -63,12 +49,6 @@ export default function Settings({ status, busy, error, onSettings, onAwake, zoo
       <Toggle label="RAM usage" description="" checked={settings.ram} disabled={unavailable} pending={busy} onChange={(ram) => { void onSettings({ ...settings, ram }); }} />
       <Toggle label="GPU usage" description="Coming later" checked={false} disabled onChange={() => {}} />
       <p className="settings-footnote">{t("Measurements stay in memory until exit. Timeline uses demo data.")}</p>
-    </SettingsGroup>
-    <SettingsGroup title={t("Power")}>
-      <Toggle label="Prevent automatic sleep" description="While Tracel runs. Normal display timeout still works." checked={status?.keepAwakeRequested ?? false} disabled={unavailable} pending={busy} onChange={(enabled) => { void onAwake(enabled); }} />
-      <div className="settings-action"><div><strong>{t("Display timeout")}</strong><small>{t("Use Windows display timeout. Manual screen-off is unavailable.")}</small></div><Button className="tx-button" disabled>{t("Turn display off")}</Button></div>
-      {status?.keepAwakeRequested !== status?.keepAwakeActive && <p role="status">{t("Applying power request…")}</p>}
-      {status?.powerError && <p role="alert" className="settings-error">{t("Power request failed:")}{" "}{status.powerError}</p>}
     </SettingsGroup>
     <SettingsGroup title={t("Diagnostics")}><p>{t("Capture a window title and executable. Switch windows within 3 seconds.")}</p>
       <Button className="tx-button" disabled={unavailable || debugging} onClick={() => { void inspect(); }}>{t(debugging ? "Switch windows — capturing…" : "Inspect foreground in 3 seconds")}</Button>
