@@ -1,4 +1,4 @@
-# Tracel Activity desktop 0.2.2
+# Tracel Activity desktop 0.2.3
 
 Windows-first Tauri 2 client with opt-in real CPU/RAM collection, Settings and native tools. The original October 8–14, 2026 Timeline remains a separate demo; System metrics shows measured data only.
 
@@ -20,14 +20,14 @@ cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 Native prerequisites: Rust MSVC, C++ Build Tools/Windows SDK and WebView2. Outputs:
 
 - target/release/tracel-desktop.exe: standalone executable; WebView2 required.
-- target/portable/Tracel-0.2.2-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
+- target/portable/Tracel-0.2.3-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
 - Existing 0.2.0 NSIS installer artifacts and installer configuration are retained, but that version contains the reported display-off problem and should not be used. Default builds do not invoke NSIS.
 
 ## Collection and Settings
 
-Desktop uses a viewport-sized shell: only the right content pane scrolls, while the left navigation stays in place. Expand/collapse reveals page labels; About client lives at the bottom. Settings and System metrics have no global header. Timeline keeps a compact demo/device/shortcuts bar without branding, workspace or account decoration.
+Desktop uses a viewport-sized shell: only the right content pane scrolls, while the left navigation stays in place. Expand/collapse reveals page labels; About client lives at the bottom. All pages omit the global header. Timeline opens directly on its toolbar, with export and shortcuts beside the view controls; its overview identifies demo data. Settings and metrics use compact groups and neutral colors. The owned Switch component uses Radix, following the shadcn component pattern without requiring Tailwind in Desktop.
 
-Appearance in Settings controls interface zoom from 75% to 175%, default 110%. Ctrl + plus/equal or numpad plus increases it; Ctrl + minus decreases it; Ctrl + 0 restores 110%. The same Cmd shortcuts work in browser previews. Zoom and navigation expansion persist in local webview storage independently of collection preferences. These shortcuts work even when the Timeline canvas has focus; plain plus/minus and the timeline wheel still control time zoom. Canvas hit testing, selection, resizing and backing resolution account for interface scaling.
+Appearance in Settings controls interface zoom from 75% to 175%, default 110%. Ctrl + plus/equal or numpad plus increases it; Ctrl + minus decreases it; Ctrl + 0 restores 110%. The same Cmd shortcuts work in browser previews. Drag the navigation edge to resize from 160 to 280 logical pixels; small windows cap its width to leave room for content. Arrow keys adjust its focused separator, Home/End use the limits, and double-click restores 192 pixels. Zoom, preferred navigation width and expansion persist in local webview storage independently of collection preferences. These shortcuts work even when the Timeline canvas has focus; plain plus/minus and the timeline wheel still control time zoom. Canvas hit testing, selection, resizing and backing resolution account for interface scaling.
 
 Use the left rail to switch between Timeline, System metrics and Settings. First launch defaults to collection off. Master, CPU and RAM choices are saved locally; disabling a source skips its native query entirely. When collection is off, the worker waits without querying metrics. GPU is visibly unsupported and not queried.
 
@@ -50,6 +50,6 @@ Desktop-specific adapters and pages live in src; lifecycle, worker and power too
 
 Use root typecheck, test, build, check:rust and test:rust commands, then build:desktop:portable. Rust tests cover selective queries, CPU missing/reset semantics, settings persistence and actual Windows CPU/RAM sampling with master-off suspension. Additional regression tests verify repeated legacy display_off calls are rejected and sleep-prevention flags exclude display activity. Browser IPC regression covers switches, failed-save rollback, the permanently disabled display-off button without native requests, diagnostic output, live chart/export and non-native fallback.
 
-Browser layout regression additionally verifies fixed navigation during right-pane scrolling, hidden/full/compact headers, expansion persistence, zoom shortcuts/reset, 800x600 at 175%, and matching Canvas range selections at 100%/175% zoom.
+Browser layout regression additionally verifies fixed navigation during right-pane scrolling, Desktop header/hero removal and preserved Web header, pointer/keyboard navigation resizing, width/expansion persistence, zoom shortcuts/reset, 800x600 at 175%, and matching Canvas range selections at 100%/175% zoom.
 
 Power operations are mocked during browser checks; no actual black-screen command is tested or shipped in 0.2.1. Native window/save-dialog interaction and hardware sleep behavior have not been validated. Local scripts/screenshots stay in ignored .tracel-runtime.

@@ -58,25 +58,23 @@ export default function App() {
         homeHref="/"
         localDataLabel="All data stays on this device"
         machineLabel={info ? `${info.deviceName} / ${info.platform === "windows" ? "Windows" : info.platform}` : nativeClient ? "This device" : "Desktop preview"}
-        headerVariant={page === "timeline" ? "compact" : "hidden"}
+        headerVariant="hidden"
+        compact
         onExport={nativeClient ? exportRange : undefined}
         onShowTimeline={() => setPage("timeline")}
         captureLabel={page === "timeline" ? "Demo capture" : "Local system metrics"}
-        navigation={<Navigation page={page} expanded={appearance.expanded} onToggle={appearance.toggleNavigation} onNavigate={setPage} onAbout={() => about.current?.showModal()} />}
+        navigation={<Navigation page={page} expanded={appearance.expanded} width={appearance.navigationWidth} onWidth={appearance.setNavigationWidth} onToggle={appearance.toggleNavigation} onNavigate={setPage} onAbout={() => about.current?.showModal()} />}
         pageContent={page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} onAwake={collection.changeAwake} zoom={appearance.zoom} onZoom={appearance.setZoom} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
       />
       <div className="desktop-notice" role="status" aria-live="polite">{notice}</div>
       <dialog ref={about} className="desktop-about" onClick={(event) => { if (event.target === event.currentTarget) about.current?.close(); }}>
-        <div className="desktop-about-heading"><span>TRACEL / ACTIVITY</span><button aria-label="Close about client" onClick={() => about.current?.close()}>×</button></div>
-        <h1>Your computer, in context.</h1>
-        <p>A local timeline for activity and system performance.</p>
+        <div className="desktop-about-heading"><h1>Tracel Activity</h1><button aria-label="Close about client" onClick={() => about.current?.close()}>×</button></div>
         <dl>
           <div><dt>Client</dt><dd>{nativeClient ? "Windows desktop" : "Browser preview"}{info ? ` · ${info.version}` : ""}</dd></div>
-          <div><dt>Timeline</dt><dd>Separate demo capture · October 8–14, 2026</dd></div>
-          <div><dt>Collection</dt><dd>{collection.status?.settings.enabled ? "System CPU / RAM enabled — see System metrics" : "Paused — enable CPU / RAM in Settings"}</dd></div>
-          <div><dt>Export</dt><dd>{nativeClient ? "JSON · choose a file on this device" : "JSON · browser download"}</dd></div>
+          <div><dt>Device</dt><dd>{info?.deviceName ?? "This device"}</dd></div>
+          <div><dt>Timeline</dt><dd>Demo · October 8–14, 2026</dd></div>
         </dl>
-        <p className="desktop-about-detail">Optional system CPU and RAM measurements stay in memory on this device. Foreground diagnostics read one window only when requested. No audio recording or uploads. Closing the client stops collection and releases Keep awake.</p>
+        <p className="desktop-about-detail">Measurements stay on this device. Closing Tracel stops collection and releases sleep prevention.</p>
         {infoError && <p role="status">Device information is unavailable. The demo remains available.</p>}
         <form method="dialog"><button autoFocus>Close</button></form>
       </dialog>

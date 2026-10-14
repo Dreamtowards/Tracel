@@ -83,6 +83,7 @@ export default function Explorer({
   captureLabel = "Demo capture",
   headerVariant = "full",
   navigation,
+  compact = false,
 }: {
   provider: DataProvider;
   homeHref?: string;
@@ -96,6 +97,8 @@ export default function Explorer({
   captureLabel?: string;
   headerVariant?: "full" | "compact" | "hidden";
   navigation?: ReactNode;
+  /** A toolbar-first layout for embedded desktop hosts. */
+  compact?: boolean;
 }) {
   const [data, setData] = useState<Capture | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -316,7 +319,7 @@ export default function Explorer({
         </nav>}
         <section className="tx-main">
           {pageContent ?? <>
-          <div className="tx-page-heading">
+          {!compact && <div className="tx-page-heading">
             <div>
               <div className="tx-eyebrow">YOUR COMPUTER, IN CONTEXT</div>
               <h1>
@@ -333,7 +336,7 @@ export default function Explorer({
               </button>
               {exportError && <span role="alert">Could not save the export. Please try again.</span>}
             </div>
-          </div>
+          </div>}
           <div className="tx-toolbar">
             <div className="tx-date-controls">
               <button
@@ -386,6 +389,12 @@ export default function Explorer({
               ))}
             </div>
             <div className="tx-toolbar-space" />
+            {compact && <>
+              <button className="tx-button" onClick={exportSelection} disabled={exporting} title="Export selected range">
+                <Download size={14} /> {exporting ? "Saving…" : "Export range"}
+              </button>
+              <button className="tx-icon-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={() => setHelp(true)}><HelpCircle size={16} /></button>
+            </>}
             <div className="tx-settings-anchor">
               <button
                 className={`tx-button ${settings ? "tx-settings-active" : ""}`}
@@ -460,10 +469,11 @@ export default function Explorer({
               )}
             </button>
           </div>
+          {compact && exportError && <p className="tx-export-error" role="alert">Could not save the export. Please try again.</p>}
           <div className="tx-overview">
             <div className="tx-overview-heading">
               <span>
-                <Radio size={12} /> CAPTURE OVERVIEW
+                <Radio size={12} /> {compact ? captureLabel : "CAPTURE OVERVIEW"}
               </span>
               <span>
                 OCT 08 – OCT 14, 2026 <b>7 days</b>

@@ -14,7 +14,7 @@ Prevent automatic sleep is set and cleared on the collector thread, requesting s
 
 Tauri is an explicit root Cargo member sharing lockfile and target directory. Default Cargo members are the four foundation crates; --workspace adds Tauri SDK dependencies. Native builds default to an EXE without installer packaging. An optional portable ZIP command and explicit NSIS installer command are available; see apps/desktop/README.md for validation limits.
 
-Desktop owns its fixed navigation, viewport sizing and local appearance preferences. Shared Explorer exposes optional header variants and a navigation slot; Web retains its existing default shell. Desktop Settings and metrics omit the global header, and Timeline uses a compact header. Interface zoom scales the host without changing timeline time ranges; Canvas uses measured bounds to convert screen coordinates to logical track coordinates and to size its backing buffer.
+Desktop owns its fixed navigation, viewport sizing and local appearance preferences. Shared Explorer exposes optional header variants and a navigation slot; Web retains its existing default shell. All Desktop pages omit the global header. Timeline uses the optional compact, toolbar-first content layout, with export and shortcuts in its toolbar and a demo label in its overview. Desktop uses neutral design tokens, system fonts and an owned Radix Switch component; Web retains its existing visual styling. Navigation supports pointer/keyboard resizing and persists its preferred width. Interface zoom scales the host without changing timeline time ranges; Canvas uses measured bounds to convert screen coordinates to logical track coordinates and to size its backing buffer.
 
 ## Future boundaries
 

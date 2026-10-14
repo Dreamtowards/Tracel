@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 export const zoomLevels = [75, 90, 100, 110, 125, 150, 175] as const;
 const defaultZoom = 110;
 const storageKey = "tracel.desktop.appearance";
-type Appearance = { zoom: number; expanded: boolean };
+type Appearance = { zoom: number; expanded: boolean; navigationWidth: number };
+export const navigationMin = 160;
+export const navigationMax = 280;
+export const navigationDefault = 192;
 
 function loadAppearance(): Appearance {
   try {
@@ -11,8 +14,9 @@ function loadAppearance(): Appearance {
     return {
       zoom: zoomLevels.includes(saved?.zoom) ? saved.zoom : defaultZoom,
       expanded: typeof saved?.expanded === "boolean" ? saved.expanded : false,
+      navigationWidth: Number.isFinite(saved?.navigationWidth) ? Math.max(navigationMin, Math.min(navigationMax, saved.navigationWidth)) : navigationDefault,
     };
-  } catch { return { zoom: defaultZoom, expanded: false }; }
+  } catch { return { zoom: defaultZoom, expanded: false, navigationWidth: navigationDefault }; }
 }
 
 export function useAppearance() {
@@ -43,5 +47,6 @@ export function useAppearance() {
       if (zoomLevels.some((level) => level === zoom)) setAppearance((current) => ({ ...current, zoom }));
     },
     toggleNavigation: () => setAppearance((current) => ({ ...current, expanded: !current.expanded })),
+    setNavigationWidth: (width: number) => setAppearance((current) => ({ ...current, expanded: true, navigationWidth: Math.max(navigationMin, Math.min(navigationMax, Math.round(width))) })),
   };
 }
