@@ -192,17 +192,18 @@ a { color: inherit; text-decoration: none; }
 .desktop-ui .tx-text-button { color: var(--primary); }
 .desktop-ui .tx-display-settings output { color: var(--text); }
 .desktop-ui .tx-display-settings > p, .desktop-ui .tx-display-settings small { color: var(--muted); }
-.desktop-ui .tx-timeline-heading { height: 34px; }
+.desktop-ui .tx-timeline-heading, .desktop-ui .tx-inspector-title { height: 34px; }
 .desktop-ui .tx-icon-button { color: #b8b8c1; }
 .desktop-ui .tx-segmented button { color: #aaaab4; }
 .desktop-ui .tx-toolbar .tx-icon-button { background: #ffffff06; }
 .desktop-ui .tx-toolbar .tx-icon-button:hover:not(:disabled) { background: #ffffff10; }
+.desktop-ui .tx-date-controls .tx-icon-button,
+.desktop-ui .tx-date-controls .tx-icon-button:hover:not(:disabled) { background: transparent; }
 .desktop-ui .tx-overview-heading, .desktop-ui .tx-overview-days button, .desktop-ui .tx-axis-label,
 .desktop-ui .tx-zoom-label, .desktop-ui .tx-timeline-heading small, .desktop-ui .tx-timeline-hint,
 .desktop-ui .tx-track-label small, .desktop-ui .tx-timeline-bottom, .desktop-ui .tx-status,
 .desktop-ui .tx-inspector-foot, .desktop-ui .tx-section-heading, .desktop-ui .tx-display-settings output,
 .desktop-ui .tx-summary-strip label, .desktop-ui .tx-summary-detail {
-  font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; font-size: 11px; letter-spacing: 0;
+  font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; letter-spacing: 0;
 }
-.desktop-ui .tx-axis-label span { font-size: 10px; }
-.desktop-ui .tx-track-label.tx-group button { font: 600 11px "Segoe UI", "Microsoft YaHei UI", sans-serif; letter-spacing: .2px; }
+.desktop-ui .tx-track-label.tx-group button { font: 500 9px "Segoe UI", "Microsoft YaHei UI", sans-serif; letter-spacing: .2px; }

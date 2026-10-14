@@ -1421,4 +1421,5 @@
 }
 
 .tx-label-width-resizer { position: absolute; top: 0; bottom: 0; width: 8px; transform: translateX(-50%); z-index: 5; cursor: col-resize; touch-action: none; }
-.tx-label-width-resizer:hover, .tx-label-width-resizer:focus-visible { background: var(--primary, #9ba8a0); opacity: .5; }
+.tx-label-width-resizer::after { content: ""; position: absolute; left: 3px; top: 0; bottom: 0; width: 2px; background: transparent; }
+.tx-label-width-resizer:hover::after, .tx-label-width-resizer:focus-visible::after { background: var(--primary, #9ba8a0); opacity: .5; }

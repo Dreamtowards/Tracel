@@ -300,7 +300,7 @@ export function Timeline({
         DAY * 2,
       ];
       const step = steps.find((s) => s >= span / (width / 95)) ?? DAY * 2;
-      ctx.font = '11px "Segoe UI", "Microsoft YaHei UI", sans-serif';
+      ctx.font = '10px "Segoe UI", "Microsoft YaHei UI", sans-serif';
       for (
         let t = Math.ceil(view.start / step) * step;
         t < view.end;
@@ -515,7 +515,7 @@ export function Timeline({
             ctx.setLineDash([]);
           }
           const scale = metricInfo[row.keys![0]];
-          ctx.font = '10px "Segoe UI", "Microsoft YaHei UI", sans-serif';
+          ctx.font = '9px "Segoe UI", "Microsoft YaHei UI", sans-serif';
           ctx.textAlign = "right";
           ctx.fillStyle = "#839198";
           ctx.fillText(`${scale.max} ${scale.unit}`, width - 7, y + 13);
@@ -538,7 +538,7 @@ export function Timeline({
           }
         ctx.setLineDash([]);
         ctx.fillStyle = palette.selection;
-        ctx.font = '11px "Segoe UI", "Microsoft YaHei UI", sans-serif';
+        ctx.font = '10px "Segoe UI", "Microsoft YaHei UI", sans-serif';
         ctx.fillText(duration(selection.end - selection.start), left + 5, 44);
       }
     };
