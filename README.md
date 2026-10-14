@@ -31,7 +31,7 @@ cargo run -p tracel-agent -- --sample     # One real CPU/RAM observation
 cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 ```
 
-Windows native builds require Rust MSVC, Microsoft C++ Build Tools/Windows SDK and WebView2. The client follows the [Tauri 2 configuration reference](https://v2.tauri.app/reference/config/). Native builds produce an executable and per-user NSIS installer. Closing the window exits the client; independent agent lifetime is future work. See the [Desktop release guide](apps/desktop/README.md).
+Windows native builds require Rust MSVC, Microsoft C++ Build Tools/Windows SDK and WebView2. The client follows the [Tauri 2 configuration reference](https://v2.tauri.app/reference/config/). Native builds default to an executable without an installer; portable ZIP packaging is available. Closing the window exits the client; independent agent lifetime is future work. See the [Desktop release guide](apps/desktop/README.md).
 
 ## Verify and build
 
@@ -41,7 +41,9 @@ npm test                    # Radar, Activity and Desktop export tests
 npm run build               # Web static export + Desktop Vite bundle
 npm run check:rust          # Entire Cargo workspace, including Tauri
 npm run test:rust
-npm run build:desktop:native # Native executable + unsigned Windows setup
+npm run build:desktop:native # Native executable only; no installer
+npm run build:desktop:portable # Windows executable + extract-and-run ZIP
+npm run build:desktop:installer # Optional NSIS installer; explicit request only
 ```
 
 `npm run verify` combines TypeScript, unit tests, frontend builds and Rust checks/tests. `check:core` and `test:core` target the four foundation crates without UI SDKs. Bare `cargo check`/`cargo test` default to those four crates. All five packages share root Cargo.lock and target output.
@@ -61,3 +63,5 @@ From root, `npm run deploy` builds Web and runs Wrangler in `apps/web`, publishi
 - [Original migration specification](CODEX_CONTEXT.md); its pre-migration paths are historical.
 
 Desktop collection starts disabled on first launch. CPU and RAM have independent native queries; the master switch stops both. Preferences persist locally; only the latest 1,800 measured observations stay in memory until exit. Real measurements have their own System metrics page and JSON export. GPU, browser URLs, persistent telemetry storage, per-process metrics and independent agent lifetime remain future work. The flat Radar map fetches external basemap tiles without sending visitor telemetry to that service.
+
+Desktop 0.2.1 disables manual display-off after a wake-up reliability incident. Prevent automatic sleep now requests system activity only and allows normal display timeout. See [collector limitations](docs/collectors.md). Portable releases require WebView2; preferences still use the Windows user application-data directory.

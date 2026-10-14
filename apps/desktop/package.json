@@ -1,6 +1,6 @@
 {
   "name": "@tracel/desktop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+    "tauri:build": "tauri build --no-bundle",
+    "tauri:installer": "tauri build --bundles nsis",
     "tauri": "tauri"
   },
   "dependencies": {

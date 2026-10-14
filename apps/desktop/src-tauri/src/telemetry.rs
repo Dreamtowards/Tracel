@@ -200,11 +200,6 @@ impl Telemetry {
         Ok(self.status())
     }
 
-    pub fn can_turn_off_display(&self) -> bool {
-        let status = self.status();
-        !status.keep_awake_requested && !status.keep_awake_active
-    }
-
     pub fn history(&self) -> Vec<SystemObservation> {
         self.shared
             .0

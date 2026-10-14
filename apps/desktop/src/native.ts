@@ -24,7 +24,6 @@ export const setCollectionSettings = (settings: CollectionSettings) => invoke<Co
 export const getSystemHistory = () => invoke<SystemObservation[]>("system_history");
 export const setKeepAwake = (enabled: boolean) => invoke<CollectionStatus>("set_keep_awake", { enabled });
 export const inspectForeground = () => invoke<ForegroundInfo>("inspect_foreground");
-export const turnOffDisplay = () => invoke<void>("display_off");
 
 export async function saveRange(payload: RangeExport): Promise<"saved" | "cancelled"> {
   const path = await save({

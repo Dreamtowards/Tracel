@@ -1,4 +1,4 @@
-# Tracel Activity desktop 0.2
+# Tracel Activity desktop 0.2.1
 
 Windows-first Tauri 2 client with opt-in real CPU/RAM collection, Settings and native tools. The original October 8–14, 2026 Timeline remains a separate demo; System metrics shows measured data only.
 
@@ -10,15 +10,18 @@ From the repository root:
 npm ci
 npm run dev:desktop:ui       # Browser preview; native collection/tools disabled
 npm run dev:desktop          # Native Windows client
-npm run build:desktop:native # Release executable and per-user NSIS setup
+npm run build:desktop:native # Release executable; no installer
+npm run build:desktop:portable # Executable + extract-and-run ZIP (Windows)
+npm run build:desktop:installer # Optional NSIS setup; only build on explicit request
 cargo run -p tracel-agent -- --sample     # One CPU/RAM reading
 cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 ```
 
-Native prerequisites: Rust MSVC, C++ Build Tools/Windows SDK and WebView2. Tauri downloads NSIS tools on the first installer build. Outputs:
+Native prerequisites: Rust MSVC, C++ Build Tools/Windows SDK and WebView2. Outputs:
 
 - target/release/tracel-desktop.exe: standalone executable; WebView2 required.
-- target/release/bundle/nsis/Tracel Activity_0.2.0_x64-setup.exe: per-user unsigned Windows development installer. Tauri's default WebView2 bootstrapper handles a missing runtime.
+- target/portable/Tracel-0.2.1-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
+- Existing 0.2.0 NSIS installer artifacts and installer configuration are retained, but that version contains the reported display-off problem and should not be used. Default builds do not invoke NSIS.
 
 ## Collection and Settings
 
@@ -26,7 +29,7 @@ Use the left rail to switch between Timeline, System metrics and Settings. First
 
 Measurements run every two seconds. CPU needs two counter reads; its first value is missing. The latest 1,800 observations (about one continuous hour) stay in memory until client exit. System metrics displays recent charts and exports actual readings as JSON with UTC millisecond timestamps, percentages, bytes and nulls for missing values. No persistent telemetry database, per-process sampling or independent background service exists. Reopening restores collection preferences; closing stops collection.
 
-Keep screen and computer awake uses a Windows thread power request while the client runs. It resets off on restart and releases on exit, without changing power plans. Turn display off is a one-shot button with a three-second delay, disabled while Keep awake is active. Windows handles normal input wake; later idle sleep policy still applies. See docs/collectors.md for native APIs and limitations.
+Prevent automatic sleep uses a Windows system-activity request while the client runs, allowing normal display timeout. It resets off on restart and releases on exit, without changing power plans. Manual display-off is disabled in the UI and native IPC in 0.2.1 after repeated-blackout/unexpected-sleep reports. Its broadcast and delayed task have been removed; callers cannot schedule another blackout. The precise hardware failure has not been reproduced. See docs/collectors.md for findings and platform limitations.
 
 Foreground diagnostics waits three seconds to let you switch windows, then reads the current title, executable path, PID and HWND once. Protected/exited processes may lack paths. Browser URL extraction is deferred and clearly marked unavailable. This snapshot stays on the Settings page and is not recorded in metric history.
 
@@ -41,6 +44,6 @@ Desktop-specific adapters and pages live in src; lifecycle, worker and power too
 
 ## Verification
 
-Use root typecheck, test, build, check:rust and test:rust commands, then build:desktop:native. Rust tests cover selective queries, CPU missing/reset semantics, settings persistence and actual Windows CPU/RAM sampling with master-off suspension. Browser IPC regression covers independent switches, failed-save rollback, power conflicts, diagnostic output, unavailable URLs, live chart/export, demo return and non-native fallback.
+Use root typecheck, test, build, check:rust and test:rust commands, then build:desktop:portable. Rust tests cover selective queries, CPU missing/reset semantics, settings persistence and actual Windows CPU/RAM sampling with master-off suspension. Additional regression tests verify repeated legacy display_off calls are rejected and sleep-prevention flags exclude display activity. Browser IPC regression covers switches, failed-save rollback, the permanently disabled display-off button without native requests, diagnostic output, live chart/export and non-native fallback.
 
-Power operations are mocked during browser checks; actual screen-off/keep-awake and native window/save-dialog interaction require manual validation. Building the setup does not install it. Local scripts/screenshots stay in ignored .tracel-runtime.
+Power operations are mocked during browser checks; no actual black-screen command is tested or shipped in 0.2.1. Native window/save-dialog interaction and hardware sleep behavior have not been validated. Local scripts/screenshots stay in ignored .tracel-runtime.

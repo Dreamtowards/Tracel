@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { inspectForeground, nativeClient, turnOffDisplay, type CollectionSettings, type CollectionStatus, type ForegroundInfo } from "./native";
+import { inspectForeground, nativeClient, type CollectionSettings, type CollectionStatus, type ForegroundInfo } from "./native";
 
 function Toggle({ label, description, checked, disabled, onChange }: { label: string; description: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
   return <label className="settings-toggle"><span><strong>{label}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={label} checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} /><span className="settings-switch" aria-hidden="true" /></label>;
@@ -13,7 +13,6 @@ export default function Settings({ status, busy, error, onSettings, onAwake }: {
   const unavailable = !nativeClient || !status?.supported;
   const [debug, setDebug] = useState<ForegroundInfo | null>(null);
   const [debugging, setDebugging] = useState(false);
-  const [turningOff, setTurningOff] = useState(false);
   const [toolMessage, setToolMessage] = useState("");
   const [toolError, setToolError] = useState("");
   const inspect = async () => {
@@ -21,12 +20,6 @@ export default function Settings({ status, busy, error, onSettings, onAwake }: {
     try { setDebug(await inspectForeground()); setToolMessage("Foreground snapshot captured. This is a one-time read."); }
     catch { setToolError("Could not inspect the foreground window. Try an ordinary desktop window."); }
     finally { setDebugging(false); }
-  };
-  const displayOff = async () => {
-    setTurningOff(true); setToolError(""); setToolMessage("Turning the display off in 3 seconds. Leave the mouse still; move it to wake the display.");
-    try { await turnOffDisplay(); setToolMessage("Display-off requested. Windows handles wake-up from normal input. Normal idle sleep policy still applies."); }
-    catch { setToolError("Could not turn off the display. Disable Keep awake and try again."); }
-    finally { setTurningOff(false); }
   };
   return <div className="desktop-page settings-page">
     <header className="desktop-page-heading"><div className="tx-eyebrow">YOUR DEVICE / YOUR CHOICE</div><h1>Settings</h1><p>Choose what to collect. Disabled metrics are never queried.</p></header>
@@ -41,8 +34,8 @@ export default function Settings({ status, busy, error, onSettings, onAwake }: {
       <p className="settings-footnote">Individual choices are retained while the master switch is off. Timeline still shows the separate demo capture; open System metrics for live measurements.</p>
     </section>
     <section className="settings-card"><h2>Power tools</h2><p>Uses Windows power requests, without changing your system power plan.</p>
-      <Toggle label="Keep screen and computer awake" description="Prevents automatic display timeout and idle sleep while this client is running. Resets off on restart; manual sleep still works." checked={status?.keepAwakeRequested ?? false} disabled={unavailable || busy} onChange={(enabled) => { void onAwake(enabled); }} />
-      <div className="settings-action"><div><strong>Turn display off now</strong><small>A one-time Windows display-off request after 3 seconds. Does not request sleep or lock. Move the mouse or press a key to wake; other apps may also wake the display.</small></div><button className="tx-button" onClick={() => { void displayOff(); }} disabled={unavailable || turningOff || status?.keepAwakeRequested || status?.keepAwakeActive}>{turningOff ? "Turning off…" : "Turn display off"}</button></div>
+      <Toggle label="Prevent automatic sleep" description="Keeps the computer working while this client runs. The display may turn off normally. Resets off on restart; manual sleep still works." checked={status?.keepAwakeRequested ?? false} disabled={unavailable || busy} onChange={(enabled) => { void onAwake(enabled); }} />
+      <div className="settings-action"><div><strong>Turn display off now — unavailable</strong><small>Disabled after a wake-up reliability issue. No display-off commands are sent. Use the system display timeout while Prevent automatic sleep is enabled.</small></div><button className="tx-button" disabled>Turn display off</button></div>
       {status?.keepAwakeRequested !== status?.keepAwakeActive && <p role="status">Applying power request…</p>}
       {status?.powerError && <p role="alert" className="settings-error">Power request failed: {status.powerError}</p>}
     </section>

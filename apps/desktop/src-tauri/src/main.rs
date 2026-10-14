@@ -57,19 +57,19 @@ async fn inspect_foreground() -> Result<tracel_agent::ForegroundInfo, String> {
     .map_err(|e| e.to_string())?
 }
 #[tauri::command]
-async fn display_off(app: tauri::AppHandle) -> Result<(), String> {
-    if !app.state::<telemetry::Telemetry>().can_turn_off_display() {
-        return Err("Turn off Keep awake before switching off the display.".into());
-    }
-    tauri::async_runtime::spawn_blocking(move || {
-        std::thread::sleep(std::time::Duration::from_secs(3));
-        if !app.state::<telemetry::Telemetry>().can_turn_off_display() {
-            return Err("Display-off cancelled because Keep awake was enabled.".into());
+fn display_off() -> Result<(), String> {
+    // Keep old IPC callers harmless too. No timers, broadcasts, or power changes.
+    Err("Display-off is disabled after a wake-up reliability issue.".into())
+}
+
+#[cfg(test)]
+mod safety_tests {
+    #[test]
+    fn display_off_is_rejected_even_for_repeated_native_calls() {
+        for _ in 0..10 {
+            assert!(super::display_off().is_err());
         }
-        tools::turn_off_display()
-    })
-    .await
-    .map_err(|e| e.to_string())?
+    }
 }
 
 fn main() {

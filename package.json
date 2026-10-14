@@ -17,6 +17,8 @@
     "dev:desktop:ui": "npm run dev --workspace @tracel/desktop --",
     "build:desktop": "npm run build --workspace @tracel/desktop",
     "build:desktop:native": "npm run tauri:build --workspace @tracel/desktop",
+    "build:desktop:installer": "npm run tauri:installer --workspace @tracel/desktop",
+    "build:desktop:portable": "npm run build:desktop:native && powershell -NoProfile -File apps/desktop/scripts/package-portable.ps1",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "check:rust": "cargo check --workspace",

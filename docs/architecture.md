@@ -10,9 +10,9 @@ Both apps pass `@tracel/timeline/mock` to `Explorer` from `packages/timeline`. T
 
 Tauri owns one collector worker, configuration persistence and a bounded 1,800-observation memory ring. A condition variable suspends the worker when collection and power requests are idle. Desktop-specific IPC exposes configuration, status, history, foreground diagnostics and power tools. Settings and System metrics occupy host-provided pages in the shared shell; the original Timeline remains a clearly separate demo. CPU/RAM measurements do not fabricate a full demo Capture. The UI polls status every two seconds and reads bounded history only on the metrics page. Native save-dialog/filesystem plugins export JSON to a user-selected path; window-state restores placement.
 
-Keep awake is set and cleared on the collector thread. Closing the client joins that worker and releases its power request. Collection preferences persist, but Keep awake is always off at startup. Browser preview disables native features. No collection APIs enter the shared package or Web.
+Prevent automatic sleep is set and cleared on the collector thread, requesting system activity only and allowing display timeout. Closing the client joins that worker and releases its power request. Collection preferences persist, but sleep prevention is always off at startup. Manual display-off is disabled in both UI and native IPC after a wake-up reliability incident; no monitor command or delayed display task remains. Browser preview disables native features. No collection APIs enter the shared package or Web.
 
-Tauri is an explicit root Cargo member sharing lockfile and target directory. Default Cargo members are the four foundation crates; --workspace adds Tauri SDK dependencies. The Windows client builds a per-user NSIS installer; see apps/desktop/README.md for features and validation limits.
+Tauri is an explicit root Cargo member sharing lockfile and target directory. Default Cargo members are the four foundation crates; --workspace adds Tauri SDK dependencies. Native builds default to an EXE without installer packaging. An optional portable ZIP command and explicit NSIS installer command are available; see apps/desktop/README.md for validation limits.
 
 ## Future boundaries
 

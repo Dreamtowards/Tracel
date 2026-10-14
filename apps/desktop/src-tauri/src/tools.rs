@@ -1,17 +1,16 @@
+#[cfg(windows)]
+fn execution_flags(enabled: bool) -> u32 {
+    use windows_sys::Win32::System::Power::{ES_CONTINUOUS, ES_SYSTEM_REQUIRED};
+    ES_CONTINUOUS | if enabled { ES_SYSTEM_REQUIRED } else { 0 }
+}
+
 pub fn keep_awake(enabled: bool) -> Result<(), String> {
     #[cfg(windows)]
     {
-        use windows_sys::Win32::System::Power::{
-            SetThreadExecutionState, ES_CONTINUOUS, ES_DISPLAY_REQUIRED, ES_SYSTEM_REQUIRED,
-        };
-        let flags = ES_CONTINUOUS
-            | if enabled {
-                ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED
-            } else {
-                0
-            };
+        use windows_sys::Win32::System::Power::SetThreadExecutionState;
+        // Request system activity only. Never hold the display on or issue monitor commands.
         // SAFETY: called and released on the single collector worker thread.
-        if unsafe { SetThreadExecutionState(flags) } == 0 {
+        if unsafe { SetThreadExecutionState(execution_flags(enabled)) } == 0 {
             return Err(std::io::Error::last_os_error().to_string());
         }
         Ok(())
@@ -23,31 +22,17 @@ pub fn keep_awake(enabled: bool) -> Result<(), String> {
     }
 }
 
-pub fn turn_off_display() -> Result<(), String> {
-    #[cfg(windows)]
-    {
-        use windows_sys::Win32::UI::WindowsAndMessaging::{
-            SendMessageTimeoutW, HWND_BROADCAST, SC_MONITORPOWER, SMTO_ABORTIFHUNG, WM_SYSCOMMAND,
-        };
-        // Standard monitor-power request; no overlay, input hooks, or suspend call.
-        let result = unsafe {
-            SendMessageTimeoutW(
-                HWND_BROADCAST,
-                WM_SYSCOMMAND,
-                SC_MONITORPOWER as usize,
-                2,
-                SMTO_ABORTIFHUNG,
-                1000,
-                std::ptr::null_mut(),
-            )
-        };
-        if result == 0 {
-            return Err("Windows did not acknowledge the display-off request (a window may have timed out).".into());
-        }
-        Ok(())
-    }
-    #[cfg(not(windows))]
-    {
-        Err("Windows only".into())
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+    use windows_sys::Win32::System::Power::{
+        ES_CONTINUOUS, ES_DISPLAY_REQUIRED, ES_SYSTEM_REQUIRED,
+    };
+
+    #[test]
+    fn prevent_sleep_allows_display_timeout_and_releases_on_disable() {
+        assert_eq!(execution_flags(true), ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+        assert_eq!(execution_flags(true) & ES_DISPLAY_REQUIRED, 0);
+        assert_eq!(execution_flags(false), ES_CONTINUOUS);
     }
 }

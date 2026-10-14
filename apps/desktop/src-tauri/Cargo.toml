@@ -1,6 +1,6 @@
 [package]
 name = "tracel-desktop"
-version = "0.2.0"
+version = "0.2.1"
 edition.workspace = true
 publish = false
 
@@ -17,4 +17,4 @@ serde_json = "1"
 tracel-agent = { path = "../../../crates/tracel-agent" }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_System_Power", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61", features = ["Win32_System_Power"] }
