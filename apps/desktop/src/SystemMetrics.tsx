@@ -1,9 +1,12 @@
+import { useI18n, type Locale } from "@tracel/timeline";
+import { Button } from "./components/ui/Button";
 import { useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { getSystemHistory, nativeClient, type CollectionStatus, type SystemObservation } from "./native";
 
 function MetricChart({ history, field, max, color }: { history: SystemObservation[]; field: "cpuPercent" | "memoryUsedBytes"; max: number; color: string }) {
+  const { t } = useI18n();
   const points = history.slice(-300);
   const first = points[0]?.capturedAtMs ?? 0;
   const end = Math.max(first + 2000, points.at(-1)?.capturedAtMs ?? first);
@@ -16,10 +19,12 @@ function MetricChart({ history, field, max, color }: { history: SystemObservatio
     path += `${connected && point.capturedAtMs - previous <= 6000 ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)} `;
     connected = true; previous = point.capturedAtMs;
   }
-  return <svg viewBox="0 0 1000 120" preserveAspectRatio="none" role="img" aria-label={`${field === "cpuPercent" ? "CPU" : "RAM"} recent measured history`}><path d="M0 110H1000M0 60H1000M0 10H1000" stroke="#293034" fill="none" /><path d={path} stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" fill="none" /></svg>;
+  return <svg viewBox="0 0 1000 120" preserveAspectRatio="none" role="img" aria-label={t("{metric} recent measured history", { metric: field === "cpuPercent" ? "CPU" : "RAM" })}><path d="M0 110H1000M0 60H1000M0 10H1000" stroke="#293034" fill="none" /><path d={path} stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" fill="none" /></svg>;
 }
 
 export default function SystemMetrics({ status, history, error, onSettings }: { status: CollectionStatus | null; history: SystemObservation[]; error: string; onSettings: () => void }) {
+  const { t, locale } = useI18n();
+  const [exportCount, setExportCount] = useState(0);
   const [exporting, setExporting] = useState(false); const [exportStatus, setExportStatus] = useState("");
   const settings = status?.settings;
   const active = !!(status?.supported && settings?.enabled && (settings.cpu || settings.ram));
@@ -31,24 +36,25 @@ export default function SystemMetrics({ status, history, error, onSettings }: { 
     setExporting(true); setExportStatus("");
     try {
       const samples = await getSystemHistory();
-      const path = await save({ title: "Export recorded system metrics", defaultPath: "tracel-system-metrics.json", filters: [{ name: "JSON", extensions: ["json"] }] });
+      const path = await save({ title: t("Export recorded system metrics"), defaultPath: "tracel-system-metrics.json", filters: [{ name: "JSON", extensions: ["json"] }] });
       if (!path) { setExportStatus("Export cancelled."); return; }
       await writeTextFile(path, JSON.stringify({ source: "Tracel native system metrics", timestampUnit: "UTC Unix milliseconds", cpuUnit: "percent", memoryUnit: "bytes", nominalPeriodMs: 2000, samples }, null, 2));
-      setExportStatus(`Saved ${samples.length} measured observations.`);
+      setExportCount(samples.length);
+      setExportStatus("Saved {count} measured observations.");
     } catch { setExportStatus("Could not save metrics. Please try again."); }
     finally { setExporting(false); }
   };
   return <div className="desktop-page metrics-page">
-    <header className="desktop-page-heading"><h1>System metrics</h1><div className="metrics-actions"><button className="tx-button" onClick={onSettings}>Collection settings</button><button className="tx-button" onClick={() => { void exportHistory(); }} disabled={!nativeClient || exporting || !status?.sampleCount}>{exporting ? "Saving…" : "Export measurements"}</button></div></header>
-    <div className="metrics-state"><i className={active ? "active" : ""} />{!nativeClient ? "Windows client required" : !status ? "Connecting…" : active ? "Collecting every 2s" : "Paused"}<span>{status?.sampleCount ?? 0} samples · local</span></div>
-    {error && <p role="alert" className="settings-error">{error}</p>}
-    {!active && <p className="settings-banner">Collection is paused. Enable it in Settings to start.</p>}
+    <header className="desktop-page-heading"><h1>{t("System metrics")}</h1><div className="metrics-actions"><Button className="tx-button" onClick={onSettings}>{t("Collection settings")}</Button><Button className="tx-button" onClick={() => { void exportHistory(); }} disabled={!nativeClient || exporting || !status?.sampleCount}>{t(exporting ? "Saving…" : "Export measurements")}</Button></div></header>
+    <div className="metrics-state"><i className={active ? "active" : ""} />{t(!nativeClient ? "Windows client required" : !status ? "Connecting…" : active ? "Collecting every 2s" : "Paused")}<span>{status?.sampleCount ?? 0} {" "}{t("samples · local")}</span></div>
+    {error && <p role="alert" className="settings-error">{t(error)}</p>}
+    {!active && <p className="settings-banner">{t("Collection is paused. Enable it in Settings to start.")}</p>}
     <div className="metrics-grid">
-      <section className="settings-card"><h2>CPU usage</h2><div className="metrics-value">{cpu == null ? "—" : cpu.toFixed(1)}<small>%</small></div><p>{!settings?.cpu ? "CPU sampling disabled" : active && cpu == null ? "Warming up…" : "System utilization"}</p><MetricChart history={history} field="cpuPercent" max={100} color="#54bdd6" /></section>
-      <section className="settings-card"><h2>Physical memory</h2><div className="metrics-value">{ram == null ? "—" : (ram / 1024 ** 3).toFixed(2)}<small>GiB {latest?.memoryTotalBytes ? `/ ${(latest.memoryTotalBytes / 1024 ** 3).toFixed(1)}` : ""}</small></div><p>{!settings?.ram ? "RAM sampling disabled" : "Memory in use"}</p><MetricChart history={history} field="memoryUsedBytes" max={memoryCapacity} color="#5485df" /></section>
+      <section className="settings-card"><h2>{t("CPU usage")}</h2><div className="metrics-value">{cpu == null ? "—" : cpu.toFixed(1)}<small>%</small></div><p>{t(!settings?.cpu ? "CPU sampling disabled" : active && cpu == null ? "Warming up…" : "System utilization")}</p><MetricChart history={history} field="cpuPercent" max={100} color="#54bdd6" /></section>
+      <section className="settings-card"><h2>{t("Physical memory")}</h2><div className="metrics-value">{ram == null ? "—" : (ram / 1024 ** 3).toFixed(2)}<small>GiB {latest?.memoryTotalBytes ? `/ ${(latest.memoryTotalBytes / 1024 ** 3).toFixed(1)}` : ""}</small></div><p>{t(!settings?.ram ? "RAM sampling disabled" : "Memory in use")}</p><MetricChart history={history} field="memoryUsedBytes" max={memoryCapacity} color="#5485df" /></section>
     </div>
-    <div className="metrics-updated">Last updated {latest ? new Date(latest.capturedAtMs).toLocaleTimeString() : "—"} · History clears on exit</div>
+    <div className="metrics-updated">{t("Last updated")}{" "}{latest ? new Date(latest.capturedAtMs).toLocaleTimeString(locale) : "—"} {" "}{t("· History clears on exit")}</div>
     {latest?.errors.map((message) => <p className="settings-error" role="alert" key={message}>{message}</p>)}
-    <p role="status">{exportStatus}</p>
+    <p role="status">{t(exportStatus, { count: exportCount })}</p>
   </div>;
 }

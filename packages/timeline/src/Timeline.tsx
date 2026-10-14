@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "./i18n";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -61,6 +62,7 @@ export function Timeline({
   onSelect,
   onFocus,
 }: Props) {
+  const { t, duration, dateLabel } = useI18n();
   const [closed, setClosed] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string[]>(["foreground"]);
   const [heights, setHeights] = useState<Record<string, number>>({});
@@ -540,7 +542,7 @@ export function Timeline({
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", draw);
     };
-  }, [data, view, selection, tracks, width, totalHeight, focus, appearance, palette]);
+  }, [data, view, selection, tracks, width, totalHeight, focus, appearance, palette, duration, dateLabel]);
 
   useEffect(() => {
     const element = canvas.current!;
@@ -592,7 +594,7 @@ export function Timeline({
     }
     if (tip.current && !drag.current && row && row.kind !== "group") {
       const sample = data.metrics[Math.floor(time / data.samplePeriod)];
-      let lines = `${dateLabel(time)} · ${clock(time, true)}\n${row.name}`;
+      let lines = `${dateLabel(time)} · ${clock(time, true)}\n${row.appId ? row.name : t(row.name)}`;
       if ((row.kind === "app" || row.kind === "context") && event) {
         const app = data.apps.find((a) => a.id === event.appId)!;
         const context = event.contexts.find(
@@ -606,19 +608,19 @@ export function Timeline({
           row.keys
             .map(
               (key) =>
-                `${metricInfo[key].name}: ${sample?.values ? sample.values[key].toFixed(1) + " " + metricInfo[key].unit : "No sample · asleep / capture gap"}`,
+                `${t(metricInfo[key].name)}: ${sample?.values ? sample.values[key].toFixed(1) + " " + metricInfo[key].unit : t("No sample · asleep / capture gap")}`,
             )
             .join("\n");
       else if (row.kind === "media") {
         const media = data.media.find((m) => m.start <= time && m.end > time);
         lines += media
-          ? `\n${media.title}\n${media.artist}\n${data.apps.find((a) => a.id === media.appId)?.name} · ${media.state}`
-          : "\nNo media session";
+          ? `\n${media.title}\n${media.artist}\n${data.apps.find((a) => a.id === media.appId)?.name} · ${t(media.state)}`
+          : "\n" + t("No media session");
       } else if (row.kind === "afk")
         lines +=
           "\n" +
           (data.afk.find((a) => a.start <= time && a.end > time)?.reason ??
-            "Not idle");
+            t("Not idle"));
       else if (row.kind === "background")
         lines +=
           "\n" +
@@ -628,8 +630,8 @@ export function Timeline({
                 b.start <= time && b.end > time && b.appId !== event?.appId,
             )
             .map((b) => data.apps.find((a) => a.id === b.appId)!.name)
-            .join(", ") || "No background apps");
-      else lines += "\nNo foreground activity";
+            .join(", ") || t("No background apps"));
+      else lines += "\n" + t("No foreground activity");
       tip.current.textContent = lines;
       tip.current.style.display = "block";
       tip.current.style.left = `${Math.max(8, Math.min(window.innerWidth - 354, clientX + 18))}px`;
@@ -641,7 +643,7 @@ export function Timeline({
     <div className="tx-timeline-scroll">
       <div ref={host} className="tx-timeline" style={{ height: totalHeight }}>
         <div className="tx-axis-label">
-          TRACKS <span>UTC+08:00</span>
+          {t("TRACKS")}{" "}<span>UTC+08:00</span>
         </div>
         {tracks.map((row) => (
           <div
@@ -691,9 +693,9 @@ export function Timeline({
                 />
               )}
               <span>
-                {row.name}
+                {row.appId ? row.name : t(row.name)}
                 {row.subtitle && row.height >= 38 && (
-                  <small>{row.subtitle}</small>
+                  <small>{t(row.subtitle)}</small>
                 )}
               </span>
             </button>
@@ -701,7 +703,7 @@ export function Timeline({
               <div
                 className="tx-track-resize"
                 role="separator"
-                aria-label={`Resize ${row.name}`}
+                aria-label={t("Resize {track}", { track: row.appId ? row.name : t(row.name) })}
                 aria-orientation="horizontal"
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -756,7 +758,7 @@ export function Timeline({
             cursor: mode === "pan" ? "grab" : "crosshair",
           }}
           tabIndex={0}
-          aria-label="Interactive timeline. Scroll to zoom, Shift-scroll to pan. Drag to select; Alt-drag to pan. Arrow keys pan; plus and minus zoom; Escape clears selection."
+          aria-label={t("Interactive timeline. Scroll to zoom, Shift-scroll to pan. Drag to select; Alt-drag to pan. Arrow keys pan; plus and minus zoom; Escape clears selection.")}
           onKeyDown={(e) => {
             const span = view.end - view.start;
             if (

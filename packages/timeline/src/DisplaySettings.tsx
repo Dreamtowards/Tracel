@@ -1,3 +1,4 @@
+import { useI18n } from "./i18n";
 import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
 
 export type TimelineAppearance = {
@@ -22,31 +23,31 @@ export function DisplaySettings({
   onChange: (value: TimelineAppearance) => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <section
       className="tx-display-settings"
-      aria-label="Timeline display settings"
+      aria-label={t("Timeline display settings")}
       onKeyDown={(e) => {
         if (e.key === "Escape") onClose();
       }}
     >
       <header>
         <span>
-          <SlidersHorizontal size={15} /> Timeline appearance
-        </span>
+          <SlidersHorizontal size={15} /> {" "}{t("Timeline appearance")}</span>
         <button
           className="tx-icon-button"
-          aria-label="Close display settings"
+          aria-label={t("Close display settings")}
           onClick={onClose}
         >
           <X size={15} />
         </button>
       </header>
-      <p>Less space. More context. Changes apply immediately.</p>
+      <p>{t("Less space. More context. Changes apply immediately.")}</p>
       <label>
-        Lane vertical padding <output>{value.padding} px</output>
+        {t("Lane vertical padding")}{" "}<output>{value.padding} px</output>
         <input
-          aria-label="Lane vertical padding"
+          aria-label={t("Lane vertical padding")}
           type="range"
           min={0}
           max={12}
@@ -55,12 +56,12 @@ export function DisplaySettings({
             onChange({ ...value, padding: Number(e.target.value) })
           }
         />
-        <small>Applied above and below each lane’s content.</small>
+        <small>{t("Applied above and below each lane’s content.")}</small>
       </label>
       <label>
-        Background row height <output>{value.backgroundHeight} px</output>
+        {t("Background row height")}{" "}<output>{value.backgroundHeight} px</output>
         <input
-          aria-label="Background row height"
+          aria-label={t("Background row height")}
           type="range"
           min={16}
           max={32}
@@ -72,9 +73,9 @@ export function DisplaySettings({
         />
       </label>
       <label>
-        Context brightness <output>{value.contextOpacity}%</output>
+        {t("Context brightness")}{" "}<output>{value.contextOpacity}%</output>
         <input
-          aria-label="Context brightness"
+          aria-label={t("Context brightness")}
           type="range"
           min={35}
           max={100}
@@ -86,8 +87,7 @@ export function DisplaySettings({
       </label>
       <label className="tx-setting-check">
         <span>
-          Show duration in app lanes
-          <small>When there is enough horizontal space.</small>
+          {t("Show duration in app lanes")}<small>{t("When there is enough horizontal space.")}</small>
         </span>
         <input
           type="checkbox"
@@ -102,9 +102,8 @@ export function DisplaySettings({
           className="tx-text-button"
           onClick={() => onChange(defaultAppearance)}
         >
-          <RotateCcw size={12} /> Reset defaults
-        </button>
-        <span>Session preferences</span>
+          <RotateCcw size={12} /> {" "}{t("Reset defaults")}</button>
+        <span>{t("Session preferences")}</span>
       </footer>
     </section>
   );

@@ -25,9 +25,9 @@ export const getSystemHistory = () => invoke<SystemObservation[]>("system_histor
 export const setKeepAwake = (enabled: boolean) => invoke<CollectionStatus>("set_keep_awake", { enabled });
 export const inspectForeground = () => invoke<ForegroundInfo>("inspect_foreground");
 
-export async function saveRange(payload: RangeExport): Promise<"saved" | "cancelled"> {
+export async function saveRange(payload: RangeExport, title = "Export timeline range"): Promise<"saved" | "cancelled"> {
   const path = await save({
-    title: "Export timeline range",
+    title,
     defaultPath: "tracel-selection.json",
     filters: [{ name: "JSON", extensions: ["json"] }],
   });
