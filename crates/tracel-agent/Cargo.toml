@@ -7,3 +7,8 @@ publish = false
 [dependencies]
 tracel-core.workspace = true
 tracel-storage.workspace = true
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_SystemInformation", "Win32_UI_WindowsAndMessaging"] }

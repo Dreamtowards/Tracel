@@ -1,14 +1,14 @@
 # Tracel
 
-Tracel contains two independent experiences: **Radar**, a simulated website visitor map/globe at `/`, and **Activity**, a personal computer activity/performance Timeline at `/timeline`. Neither currently collects real telemetry.
+Tracel contains two independent experiences: **Radar**, a simulated website visitor map/globe at `/`, and **Activity**, a personal computer activity/performance explorer. The website `/timeline` and Desktop Timeline use demo data. The Windows client also offers opt-in real CPU/RAM collection, Settings and power tools.
 
 ## Layout
 
 - `apps/web`: Next.js static website, Radar, assets, web tests and Cloudflare Pages.
-- `apps/desktop`: Tauri 2 + Vite + React shell showing the shared Activity demo; no Radar or native collector.
+- `apps/desktop`: Tauri 2 + Vite + React client with the shared Activity demo, native system metrics, Settings and diagnostics; no Radar.
 - `packages/timeline`: original Canvas Timeline, Explorer, display settings, models, analytics, isolated mock provider and Activity tests.
 - `crates/tracel-core`: OS-neutral observations and UTC timestamp conventions.
-- `crates/tracel-agent`: status-reporting entry point; exits without collecting.
+- `crates/tracel-agent`: selective Windows CPU/RAM collectors and foreground snapshot library; optional one-shot CLI.
 - `crates/tracel-storage`: store interface and draft SQLite migration; no database backend.
 - `crates/tracel-query`: clipped time-weighted gauge aggregation; range/LOD transport deferred.
 
@@ -26,7 +26,9 @@ Open [Radar](http://127.0.0.1:3000/) or [Activity](http://127.0.0.1:3000/timelin
 ```sh
 npm run dev:desktop:ui       # Vite at http://127.0.0.1:1420
 npm run dev:desktop          # Native Tauri window; requires platform SDKs
-npm run agent                # Rust scaffold; does not collect
+npm run agent                # Collector help; no continuous background service
+cargo run -p tracel-agent -- --sample     # One real CPU/RAM observation
+cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 ```
 
 Windows native builds require Rust MSVC, Microsoft C++ Build Tools/Windows SDK and WebView2. The client follows the [Tauri 2 configuration reference](https://v2.tauri.app/reference/config/). Native builds produce an executable and per-user NSIS installer. Closing the window exits the client; independent agent lifetime is future work. See the [Desktop release guide](apps/desktop/README.md).
@@ -58,4 +60,4 @@ From root, `npm run deploy` builds Web and runs Wrangler in `apps/web`, publishi
 - [Migration and verification record](docs/migration.md).
 - [Original migration specification](CODEX_CONTEXT.md); its pre-migration paths are historical.
 
-Demo telemetry stays local. The flat map fetches external basemap tiles without sending visitor telemetry to that service. Native collection, persistent storage, per-process metrics and agent management remain future work.
+Desktop collection starts disabled on first launch. CPU and RAM have independent native queries; the master switch stops both. Preferences persist locally; only the latest 1,800 measured observations stay in memory until exit. Real measurements have their own System metrics page and JSON export. GPU, browser URLs, persistent telemetry storage, per-process metrics and independent agent lifetime remain future work. The flat Radar map fetches external basemap tiles without sending visitor telemetry to that service.

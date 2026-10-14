@@ -30,3 +30,43 @@ a:focus-visible { outline: 2px solid #a4cfb7; outline-offset: -2px; }
 .desktop-recovery { display: grid; place-content: center; gap: 12px; min-height: 100vh; padding: 32px; color: #dce2e5; font-family: "Segoe UI", sans-serif; }
 .desktop-recovery h1, .desktop-recovery p { margin: 0; }
 @media (max-width: 1100px) { .tx-header-end .tx-machine { display: none; } }
+.desktop-page { overflow-y: auto; flex: 1; min-height: 0; padding: 34px clamp(24px, 4vw, 64px) 60px; color: #dce2e5; }
+.desktop-page-heading { max-width: 1040px; margin: 0 auto 28px; }
+.desktop-page-heading h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; margin: 12px 0 6px; }
+.desktop-page-heading p { color: #8a999e; margin: 0; }
+.settings-card { max-width: 1040px; margin: 0 auto 20px; background: #141a1d; border: 1px solid #293237; border-radius: 8px; padding: 24px 28px; }
+.settings-card h2 { margin: 0 0 8px; font-size: 16px; font-weight: 550; }
+.settings-card > p { color: #91a0a6; font-size: 12px; line-height: 1.7; margin: 0 0 16px; }
+.settings-toggle { display: flex; position: relative; align-items: center; gap: 24px; padding: 20px 0; border-top: 1px solid #273034; cursor: pointer; }
+.settings-toggle > span:first-child { flex: 1; }
+.settings-toggle strong, .settings-action strong { display: block; font-size: 13px; font-weight: 500; }
+.settings-toggle small, .settings-action small { display: block; color: #8c9ba1; font-size: 12px; margin-top: 5px; line-height: 1.6; max-width: 720px; }
+.settings-toggle input { position: absolute; right: 0; width: 38px; height: 22px; opacity: 0; cursor: pointer; margin: 0; }
+.settings-switch { width: 38px; height: 22px; background: #353e43; border-radius: 20px; pointer-events: none; flex-shrink: 0; transition: background .15s; }
+.settings-switch::after { content: ""; display: block; width: 16px; height: 16px; margin: 3px; border-radius: 50%; background: #9aa8ad; transition: transform .15s; }
+.settings-toggle input:checked + .settings-switch { background: #3f6a55; }
+.settings-toggle input:checked + .settings-switch::after { transform: translateX(16px); background: #d2e9db; }
+.settings-toggle input:focus-visible + .settings-switch { outline: 2px solid #a4cfb7; outline-offset: 4px; }
+.settings-toggle:has(input:disabled) { opacity: .45; cursor: default; }
+.settings-action { display: flex; align-items: center; gap: 24px; border-top: 1px solid #273034; padding-top: 20px; }
+.settings-action > div { flex: 1; }
+.settings-action .tx-button { flex-shrink: 0; }
+.settings-banner, .settings-error { max-width: 1040px; margin: 0 auto 20px; padding: 12px 16px; border: 1px solid #394842; background: #192821; color: #abc2b3; border-radius: 5px; line-height: 1.6; }
+.settings-error { color: #e4ac91 !important; border-color: #664a39; background: #2b211d; }
+.settings-debug { font-size: 12px; margin: 12px 0; }
+.settings-debug > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); padding: 10px 0; border-bottom: 1px solid #293034; gap: 20px; }
+.settings-debug dt { color: #899ba1; }
+.settings-debug dd { margin: 0; overflow-wrap: anywhere; font-family: Consolas, monospace; }
+.settings-tool-status { margin-top: 14px !important; color: #b4cdbd !important; min-height: 20px; }
+.settings-footnote { margin-top: 8px !important; }
+.metrics-actions { display: flex; gap: 10px; margin-top: 20px; }
+.metrics-state { display: flex; align-items: center; gap: 10px; max-width: 1040px; margin: 0 auto 24px; color: #b9c7c1; font-size: 12px; flex-wrap: wrap; }
+.metrics-state > i { width: 6px; height: 6px; border-radius: 50%; background: #78868a; }
+.metrics-state > i.active { background: #8fd1aa; box-shadow: 0 0 8px #8fd1aa40; }
+.metrics-state > span { margin-left: auto; color: #82949a; font: 11px Consolas, monospace; }
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1040px; margin: 0 auto; }
+.metrics-grid .settings-card { width: 100%; min-width: 0; }
+.metrics-value { font: 42px/1.2 Consolas, monospace; margin: 24px 0 10px; color: #d3e7dd; }
+.metrics-value small { font-size: 14px; margin-left: 10px; color: #8d9fa6; }
+.metrics-grid svg { width: 100%; height: 140px; margin-top: 10px; }
+@media (max-width: 1050px) { .metrics-grid { grid-template-columns: 1fr; gap: 0; } .settings-card { padding: 20px; } .settings-action { align-items: flex-start; flex-direction: column; } }

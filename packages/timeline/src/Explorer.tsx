@@ -77,6 +77,10 @@ export default function Explorer({
   headerActions,
   localDataLabel = "All data stays in this browser",
   onExport,
+  pageContent,
+  railExtra,
+  onShowTimeline,
+  captureLabel = "Demo capture",
 }: {
   provider: DataProvider;
   homeHref?: string;
@@ -84,6 +88,10 @@ export default function Explorer({
   headerActions?: ReactNode;
   localDataLabel?: string;
   onExport?: (payload: RangeExport) => Promise<void>;
+  pageContent?: ReactNode;
+  railExtra?: ReactNode;
+  onShowTimeline?: () => void;
+  captureLabel?: string;
 }) {
   const [data, setData] = useState<Capture | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -228,7 +236,7 @@ export default function Explorer({
         </span>
         <div className="tx-header-end">
           <span className="tx-demo">
-            <i /> Demo capture
+            <i /> {captureLabel}
           </span>
           <span className="tx-machine">
             {machineLabel ?? <>DESKTOP–ALEX <span>/</span> Windows 11</>}
@@ -248,10 +256,11 @@ export default function Explorer({
       <div className="tx-shell">
         <nav className="tx-rail" aria-label="Explorer navigation">
           <button
-            className="tx-rail-active"
+            className={pageContent ? undefined : "tx-rail-active"}
             title="Timeline explorer"
             aria-label="Timeline explorer"
             onClick={() => {
+              onShowTimeline?.();
               setFocus(null);
               setSelection(null);
               navigate(6, "Day");
@@ -263,6 +272,7 @@ export default function Explorer({
             title="Application analytics"
             aria-label="Application analytics"
             onClick={() => {
+              onShowTimeline?.();
               setInspector(true);
               setTab("Activity");
             }}
@@ -273,6 +283,7 @@ export default function Explorer({
             title="Performance analytics"
             aria-label="Performance analytics"
             onClick={() => {
+              onShowTimeline?.();
               setInspector(true);
               setTab("Performance");
             }}
@@ -283,12 +294,14 @@ export default function Explorer({
             title="Media sessions"
             aria-label="Media sessions"
             onClick={() => {
+              onShowTimeline?.();
               setInspector(true);
               setTab("Media");
             }}
           >
             <AudioLines size={20} />
           </button>
+          {railExtra}
           <div className="tx-rail-bottom">
             <span>LOCAL</span>
             <Monitor size={18} />
@@ -296,6 +309,7 @@ export default function Explorer({
           </div>
         </nav>
         <section className="tx-main">
+          {pageContent ?? <>
           <div className="tx-page-heading">
             <div>
               <div className="tx-eyebrow">YOUR COMPUTER, IN CONTEXT</div>
@@ -988,6 +1002,7 @@ export default function Explorer({
               {selection ? "Selection statistics" : "Visible range statistics"}
             </span>
           </footer>
+          </>}
         </section>
       </div>
       {help && (

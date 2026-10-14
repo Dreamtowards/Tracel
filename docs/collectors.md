@@ -1,13 +1,25 @@
 # Collectors
 
-## Current state
+## Implemented in Desktop 0.2
 
-No native Windows collector exists. Web and Desktop display the same deterministic mock Capture. tracel-agent reports status and exits. There is no SQLite runtime, native IPC provider, background process manager, autostart or Windows Service.
+Windows interactive-user collection is opt-in. On first launch the master switch is off, with CPU/RAM selected. Settings persist as collection.json in Tauri's application config directory. A malformed file starts collection off and displays a warning. Saving must succeed before a new configuration becomes active.
 
-## First native scope
+The worker samples selected sources at a nominal two-second period. CPU calls [GetSystemTimes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getsystemtimes); utilization is (delta kernel + delta user - delta idle) / (delta kernel + delta user). Kernel time includes idle. First reads, counter resets and long scheduling gaps establish a new baseline and leave CPU missing. On machines with more than 64 logical processors, this API measures the calling thread's primary processor group; multi-group aggregation is not implemented.
 
-Target Windows interactive-user sessions and system metrics only: CPU, RAM, GPU where available, network receive/send, disk read/write and audio signal level. Preserve measured bytes and actual sample intervals when possible. Missing/unsupported readings stay missing; sleep and capture interruptions must not turn into zero-valued observations. Retain source and quality. Per-process/application metrics are deferred.
+RAM separately calls [GlobalMemoryStatusEx](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-globalmemorystatusex), returning physical total and total-minus-available in bytes. Disabling CPU skips its OS call; disabling RAM skips its OS call. Disabling the master switch or selecting neither suspends metric queries entirely. These choices control collection rather than discarding unwanted measurements after querying everything. No process enumeration is performed for metrics.
 
-Later foreground/context, running-app lifetime, AFK and playback collectors remain separate. Group foreground by executable/application while retaining title/URI/file/project context without splitting app color for every context change. Prefer native UI/UI Automation for browser/editor metadata; no mandatory extensions initially.
+The latest 1,800 observations remain in memory, about one hour of continuous collection. Pauses retain old history, so this is a count limit rather than a one-hour expiration policy. History can be exported as real JSON from System metrics. Closing the client ends collection and discards readings. Reopening restores collection preferences. SQLite, autostart and an independent background agent are not implemented. Timeline and the website remain demo providers.
 
-Privacy/local first: no keylogging, screenshots, raw audio capture or cloud upload. Production retention/storage need concrete implementations and tests. Agent/window lifetime needs an explicit later strategy; this scaffold does not keep collecting when the window closes.
+## Diagnostics and power tools
+
+Foreground inspection is a one-shot request after a three-second delay to switch to the target window. It reads HWND, PID, window title and executable path via Win32, without elevation. Protected/exited processes may lack paths. PID/HWND are snapshot identifiers, not durable identities. Browser URL extraction requires a later UI Automation adapter and is explicitly unavailable; titles are never treated as URLs. Results remain on the Settings page and are not added to metric history.
+
+Keep awake uses [SetThreadExecutionState](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate) on one worker thread, requesting display/system activity until disabled or the client exits. It resets off on restart, does not alter power plans, and does not prevent explicit manual sleep.
+
+Turn display off is a button, not a preference. After three seconds it sends the standard [WM_SYSCOMMAND / SC_MONITORPOWER](https://learn.microsoft.com/en-us/windows/win32/menurc/wm-syscommand) request with value 2 and bounded per-window message timeout. No overlay, input hooks, lock or suspend call is used. Windows handles subsequent input wake; other applications may wake the display too. Normal later idle-sleep policy still applies. Disable Keep awake before using this action. Hardware-specific power behavior needs manual validation; automated UI checks mock these commands and never change the user's power state.
+
+## Deferred scope
+
+GPU, network, disk and audio collectors are not queried. GPU appears disabled in Settings. Future implementations must preserve source, actual sample intervals, quality and gaps; byte totals require measured counters. Per-process metrics remain deferred.
+
+Foreground/context intervals, running-app lifetimes, AFK and playback will be separate collectors. Prefer native UI Automation for browser/editor context without mandatory extensions. Privacy remains local-first: no keylogging, screenshots, raw audio or cloud upload.

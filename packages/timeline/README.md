@@ -4,6 +4,10 @@ Shared React UI consumed by the Next.js `/timeline` demo and the Vite/Tauri Desk
 
 Use `import { Explorer } from "@tracel/timeline"` and pass a stable `DataProvider` as `provider`. The deterministic demo adapter is a separate `@tracel/timeline/mock` entry point. Set `homeHref="/"` in Desktop. Explorer imports its scoped CSS; each host provides a box-sizing/body/button/link reset. Core models and analytics are also available as `@tracel/timeline/model` and `@tracel/timeline/analytics` without a React client boundary.
 
+## Host integration
+
+Explorer also accepts optional framework-neutral `railExtra`, `pageContent`, `onShowTimeline` and `captureLabel` host props. Desktop uses these for Settings and System metrics without importing native APIs into this package. Its native readings remain separate from the mock Capture.
+
 ## Structure
 
 - `model.ts`: interval types, subject abstraction, relative-second time coordinates and viewport math.

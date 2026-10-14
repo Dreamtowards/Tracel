@@ -12,6 +12,12 @@ tracel-core uses UTC Unix milliseconds, System/Process/Application/Device subjec
 
 tracel-query currently aggregates gauges from non-overlapping observations per subject/metric. It clips weights and excludes missing/non-finite values; zero remains valid. Byte totals and LOD are deferred. The draft system_samples schema records interval, metric, nullable value, source and quality; it is not automatically applied and no database is opened.
 
+## Desktop measured observations
+
+Desktop 0.2 serializes `SystemObservation` from `tracel-agent` as `capturedAtMs` (UTC Unix milliseconds), nullable `cpuPercent`, nullable `memoryUsedBytes` / `memoryTotalBytes` (bytes), and an `errors` array. CPU is a utilization gauge averaged between consecutive counter reads; RAM is an instantaneous physical-memory gauge. Disabled, failed and warm-up values stay null rather than becoming zero. The nominal period is 2,000 ms; timestamps carry actual observation spacing. It is a small collector transport DTO, not yet the interval/quality database model in tracel-core.
+
+System metrics renders and exports this bounded native series separately from the demo Capture. Charts break across missing readings and gaps over six seconds; they do not interpolate interrupted collection. No GPU/network/disk/audio or simulated foreground intervals are inserted into real measurements. The current ring is bounded by 1,800 observations and has no persistent telemetry storage.
+
 ## Future entities
 
 Application, process instance and window instance IDs must be distinct and durable; PID/HWND are reusable. Foreground, context, AFK, lifetime and playback remain separate intervals. Discrete switches, sleep/wake, interruptions and rollups should retain source/quality, min/max, time-weighted means, coverage and byte totals. Per-process metrics are deferred and may use separate tables. System is not an application. Process I/O is not physical disk throughput; CPU utilization is not power draw.

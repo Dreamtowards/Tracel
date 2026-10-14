@@ -3605,8 +3605,11 @@ checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
 name = "tracel-agent"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "tracel-core",
  "tracel-storage",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3615,14 +3618,17 @@ version = "0.1.0"
 
 [[package]]
 name = "tracel-desktop"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
  "tauri-plugin-window-state",
+ "tracel-agent",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
