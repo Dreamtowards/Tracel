@@ -1,10 +1,12 @@
-import { Component, useEffect, useRef, useState, type ReactNode } from "react";
+import { Component, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Explorer, type RangeExport } from "@tracel/timeline";
 import { demoProvider } from "@tracel/timeline/mock";
 import { getAppInfo, nativeClient, saveRange, type AppInfo } from "./native";
 import Settings from "./Settings";
 import SystemMetrics from "./SystemMetrics";
 import { useCollection } from "./useCollection";
+import { useAppearance } from "./useAppearance";
+import Navigation, { type Page } from "./Navigation";
 
 class ClientBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -22,7 +24,10 @@ class ClientBoundary extends Component<{ children: ReactNode }, { failed: boolea
 }
 
 export default function App() {
-  const [page, setPage] = useState<"timeline" | "metrics" | "settings">("timeline");
+  const [page, setPage] = useState<Page>("timeline");
+  const appearance = useAppearance();
+  const ui = useRef<HTMLDivElement>(null);
+  useEffect(() => { ui.current?.querySelector(".tx-main")?.scrollTo(0, 0); }, [page]);
   const collection = useCollection(page === "metrics");
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [infoError, setInfoError] = useState(false);
@@ -47,20 +52,18 @@ export default function App() {
   };
   return (
     <ClientBoundary>
+      <div ref={ui} className="desktop-ui" style={{ "--ui-scale": appearance.zoom / 100 } as CSSProperties}>
       <Explorer
         provider={demoProvider}
         homeHref="/"
         localDataLabel="All data stays on this device"
         machineLabel={info ? `${info.deviceName} / ${info.platform === "windows" ? "Windows" : info.platform}` : nativeClient ? "This device" : "Desktop preview"}
-        headerActions={<button className="desktop-about-button" onClick={() => about.current?.showModal()}>About client</button>}
+        headerVariant={page === "timeline" ? "compact" : "hidden"}
         onExport={nativeClient ? exportRange : undefined}
         onShowTimeline={() => setPage("timeline")}
         captureLabel={page === "timeline" ? "Demo capture" : "Local system metrics"}
-        railExtra={<>
-          <button className={page === "metrics" ? "tx-rail-active" : undefined} aria-label="System metrics" title="System metrics" onClick={() => setPage("metrics")}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4" /></svg></button>
-          <button className={page === "settings" ? "tx-rail-active" : undefined} aria-label="Settings" title="Settings" onClick={() => setPage("settings")}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6" /><circle cx="8" cy="7" r="2" fill="currentColor" /><circle cx="16" cy="17" r="2" fill="currentColor" /></svg></button>
-        </>}
-        pageContent={page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} onAwake={collection.changeAwake} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
+        navigation={<Navigation page={page} expanded={appearance.expanded} onToggle={appearance.toggleNavigation} onNavigate={setPage} onAbout={() => about.current?.showModal()} />}
+        pageContent={page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} onAwake={collection.changeAwake} zoom={appearance.zoom} onZoom={appearance.setZoom} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
       />
       <div className="desktop-notice" role="status" aria-live="polite">{notice}</div>
       <dialog ref={about} className="desktop-about" onClick={(event) => { if (event.target === event.currentTarget) about.current?.close(); }}>
@@ -75,8 +78,9 @@ export default function App() {
         </dl>
         <p className="desktop-about-detail">Optional system CPU and RAM measurements stay in memory on this device. Foreground diagnostics read one window only when requested. No audio recording or uploads. Closing the client stops collection and releases Keep awake.</p>
         {infoError && <p role="status">Device information is unavailable. The demo remains available.</p>}
-        <form method="dialog"><button autoFocus>Back to timeline</button></form>
+        <form method="dialog"><button autoFocus>Close</button></form>
       </dialog>
+      </div>
     </ClientBoundary>
   );
 }

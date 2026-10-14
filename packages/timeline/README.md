@@ -8,6 +8,8 @@ Use `import { Explorer } from "@tracel/timeline"` and pass a stable `DataProvide
 
 Explorer also accepts optional framework-neutral `railExtra`, `pageContent`, `onShowTimeline` and `captureLabel` host props. Desktop uses these for Settings and System metrics without importing native APIs into this package. Its native readings remain separate from the mock Capture.
 
+`headerVariant` selects `full` (default), `compact` or `hidden`; `navigation` optionally replaces the default rail. Desktop supplies its own collapsible navigation and only shows a compact header on Timeline. Web consumers keep their defaults. Canvas coordinates and backing resolution account for host CSS scaling so that hover, selection, panning and track resize stay aligned.
+
 ## Structure
 
 - `model.ts`: interval types, subject abstraction, relative-second time coordinates and viewport math.

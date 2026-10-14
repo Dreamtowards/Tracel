@@ -14,6 +14,8 @@ Prevent automatic sleep is set and cleared on the collector thread, requesting s
 
 Tauri is an explicit root Cargo member sharing lockfile and target directory. Default Cargo members are the four foundation crates; --workspace adds Tauri SDK dependencies. Native builds default to an EXE without installer packaging. An optional portable ZIP command and explicit NSIS installer command are available; see apps/desktop/README.md for validation limits.
 
+Desktop owns its fixed navigation, viewport sizing and local appearance preferences. Shared Explorer exposes optional header variants and a navigation slot; Web retains its existing default shell. Desktop Settings and metrics omit the global header, and Timeline uses a compact header. Interface zoom scales the host without changing timeline time ranges; Canvas uses measured bounds to convert screen coordinates to logical track coordinates and to size its backing buffer.
+
 ## Future boundaries
 
 Windows collectors belong to the interactive-user agent. SQLite should use WAL, migrations and atomic batched writes. Query work will add range/LOD, coverage and totals, with transport through a Desktop-specific Tauri adapter. Avoid shipping entire histories to React. DataProvider.load remains the prototype API until range reads are implemented.

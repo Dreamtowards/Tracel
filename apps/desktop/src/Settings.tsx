@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { inspectForeground, nativeClient, type CollectionSettings, type CollectionStatus, type ForegroundInfo } from "./native";
+import { zoomLevels } from "./useAppearance";
 
 function Toggle({ label, description, checked, disabled, onChange }: { label: string; description: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
   return <label className="settings-toggle"><span><strong>{label}</strong><small>{description}</small></span><input type="checkbox" role="switch" aria-label={label} checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} /><span className="settings-switch" aria-hidden="true" /></label>;
 }
 
-export default function Settings({ status, busy, error, onSettings, onAwake }: {
+export default function Settings({ status, busy, error, onSettings, onAwake, zoom, onZoom }: {
   status: CollectionStatus | null; busy: boolean; error: string;
   onSettings: (settings: CollectionSettings) => Promise<void>; onAwake: (enabled: boolean) => Promise<void>;
+  zoom: number; onZoom: (zoom: number) => void;
 }) {
   const settings = status?.settings ?? { enabled: false, cpu: true, ram: true };
   const unavailable = !nativeClient || !status?.supported;
@@ -26,6 +28,11 @@ export default function Settings({ status, busy, error, onSettings, onAwake }: {
     {unavailable && <p className="settings-banner">{nativeClient && !status ? "Connecting to the native collector…" : "Native collection and power tools are available in the Windows client. Browser preview does not collect device data."}</p>}
     {error && <p role="alert" className="settings-error">{error}</p>}
     {status?.startupWarning && <p role="alert" className="settings-error">{status.startupWarning}</p>}
+    <section className="settings-card"><h2>Appearance</h2>
+      <div className="settings-action settings-zoom"><label htmlFor="interface-zoom"><strong>Interface zoom</strong><small>Scale text, controls and navigation. Ctrl + plus / minus to adjust; Ctrl + 0 restores 110%. Timeline time zoom is separate.</small></label>
+        <select id="interface-zoom" value={zoom} onChange={(event) => onZoom(Number(event.target.value))}>{zoomLevels.map((level) => <option value={level} key={level}>{level}%{level === 110 ? " (default)" : ""}</option>)}</select>
+      </div>
+    </section>
     <section className="settings-card"><h2>Collection</h2><p>System-wide measurements every 2 seconds. Preferences are saved on this device; the latest 1,800 observations stay in memory (about 1 hour of continuous collection).</p>
       <Toggle label="Enable collection" description="Master switch. Off means the sampler waits without querying metrics." checked={settings.enabled} disabled={unavailable || busy} onChange={(enabled) => { void onSettings({ ...settings, enabled }); }} />
       <Toggle label="CPU usage" description="Reads system CPU time counters. First sample after enabling warms up the baseline." checked={settings.cpu} disabled={unavailable || busy} onChange={(cpu) => { void onSettings({ ...settings, cpu }); }} />

@@ -70,3 +70,28 @@ a:focus-visible { outline: 2px solid #a4cfb7; outline-offset: -2px; }
 .metrics-value small { font-size: 14px; margin-left: 10px; color: #8d9fa6; }
 .metrics-grid svg { width: 100%; height: 140px; margin-top: 10px; }
 @media (max-width: 1050px) { .metrics-grid { grid-template-columns: 1fr; gap: 0; } .settings-card { padding: 20px; } .settings-action { align-items: flex-start; flex-direction: column; } }
+
+html, body, #root { height: 100%; overflow: hidden; }
+.desktop-ui { --ui-scale: 1.1; width: calc(100vw / var(--ui-scale)); height: calc(100dvh / var(--ui-scale)); zoom: var(--ui-scale); }
+.desktop-ui > .tx-app { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.desktop-ui .tx-shell { flex: 1; min-height: 0; overflow: hidden; }
+.desktop-ui .tx-main { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.desktop-ui .desktop-page { overflow: visible; }
+.desktop-ui .tx-header-compact { height: 40px; flex-shrink: 0; padding: 0 20px; }
+.desktop-ui .tx-header-compact .tx-header-end { margin: 0; width: 100%; }
+.desktop-ui .tx-header-compact .tx-machine { margin-left: auto; }
+.desktop-navigation { width: 62px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; padding: 12px 10px; border-right: 1px solid #293034; background: #111619; overflow-y: auto; overflow-x: hidden; }
+.desktop-navigation.expanded { width: 204px; }
+.desktop-navigation button { width: 100%; min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-shrink: 0; padding: 9px; border: 0; border-radius: 5px; color: #89999f; background: transparent; white-space: nowrap; }
+.desktop-navigation button:hover { background: #202b2e; color: #e1e9e5; }
+.desktop-navigation button[aria-current="page"] { background: #25362f; color: #c2e0ce; }
+.desktop-navigation button span { display: none; }
+.desktop-navigation.expanded button { justify-content: flex-start; }
+.desktop-navigation.expanded button span { display: inline; }
+.desktop-nav-pages { display: flex; flex-direction: column; gap: 8px; }
+.desktop-navigation .desktop-nav-toggle { color: #a6b3b7; }
+.desktop-navigation .desktop-nav-about { margin-top: auto; }
+.settings-zoom { align-items: center; }
+.settings-zoom label { flex: 1; }
+.settings-zoom select { min-width: 130px; border: 1px solid #42524a; border-radius: 5px; color: #dce2e5; background: #1b2521; padding: 8px 12px; font: inherit; }
+.settings-zoom select:focus-visible { outline: 2px solid #a4cfb7; outline-offset: 2px; }

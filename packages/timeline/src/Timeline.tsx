@@ -229,7 +229,8 @@ export function Timeline({
     const element = canvas.current;
     if (!element) return;
     const draw = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const scale = element.getBoundingClientRect().width / width || 1;
+      const dpr = (window.devicePixelRatio || 1) * scale;
       element.width = width * dpr;
       element.height = totalHeight * dpr;
       const ctx = element.getContext("2d")!;
@@ -569,14 +570,16 @@ export function Timeline({
     const rect = canvas.current!.getBoundingClientRect();
     const px = Math.max(0, Math.min(rect.width, clientX - rect.left));
     const time = view.start + (px / rect.width) * (view.end - view.start);
+    const localX = px * width / rect.width;
+    const localY = (clientY - rect.top) * totalHeight / rect.height;
     const row = tracks.find(
-      (t) => clientY - rect.top >= t.y && clientY - rect.top < t.y + t.height,
+      (t) => localY >= t.y && localY < t.y + t.height,
     );
     const event = data.activity.find((a) => a.start <= time && a.end > time);
     if (tip.current) tip.current.style.display = "none";
     if (cursor.current) {
       cursor.current.style.display = "block";
-      cursor.current.style.left = `${LABEL + px}px`;
+      cursor.current.style.left = `${LABEL + localX}px`;
       cursor.current.dataset.time = `${dateLabel(time)} · ${clock(time, true)}`;
     }
     if (tip.current && !drag.current && row && row.kind !== "group") {
@@ -721,8 +724,8 @@ export function Timeline({
                     Math.min(
                       180,
                       Number(e.currentTarget.dataset.height) +
-                        e.clientY -
-                        Number(e.currentTarget.dataset.start),
+                        (e.clientY - Number(e.currentTarget.dataset.start)) /
+                          (host.current!.getBoundingClientRect().width / host.current!.offsetWidth),
                     ),
                   );
                   setHeights((h) => ({
@@ -795,7 +798,7 @@ export function Timeline({
               if (Math.abs(e.clientX - current.x) > 3) current.moved = true;
               if (!current.moved) return;
               const delta =
-                ((e.clientX - current.x) / width) *
+                ((e.clientX - current.x) / e.currentTarget.getBoundingClientRect().width) *
                 (current.view.end - current.view.start);
               if (current.pan)
                 onView(

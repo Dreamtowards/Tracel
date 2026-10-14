@@ -1,4 +1,4 @@
-# Tracel Activity desktop 0.2.1
+# Tracel Activity desktop 0.2.2
 
 Windows-first Tauri 2 client with opt-in real CPU/RAM collection, Settings and native tools. The original October 8–14, 2026 Timeline remains a separate demo; System metrics shows measured data only.
 
@@ -20,10 +20,14 @@ cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 Native prerequisites: Rust MSVC, C++ Build Tools/Windows SDK and WebView2. Outputs:
 
 - target/release/tracel-desktop.exe: standalone executable; WebView2 required.
-- target/portable/Tracel-0.2.1-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
+- target/portable/Tracel-0.2.2-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
 - Existing 0.2.0 NSIS installer artifacts and installer configuration are retained, but that version contains the reported display-off problem and should not be used. Default builds do not invoke NSIS.
 
 ## Collection and Settings
+
+Desktop uses a viewport-sized shell: only the right content pane scrolls, while the left navigation stays in place. Expand/collapse reveals page labels; About client lives at the bottom. Settings and System metrics have no global header. Timeline keeps a compact demo/device/shortcuts bar without branding, workspace or account decoration.
+
+Appearance in Settings controls interface zoom from 75% to 175%, default 110%. Ctrl + plus/equal or numpad plus increases it; Ctrl + minus decreases it; Ctrl + 0 restores 110%. The same Cmd shortcuts work in browser previews. Zoom and navigation expansion persist in local webview storage independently of collection preferences. These shortcuts work even when the Timeline canvas has focus; plain plus/minus and the timeline wheel still control time zoom. Canvas hit testing, selection, resizing and backing resolution account for interface scaling.
 
 Use the left rail to switch between Timeline, System metrics and Settings. First launch defaults to collection off. Master, CPU and RAM choices are saved locally; disabling a source skips its native query entirely. When collection is off, the worker waits without querying metrics. GPU is visibly unsupported and not queried.
 
@@ -45,5 +49,7 @@ Desktop-specific adapters and pages live in src; lifecycle, worker and power too
 ## Verification
 
 Use root typecheck, test, build, check:rust and test:rust commands, then build:desktop:portable. Rust tests cover selective queries, CPU missing/reset semantics, settings persistence and actual Windows CPU/RAM sampling with master-off suspension. Additional regression tests verify repeated legacy display_off calls are rejected and sleep-prevention flags exclude display activity. Browser IPC regression covers switches, failed-save rollback, the permanently disabled display-off button without native requests, diagnostic output, live chart/export and non-native fallback.
+
+Browser layout regression additionally verifies fixed navigation during right-pane scrolling, hidden/full/compact headers, expansion persistence, zoom shortcuts/reset, 800x600 at 175%, and matching Canvas range selections at 100%/175% zoom.
 
 Power operations are mocked during browser checks; no actual black-screen command is tested or shipped in 0.2.1. Native window/save-dialog interaction and hardware sleep behavior have not been validated. Local scripts/screenshots stay in ignored .tracel-runtime.

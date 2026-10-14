@@ -81,6 +81,8 @@ export default function Explorer({
   railExtra,
   onShowTimeline,
   captureLabel = "Demo capture",
+  headerVariant = "full",
+  navigation,
 }: {
   provider: DataProvider;
   homeHref?: string;
@@ -92,6 +94,8 @@ export default function Explorer({
   railExtra?: ReactNode;
   onShowTimeline?: () => void;
   captureLabel?: string;
+  headerVariant?: "full" | "compact" | "hidden";
+  navigation?: ReactNode;
 }) {
   const [data, setData] = useState<Capture | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -222,7 +226,8 @@ export default function Explorer({
   };
   return (
     <main className="tx-app">
-      <header className="tx-header">
+      {headerVariant !== "hidden" && <header className={`tx-header${headerVariant === "compact" ? " tx-header-compact" : ""}`}>
+        {headerVariant === "full" && <>
         <a href={homeHref} className="tx-brand">
           <span className="tx-brand-mark">
             <Activity size={23} />
@@ -234,6 +239,7 @@ export default function Explorer({
           <Monitor size={14} /> Personal workspace <ChevronRight size={12} />{" "}
           <strong>Explorer</strong>
         </span>
+        </>}
         <div className="tx-header-end">
           <span className="tx-demo">
             <i /> {captureLabel}
@@ -250,11 +256,11 @@ export default function Explorer({
           >
             <HelpCircle size={17} />
           </button>
-          <span className="tx-avatar">A</span>
+          {headerVariant === "full" && <span className="tx-avatar">A</span>}
         </div>
-      </header>
+      </header>}
       <div className="tx-shell">
-        <nav className="tx-rail" aria-label="Explorer navigation">
+        {navigation ?? <nav className="tx-rail" aria-label="Explorer navigation">
           <button
             className={pageContent ? undefined : "tx-rail-active"}
             title="Timeline explorer"
@@ -307,7 +313,7 @@ export default function Explorer({
             <Monitor size={18} />
             <i />
           </div>
-        </nav>
+        </nav>}
         <section className="tx-main">
           {pageContent ?? <>
           <div className="tx-page-heading">
