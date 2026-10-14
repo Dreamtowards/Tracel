@@ -1,9 +1,10 @@
+import { defaultAccent, validAccent } from "./theme";
 import { useEffect, useState } from "react";
 
 export const zoomLevels = [75, 90, 100, 110, 125, 150, 175] as const;
 const defaultZoom = 110;
 const storageKey = "tracel.desktop.appearance";
-type Appearance = { zoom: number; expanded: boolean; navigationWidth: number };
+type Appearance = { zoom: number; expanded: boolean; navigationWidth: number; accent: string };
 export const navigationMin = 160;
 export const navigationMax = 280;
 export const navigationDefault = 192;
@@ -14,9 +15,10 @@ function loadAppearance(): Appearance {
     return {
       zoom: zoomLevels.includes(saved?.zoom) ? saved.zoom : defaultZoom,
       expanded: typeof saved?.expanded === "boolean" ? saved.expanded : false,
+      accent: validAccent(saved?.accent) ? saved.accent.toLowerCase() : defaultAccent,
       navigationWidth: Number.isFinite(saved?.navigationWidth) ? Math.max(navigationMin, Math.min(navigationMax, saved.navigationWidth)) : navigationDefault,
     };
-  } catch { return { zoom: defaultZoom, expanded: false, navigationWidth: navigationDefault }; }
+  } catch { return { zoom: defaultZoom, expanded: false, navigationWidth: navigationDefault, accent: defaultAccent }; }
 }
 
 export function useAppearance() {
@@ -43,6 +45,9 @@ export function useAppearance() {
   }, []);
   return {
     ...appearance,
+    setAccent: (accent: string) => {
+      if (validAccent(accent)) setAppearance((current) => ({ ...current, accent: accent.toLowerCase() }));
+    },
     setZoom: (zoom: number) => {
       if (zoomLevels.some((level) => level === zoom)) setAppearance((current) => ({ ...current, zoom }));
     },

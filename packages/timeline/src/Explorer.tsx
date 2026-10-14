@@ -45,7 +45,7 @@ import {
   bytes,
   metricInfo,
 } from "./model";
-import { Timeline } from "./Timeline";
+import { Timeline, type TimelinePalette } from "./Timeline";
 import { overviewPath } from "./overview";
 import { DisplaySettings, defaultAppearance } from "./DisplaySettings";
 import "./explorer.css";
@@ -84,6 +84,8 @@ export default function Explorer({
   headerVariant = "full",
   navigation,
   compact = false,
+  renderDatePicker,
+  palette,
 }: {
   provider: DataProvider;
   homeHref?: string;
@@ -99,6 +101,8 @@ export default function Explorer({
   navigation?: ReactNode;
   /** A toolbar-first layout for embedded desktop hosts. */
   compact?: boolean;
+  renderDatePicker?: (props: { value: string; min: string; max: string; onChange: (value: string) => void }) => ReactNode;
+  palette?: TimelinePalette;
 }) {
   const [data, setData] = useState<Capture | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -317,7 +321,7 @@ export default function Explorer({
             <i />
           </div>
         </nav>}
-        <section className="tx-main">
+        <section className={`tx-main${compact && !pageContent ? " tx-main-timeline" : ""}`}>
           {pageContent ?? <>
           {!compact && <div className="tx-page-heading">
             <div>
@@ -347,7 +351,11 @@ export default function Explorer({
               >
                 <ChevronLeft size={15} />
               </button>
-              <label className="tx-date">
+              {renderDatePicker ? renderDatePicker({
+                value: `2026-10-${String(day + 8).padStart(2, "0")}`,
+                min: "2026-10-08", max: "2026-10-14",
+                onChange: (value) => navigate(Number(value.slice(-2)) - 8, "Day"),
+              }) : <label className="tx-date">
                 <CalendarDays size={14} />
                 <input
                   aria-label="Capture date"
@@ -360,7 +368,7 @@ export default function Explorer({
                       navigate(Number(e.target.value.slice(-2)) - 8, "Day");
                   }}
                 />
-              </label>
+              </label>}
               <button
                 className="tx-icon-button"
                 aria-label="Next day"
@@ -390,10 +398,10 @@ export default function Explorer({
             </div>
             <div className="tx-toolbar-space" />
             {compact && <>
-              <button className="tx-button" onClick={exportSelection} disabled={exporting} title="Export selected range">
-                <Download size={14} /> {exporting ? "Saving…" : "Export range"}
-              </button>
               <button className="tx-icon-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={() => setHelp(true)}><HelpCircle size={16} /></button>
+              <button className="tx-icon-button" onClick={exportSelection} disabled={exporting} aria-label="Export range" title={exporting ? "Saving range..." : "Export range"}>
+                <Download size={16} />
+              </button>
             </>}
             <div className="tx-settings-anchor">
               <button
@@ -602,6 +610,7 @@ export default function Explorer({
                 mode={mode}
                 focus={focus}
                 appearance={appearance}
+                palette={palette}
                 onView={changeView}
                 onSelect={setSelection}
                 onFocus={setFocus}

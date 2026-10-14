@@ -3618,7 +3618,7 @@ version = "0.1.0"
 
 [[package]]
 name = "tracel-desktop"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "serde",
  "serde_json",

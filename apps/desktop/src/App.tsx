@@ -1,4 +1,6 @@
-import { Component, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import DatePicker from "./DatePicker";
+import { accentForeground } from "./theme";
+import { Component, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Explorer, type RangeExport } from "@tracel/timeline";
 import { demoProvider } from "@tracel/timeline/mock";
 import { getAppInfo, nativeClient, saveRange, type AppInfo } from "./native";
@@ -26,6 +28,14 @@ class ClientBoundary extends Component<{ children: ReactNode }, { failed: boolea
 export default function App() {
   const [page, setPage] = useState<Page>("timeline");
   const appearance = useAppearance();
+  const palette = useMemo(() => ({ background: "#111113", grid: "#232326", divider: "#29292d", group: "#19191c", focus: `${appearance.accent}12`, selection: appearance.accent }), [appearance.accent]);
+  useLayoutEffect(() => {
+    // Body portals inherit the same theme; their dimensions scale without a zoomed positioning ancestor.
+    const root = document.documentElement.style;
+    root.setProperty("--primary", appearance.accent);
+    root.setProperty("--primary-foreground", accentForeground(appearance.accent));
+    root.setProperty("--ui-scale", String(appearance.zoom / 100));
+  }, [appearance.accent, appearance.zoom]);
   const ui = useRef<HTMLDivElement>(null);
   useEffect(() => { ui.current?.querySelector(".tx-main")?.scrollTo(0, 0); }, [page]);
   const collection = useCollection(page === "metrics");
@@ -60,11 +70,13 @@ export default function App() {
         machineLabel={info ? `${info.deviceName} / ${info.platform === "windows" ? "Windows" : info.platform}` : nativeClient ? "This device" : "Desktop preview"}
         headerVariant="hidden"
         compact
+        renderDatePicker={(props) => <DatePicker {...props} />}
+        palette={palette}
         onExport={nativeClient ? exportRange : undefined}
         onShowTimeline={() => setPage("timeline")}
         captureLabel={page === "timeline" ? "Demo capture" : "Local system metrics"}
         navigation={<Navigation page={page} expanded={appearance.expanded} width={appearance.navigationWidth} onWidth={appearance.setNavigationWidth} onToggle={appearance.toggleNavigation} onNavigate={setPage} onAbout={() => about.current?.showModal()} />}
-        pageContent={page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} onAwake={collection.changeAwake} zoom={appearance.zoom} onZoom={appearance.setZoom} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
+        pageContent={page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} onAwake={collection.changeAwake} zoom={appearance.zoom} onZoom={appearance.setZoom} accent={appearance.accent} onAccent={appearance.setAccent} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
       />
       <div className="desktop-notice" role="status" aria-live="polite">{notice}</div>
       <dialog ref={about} className="desktop-about" onClick={(event) => { if (event.target === event.currentTarget) about.current?.close(); }}>

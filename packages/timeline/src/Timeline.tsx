@@ -29,6 +29,12 @@ type Track = {
   appId?: string;
   group?: string;
 };
+export type TimelinePalette = {
+  background: string; grid: string; divider: string; group: string; focus: string; selection: string;
+};
+const defaultPalette: TimelinePalette = {
+  background: "#101416", grid: "#22292d", divider: "#242b2e", group: "#151a1d", focus: "#bacbbd12", selection: "#d7b17a",
+};
 type Props = {
   data: Capture;
   view: Range;
@@ -36,6 +42,7 @@ type Props = {
   mode: "select" | "pan";
   focus: string | null;
   appearance: TimelineAppearance;
+  palette?: TimelinePalette;
   onView: (r: Range) => void;
   onSelect: (r: Range | null) => void;
   onFocus: (id: string | null) => void;
@@ -49,6 +56,7 @@ export function Timeline({
   mode,
   focus,
   appearance,
+  palette = defaultPalette,
   onView,
   onSelect,
   onFocus,
@@ -235,7 +243,7 @@ export function Timeline({
       element.height = totalHeight * dpr;
       const ctx = element.getContext("2d")!;
       ctx.scale(dpr, dpr);
-      ctx.fillStyle = "#101416";
+      ctx.fillStyle = palette.background;
       ctx.fillRect(0, 0, width, totalHeight);
       const span = view.end - view.start;
       const x = (t: number) => ((t - view.start) / span) * width;
@@ -291,7 +299,7 @@ export function Timeline({
         t += step
       ) {
         const px = Math.round(x(t)) + 0.5;
-        ctx.strokeStyle = "#22292d";
+        ctx.strokeStyle = palette.grid;
         ctx.beginPath();
         ctx.moveTo(px, 25);
         ctx.lineTo(px, totalHeight);
@@ -306,13 +314,13 @@ export function Timeline({
       for (const row of tracks) {
         const { y, height } = row;
         const pad = Math.min(appearance.padding, Math.max(0, (height - 8) / 2));
-        ctx.strokeStyle = "#242b2e";
+        ctx.strokeStyle = palette.divider;
         ctx.beginPath();
         ctx.moveTo(0, y + height - 0.5);
         ctx.lineTo(width, y + height - 0.5);
         ctx.stroke();
         if (row.kind === "group") {
-          ctx.fillStyle = "#151a1d";
+          ctx.fillStyle = palette.group;
           ctx.fillRect(0, y, width, height - 1);
           if (row.id === "performance") {
             for (const event of data.events.filter((e) => e.kind !== "sleep"))
@@ -320,7 +328,7 @@ export function Timeline({
                 event,
                 y + 7,
                 height - 14,
-                "#bacbbd12",
+                palette.focus,
                 event.kind === "compile" ? "Shader compile" : "Download",
               );
           }
@@ -412,7 +420,7 @@ export function Timeline({
               for (const event of data.activity.filter(
                 (a) => a.appId === app.id,
               ))
-                rect(event, top, Math.max(1, stripe - 1), "#101416");
+                rect(event, top, Math.max(1, stripe - 1), palette.background);
               ctx.globalAlpha = 1;
             });
           }
@@ -421,7 +429,7 @@ export function Timeline({
             for (const event of data.activity.filter(
               (a) => a.appId === row.appId,
             ))
-              rect(event, y + pad, height - pad * 2, "#101416");
+              rect(event, y + pad, height - pad * 2, palette.background);
         }
         if (row.kind === "afk")
           for (const event of data.afk)
@@ -509,9 +517,9 @@ export function Timeline({
       if (selection && overlap(selection, view) > 0) {
         const left = Math.max(0, x(selection.start)),
           right = Math.min(width, x(selection.end));
-        ctx.fillStyle = "#d7b17a12";
+        ctx.fillStyle = `${palette.selection}12`;
         ctx.fillRect(left, 32, right - left, totalHeight - 32);
-        ctx.strokeStyle = "#d7b17a";
+        ctx.strokeStyle = palette.selection;
         ctx.setLineDash([3, 3]);
         for (const edge of [selection.start, selection.end])
           if (edge >= view.start && edge <= view.end) {
@@ -521,7 +529,7 @@ export function Timeline({
             ctx.stroke();
           }
         ctx.setLineDash([]);
-        ctx.fillStyle = "#d7b17a";
+        ctx.fillStyle = palette.selection;
         ctx.font = "10px Consolas, monospace";
         ctx.fillText(duration(selection.end - selection.start), left + 5, 44);
       }
@@ -532,7 +540,7 @@ export function Timeline({
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", draw);
     };
-  }, [data, view, selection, tracks, width, totalHeight, focus, appearance]);
+  }, [data, view, selection, tracks, width, totalHeight, focus, appearance, palette]);
 
   useEffect(() => {
     const element = canvas.current!;
