@@ -634,17 +634,17 @@ export function Timeline({
       else lines += "\n" + t("No foreground activity");
       tip.current.textContent = lines;
       tip.current.style.display = "block";
-      tip.current.style.left = `${Math.max(8, Math.min(window.innerWidth - 354, clientX + 18))}px`;
-      tip.current.style.top = `${Math.max(8, Math.min(window.innerHeight - 155, clientY + 20))}px`;
+      tip.current.style.left = `${Math.max(8, Math.min(window.innerWidth - tip.current.offsetWidth - 8, clientX + 14))}px`;
+      tip.current.style.top = `${Math.max(8, Math.min(window.innerHeight - tip.current.offsetHeight - 8, clientY - 12))}px`;
     }
     return { time, event, row };
   }
   return (
     <div className="tx-timeline-scroll">
       <div ref={host} className="tx-timeline" style={{ height: totalHeight }}>
-        <div className="tx-axis-label">
+        <button type="button" className="tx-axis-label" title={t("Clear selection")} aria-label={t("Clear timeline selection")} onClick={() => onSelect(null)}>
           {t("TRACKS")}{" "}<span>UTC+08:00</span>
-        </div>
+        </button>
         {tracks.map((row) => (
           <div
             key={row.id}

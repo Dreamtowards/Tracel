@@ -1,5 +1,9 @@
 /** Interface copy only. Captured titles, URLs, app names and export data are never translated. */
 export const timelineZh: Readonly<Record<string, string>> = {
+  "Clear timeline selection": "清除时间轴选区",
+  "Overview viewport": "总览范围",
+  "Overview range start": "总览范围起点", "Overview range end": "总览范围终点",
+  "Drag to adjust range start": "拖动调整范围起点", "Drag to adjust range end": "拖动调整范围终点",
   "Thu": "周四", "Fri": "周五", "Sat": "周六", "Sun": "周日", "Mon": "周一", "Tue": "周二", "Wed": "周三",
   "Preparing your activity timeline…": "正在准备活动时间轴…",
   "Audio output": "音频输出", "Output level · %": "输出音量 · %", "Now playing": "正在播放",

@@ -47,6 +47,7 @@ import {
   metricInfo,
 } from "./model";
 import { Timeline, type TimelinePalette } from "./Timeline";
+import { OverviewViewport } from "./OverviewViewport";
 import { overviewPath } from "./overview";
 import { DisplaySettings, defaultAppearance } from "./DisplaySettings";
 import "./explorer.css";
@@ -485,54 +486,7 @@ export default function Explorer({
                 {t("OCT 08 – OCT 14, 2026")}{" "}<b>{t("7 days")}</b>
               </span>
             </div>
-            <div
-              className="tx-overview-plot"
-              role="slider"
-              tabIndex={0}
-              aria-label={t("Overview viewport position")}
-              aria-valuemin={0}
-              aria-valuemax={data.bounds.end}
-              aria-valuenow={view.start}
-              aria-valuetext={`${dateLabel(view.start)} ${clock(view.start)} to ${dateLabel(view.end)} ${clock(view.end)}`}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  const delta = (e.key === "ArrowRight" ? 1 : -1) * 3600;
-                  changeView(
-                    clampRange(
-                      { start: view.start + delta, end: view.end + delta },
-                      data.bounds,
-                    ),
-                  );
-                }
-              }}
-              onPointerDown={(e) => {
-                e.currentTarget.setPointerCapture(e.pointerId);
-                const rect = e.currentTarget.getBoundingClientRect();
-                const time =
-                  ((e.clientX - rect.left) / rect.width) * data.bounds.end;
-                const span = view.end - view.start;
-                changeView(
-                  clampRange(
-                    { start: time - span / 2, end: time + span / 2 },
-                    data.bounds,
-                  ),
-                );
-              }}
-              onPointerMove={(e) => {
-                if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const time =
-                  ((e.clientX - rect.left) / rect.width) * data.bounds.end;
-                const span = view.end - view.start;
-                changeView(
-                  clampRange(
-                    { start: time - span / 2, end: time + span / 2 },
-                    data.bounds,
-                  ),
-                );
-              }}
-            >
+            <OverviewViewport bounds={data.bounds} view={view} onView={changeView}>
               <svg
                 viewBox="0 0 1400 44"
                 preserveAspectRatio="none"
@@ -556,17 +510,7 @@ export default function Explorer({
                   strokeWidth="1.2"
                 />
               </svg>
-              <div
-                className="tx-overview-window"
-                style={{
-                  left: `${(view.start / data.bounds.end) * 100}%`,
-                  width: `${((view.end - view.start) / data.bounds.end) * 100}%`,
-                }}
-              >
-                <i />
-                <i />
-              </div>
-            </div>
+            </OverviewViewport>
             <div className="tx-overview-days">
               {Array.from({ length: 7 }, (_, d) => (
                 <button

@@ -8,7 +8,7 @@ Use `import { Explorer } from "@tracel/timeline"` and pass a stable `DataProvide
 
 Explorer also accepts optional framework-neutral `railExtra`, `pageContent`, `onShowTimeline` and `captureLabel` host props. Desktop uses these for Settings and System metrics without importing native APIs into this package. Its native readings remain separate from the mock Capture.
 
-`headerVariant` selects `full` (default), `compact` or `hidden`; `navigation` optionally replaces the default rail. Desktop supplies its own collapsible navigation and only shows a compact header on Timeline. Web consumers keep their defaults. Canvas coordinates and backing resolution account for host CSS scaling so that hover, selection, panning and track resize stay aligned.
+`headerVariant` selects `full` (default), `compact` or `hidden`; `navigation` optionally replaces the default rail. Desktop supplies its own collapsible navigation and hides the global header. Web consumers keep their defaults. Canvas coordinates and backing resolution account for host CSS scaling so that hover, selection, panning and track resize stay aligned.
 
 ## Structure
 
@@ -20,9 +20,9 @@ Explorer also accepts optional framework-neutral `railExtra`, `pageContent`, `on
 
 ## Interaction
 
-Scroll zooms around the pointer. Shift-scroll, Alt-drag, middle-button drag or the Hand tool pans. The default drag selects a range; a click focuses an application. Selection persists across viewport changes. The Inspector can clear or zoom to a selection. Arrow keys pan the focused canvas; `+` / `-` zoom; Escape clears selection.
+Scroll zooms around the pointer. Shift-scroll, Alt-drag, middle-button drag or the Hand tool pans. The default drag selects a range; a click focuses an application. Selection persists across viewport changes. Click the Tracks header to clear a selection; the Inspector can also clear or zoom to it. Arrow keys pan the focused canvas; `+` / `-` zoom; Escape clears selection.
 
-Foreground context is expanded by default. Expand Background apps for compact individual running lifetimes excluding foreground slices; the collapsed view shows one colored stripe per application. Display settings control lane padding, background row height, context brightness and duration labels for the current session. Track groups collapse; drag the bottom edge of a label to resize a track (or focus its separator and use Up/Down). The overview strip supports click/drag navigation and arrow keys. App rankings focus the same application's timeline intervals.
+Foreground context is expanded by default. Expand Background apps for compact individual running lifetimes excluding foreground slices; the collapsed view shows one colored stripe per application. Display settings control lane padding, background row height, context brightness and duration labels for the current session. Track groups collapse; drag the bottom edge of a label to resize a track (or focus its separator and use Up/Down). The overview strip supports click-to-center, dragging its selected window without changing the grab offset, and independent start/end handles. Focus a handle and use Left/Right to resize, or Home/End to reach the capture/minimum-span limits; the minimum viewport is two seconds. Arrow keys on the window pan it. Hover tooltips sit beside the pointer, slightly above its vertical position, and use their measured size to stay inside the viewport. App rankings focus the same application's timeline intervals.
 
 ## Validation and limits
 
