@@ -13,7 +13,7 @@ import {
   zoomRange,
   clock,
   dateLabel,
-  duration,
+  duration as compactDuration,
   metricInfo,
   overlap,
   DAY,
@@ -599,14 +599,22 @@ export function Timeline({
       cursor.current.dataset.time = `${dateLabel(time)} · ${clock(time, true)}`;
     }
     if (tip.current && !drag.current && row && row.kind !== "group") {
-      let lines = `${dateLabel(time)} · ${clock(time, true)}\n${row.appId ? row.name : t(row.name)}`;
+      let title = row.appId ? row.name : t(row.name);
+      let executable = "";
+      let timing = `${clock(time, true)} · ${dateLabel(time)}`;
+      let lines = "";
+      const intervalTiming = (interval: Range) =>
+        `${compactDuration(interval.end - interval.start)} · ${clock(interval.start, true)} — ${clock(interval.end, true)} · ${dateLabel(interval.start)}${dateLabel(interval.end) !== dateLabel(interval.start) ? ` — ${dateLabel(interval.end)}` : ""}`;
       if ((row.kind === "app" || row.kind === "context") && event) {
         const app = data.apps.find((a) => a.id === event.appId)!;
         const context = event.contexts.find(
           (c) => c.start <= time && c.end > time,
         );
         const interval = row.kind === "context" && context ? context : event;
-        lines = `${duration(interval.end - interval.start)}  ·  ${app.name}\n${dateLabel(interval.start)} · ${clock(interval.start, true)} — ${clock(interval.end, true)}\n${event.windowTitle}\n${app.exe}\n${context?.value ?? ""}`;
+        title = app.name;
+        executable = app.exe;
+        timing = intervalTiming(interval);
+        lines = [event.windowTitle, context?.value].filter(Boolean).join("\n");
       } else if (row.keys)
         lines +=
           "\n" +
@@ -618,14 +626,17 @@ export function Timeline({
             .join("\n");
       else if (row.kind === "media") {
         const media = data.media.find((m) => m.start <= time && m.end > time);
+        if (media) timing = intervalTiming(media);
         lines += media
           ? `\n${media.title}\n${media.artist}\n${data.apps.find((a) => a.id === media.appId)?.name} · ${t(media.state)}`
           : "\n" + t("No media session");
-      } else if (row.kind === "afk")
+      } else if (row.kind === "afk") {
+        const idle = data.afk.find((a) => a.start <= time && a.end > time);
+        if (idle) timing = intervalTiming(idle);
         lines +=
           "\n" +
-          (data.afk.find((a) => a.start <= time && a.end > time)?.reason ??
-            t("Not idle"));
+          (idle?.reason ?? t("Not idle"));
+      }
       else if (row.kind === "background")
         lines +=
           "\n" +
@@ -637,7 +648,26 @@ export function Timeline({
             .map((b) => data.apps.find((a) => a.id === b.appId)!.name)
             .join(", ") || t("No background apps"));
       else lines += "\n" + t("No foreground activity");
-      tip.current.textContent = lines;
+      const heading = document.createElement("div");
+      heading.className = "tx-tooltip-heading";
+      const name = document.createElement("strong");
+      name.textContent = title;
+      heading.append(name);
+      if (executable) {
+        const exe = document.createElement("span");
+        exe.className = "tx-tooltip-exe";
+        exe.textContent = executable;
+        heading.append(exe);
+      }
+      const timestamp = document.createElement("div");
+      timestamp.className = "tx-tooltip-time";
+      timestamp.textContent = timing;
+      tip.current.replaceChildren(heading, timestamp);
+      if (lines.trim()) {
+        const details = document.createElement("div");
+        details.textContent = lines.trim();
+        tip.current.append(details);
+      }
       tip.current.style.display = "block";
       tip.current.style.left = `${Math.max(8, Math.min(window.innerWidth - tip.current.offsetWidth - 8, clientX + 14))}px`;
       tip.current.style.top = `${Math.max(8, Math.min(window.innerHeight - tip.current.offsetHeight - 8, clientY - 12))}px`;

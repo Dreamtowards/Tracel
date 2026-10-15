@@ -1408,11 +1408,17 @@
 .tx-range > div {
   margin-bottom: 0;
 }
-.tx-tooltip::first-line {
+.tx-tooltip-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 8px;
   color: #ecf4ed;
-  font-weight: 600;
   font-size: 12px;
 }
+.tx-tooltip-heading strong { font-weight: 600; }
+.tx-tooltip-exe { color: #93a0a5; font-size: 10px; font-weight: 400; }
+.tx-tooltip-time { color: #a8b4ba; }
 @media (max-width: 900px) {
   .tx-display-settings {
     right: auto;
