@@ -1,4 +1,6 @@
-# Tracel Activity desktop 0.2.8
+# Tracel Activity desktop 0.2.9
+
+0.2.9 adds editable hierarchical categories (`categories.json`, snake_case keys), 169 default executable rules, category share bars and cached native application icons. Configuration details: [categories](../../docs/categories.md). Icon PNGs live beside the SQLite archive in `icon-cache`; no installation or bundled icon pack is required.
 
 Windows-first Tauri 2 client with opt-in real CPU/RAM/network/disk/audio/media collection, Settings and native tools. Native Timeline displays persisted system observations and estimated media intervals. Browser preview and Web retain the original October 8–14, 2026 demo; System metrics shows measured data only.
 
@@ -19,8 +21,8 @@ cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 
 Native prerequisites: Rust MSVC, C++ Build Tools/Windows SDK and WebView2. Outputs:
 
-- target/release/tracel-desktop.exe: current build output; WebView2 required. Versioned release copy: target/portable/Tracel-0.2.8-windows-x64/Tracel.exe.
-- Optional build:desktop:portable output, target/portable/Tracel-0.2.8-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
+- target/release/tracel-desktop.exe: current build output; WebView2 required. Versioned release copy: target/portable/Tracel-0.2.9-windows-x64/Tracel.exe.
+- Optional build:desktop:portable output, target/portable/Tracel-0.2.9-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
 - Existing 0.2.0 NSIS installer artifacts and installer configuration are retained, but that version contains the reported display-off problem and should not be used. Default builds do not invoke NSIS.
 
 ## Collection and Settings
