@@ -5,7 +5,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { getSystemHistory, nativeClient, type CollectionStatus, type SystemObservation } from "./native";
 
-type MetricField = "cpuPercent" | "memoryUsedBytes" | "networkReceiveBytesPerSecond" | "networkSendBytesPerSecond" | "diskReadBytesPerSecond" | "diskWriteBytesPerSecond" | "audioPeakPercent";
+type MetricField = "cpuPercent" | "memoryUsedBytes" | "networkReceiveBytesPerSecond" | "networkSendBytesPerSecond" | "diskReadBytesPerSecond" | "diskWriteBytesPerSecond" | "audioPeakPercent" | "audioInputPeakPercent";
 type ChartSeries = { label: string; color: string; value: (sample: SystemObservation) => number | null | undefined; dashed?: boolean };
 function SeriesChart({ history, series, max, label }: { history: SystemObservation[]; series: ChartSeries[]; max: number; label: string }) {
   const { t } = useI18n();
@@ -44,7 +44,7 @@ export default function SystemMetrics({ status, history, error, onSettings }: { 
   const [exportCount, setExportCount] = useState(0);
   const [exporting, setExporting] = useState(false); const [exportStatus, setExportStatus] = useState("");
   const settings = status?.settings;
-  const active = !!(status?.supported && settings?.enabled && (settings.cpu || settings.ram || settings.network || settings.disk || settings.audio || settings.media || settings.gpu || settings.battery || settings.cpuFrequency));
+  const active = !!(status?.supported && settings?.enabled && (settings.cpu || settings.ram || settings.network || settings.disk || settings.audio || settings.audioInput || settings.media || settings.gpu || settings.battery || settings.cpuFrequency));
   const latest = status?.latest;
   const memoryCapacity = latest?.memoryTotalBytes ?? [...history].reverse().find((sample) => sample.memoryTotalBytes != null)?.memoryTotalBytes ?? 1;
   const cpu = settings?.enabled && settings.cpu ? latest?.cpuPercent : null;
@@ -60,7 +60,7 @@ export default function SystemMetrics({ status, history, error, onSettings }: { 
       const samples = await getSystemHistory();
       const path = await save({ title: t("Export recorded system metrics"), defaultPath: "tracel-system-metrics.json", filters: [{ name: "JSON", extensions: ["json"] }] });
       if (!path) { setExportStatus("Export cancelled."); return; }
-      await writeTextFile(path, JSON.stringify({ source: "Tracel native system metrics", timestampUnit: "UTC Unix milliseconds", cpuUnit: "percent", memoryUnit: "bytes", networkUnit: "bytes per second", diskUnit: "bytes per second", audioUnit: "percent peak amplitude", gpuUnit: "percent per engine; overall busiest engine", gpuMemoryUnit: "bytes", cpuFrequencyUnit: "Windows-reported MHz", batteryUnit: "percent; nullable power state booleans", mediaSource: "Windows SMTC", nominalPeriodMs: 2000, samples }, null, 2));
+      await writeTextFile(path, JSON.stringify({ source: "Tracel native system metrics", timestampUnit: "UTC Unix milliseconds", cpuUnit: "percent", memoryUnit: "bytes", networkUnit: "bytes per second", diskUnit: "bytes per second", audioUnit: "percent peak amplitude", audioInputUnit: "percent input peak amplitude", gpuUnit: "percent per engine; overall busiest engine", gpuMemoryUnit: "bytes", cpuFrequencyUnit: "Windows-reported MHz", batteryUnit: "percent; nullable power state booleans", mediaSource: "Windows SMTC", nominalPeriodMs: 2000, samples }, null, 2));
       setExportCount(samples.length);
       setExportStatus("Saved {count} measured observations.");
     } catch { setExportStatus("Could not save metrics. Please try again."); }
@@ -108,6 +108,7 @@ export default function SystemMetrics({ status, history, error, onSettings }: { 
           <MetricChart history={history} field={down} second={up} max={maximum} color="#779ab9" label={label} />
         </section>;
       })}
+      <section className="settings-card"><h2>{t("Audio input level")}</h2><div className="metrics-value">{settings?.enabled && settings.audioInput && latest?.audioInputPeakPercent != null ? latest.audioInputPeakPercent.toFixed(1) : "—"}<small>%</small></div><p>{t(!settings?.audioInput ? "Sampling disabled" : "Default microphone · peak amplitude")}</p><MetricChart history={history} field="audioInputPeakPercent" max={100} color="#71bcb1" label="Audio input level" /><p className="settings-footnote">{t("Level only, no recording. The meter may stay at zero when the microphone is idle or used exclusively.")}</p></section>
       <section className="settings-card"><h2>{t("Audio output level")}</h2><div className="metrics-value">{settings?.enabled && settings.audio && latest?.audioPeakPercent != null ? latest.audioPeakPercent.toFixed(1) : "—"}<small>%</small></div><p>{t(!settings?.audio ? "Sampling disabled" : "Default output · peak amplitude")}</p><MetricChart history={history} field="audioPeakPercent" max={100} color="#a09fc0" label="Audio output level" /></section>
       <section className="settings-card metrics-media"><h2>{t("Now playing")}</h2>
         {settings?.enabled && settings.media && latest?.media ? <><strong className="media-title">{latest.media.title || t("Untitled media")}</strong><p>{latest.media.artist || "—"}</p><span className="media-state">{t(latest.media.playbackStatus)}</span><small className="media-app">{latest.media.application}</small></> : <p>{t(!settings?.media ? "Sampling disabled" : !active ? "Paused" : latest?.errors.some((message) => message.startsWith("Media:")) ? "Unavailable" : latest ? "No current media session" : "Warming up…")}</p>}

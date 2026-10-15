@@ -115,7 +115,7 @@ impl SqliteStore {
         let connection = connection
             .unchecked_transaction()
             .map_err(|e| e.to_string())?;
-        let mut statement = connection.prepare("SELECT id,captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,NULL,errors_json,NULL,NULL,NULL,0,cpu_frequency_mhz,gpus_json,battery_json FROM system_samples WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
+        let mut statement = connection.prepare("SELECT id,captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,NULL,errors_json,NULL,NULL,NULL,0,cpu_frequency_mhz,gpus_json,battery_json,audio_input_peak FROM system_samples WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
         let observations: Vec<_> = statement
             .query_map(
                 params![
@@ -197,6 +197,11 @@ pub(crate) fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredObservat
             disk_read_bytes_per_second: row.get(8)?,
             disk_write_bytes_per_second: row.get(9)?,
             audio_peak_percent: row.get(10)?,
+            audio_input_peak_percent: if row.as_ref().column_count() > 20 {
+                row.get(20)?
+            } else {
+                None
+            },
             media: media.map(|s| json(&s, 11)).transpose()?,
             errors: json(&errors, 12)?,
             activity: {
@@ -220,6 +225,52 @@ pub(crate) fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredObservat
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn input_migration_keeps_old_output_and_round_trips_zero_and_null() {
+        let path = std::env::temp_dir().join(format!(
+            "tracel-input-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let old = Connection::open(&path).unwrap();
+        for migration in MIGRATIONS.iter().take(5) {
+            old.execute_batch(migration.sql).unwrap();
+        }
+        old.pragma_update(None, "user_version", 5).unwrap();
+        old.execute("INSERT INTO system_samples(captured_at_ms,audio_peak,errors_json,activity_present,background_observed) VALUES(10000,42,'[]',0,0)",[]).unwrap();
+        drop(old);
+        let mut store = SqliteStore::open(&path).unwrap();
+        let prior = store.recent().unwrap();
+        assert_eq!(prior[0].audio_peak_percent, Some(42.0));
+        assert_eq!(prior[0].audio_input_peak_percent, None);
+        let zero = SystemObservation {
+            captured_at_ms: 12000,
+            interval_start_ms: Some(10000),
+            audio_input_peak_percent: Some(0.0),
+            ..Default::default()
+        };
+        let missing = SystemObservation {
+            captured_at_ms: 14000,
+            interval_start_ms: Some(12000),
+            errors: vec!["Audio input: unavailable".into()],
+            ..Default::default()
+        };
+        store.append(&[zero.clone(), missing.clone()]).unwrap();
+        drop(store);
+        let store = SqliteStore::open(&path).unwrap();
+        assert_eq!(
+            &store.recent().unwrap()[1..],
+            &[zero.clone(), missing.clone()]
+        );
+        let page = SqliteStore::query(&path, 11000, 15000, 1).unwrap();
+        assert_eq!(page.observations[0].sample, zero);
+        assert_eq!(page.observations[1].sample, missing);
+        drop(store);
+        std::fs::remove_file(path).unwrap();
+    }
     #[test]
     fn schema_four_hardware_migration_preserves_history_and_round_trips_new_fields() {
         let path = std::env::temp_dir().join(format!(
@@ -310,7 +361,7 @@ mod tests {
                 .connection
                 .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
                 .unwrap(),
-            5
+            6
         );
         drop(migrated);
         std::fs::remove_file(path).unwrap();

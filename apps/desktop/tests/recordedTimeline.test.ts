@@ -7,6 +7,19 @@ import { overviewPath } from "../../../packages/timeline/src/overview";
 import type { StoredObservation, SystemObservation } from "../src/native";
 
 const day = "2026-10-15", epoch = dayRange(day).startMs;
+test("microphone levels have independent gauge coverage, preserve zero and do not fill old history", () => {
+  const capture = recordedCapture(day,[row(1,10,{audioInputPeakPercent:0,audioPeakPercent:40}),
+    row(2,12,{intervalStartMs:epoch+10000,audioInputPeakPercent:25,audioPeakPercent:null}),
+    row(3,14,{intervalStartMs:epoch+12000,audioInputPeakPercent:null,audioPeakPercent:80}),
+    row(4,30,{audioInputPeakPercent:90})],epoch+100000);
+  assert.equal(metricAt(capture,11,"audioInput"),0); assert.equal(metricAt(capture,11,"audio"),40);
+  assert.equal(metricAt(capture,13,"audioInput"),25); assert.equal(metricAt(capture,13,"audio"),null);
+  assert.equal(metricAt(capture,15,"audioInput"),null); assert.equal(metricAt(capture,15,"audio"),80);
+  assert.equal(metricAt(capture,25,"audioInput"),null); assert.equal(metricAt(capture,31,"audioInput"),90);
+  const stats = analyze(capture,{start:10,end:30});
+  assert.equal(stats.metrics.audioInput.coverage,4); assert.equal(stats.metrics.audioInput.average,12.5);
+  assert.equal(analyze(recordedCapture(day,[row(1,10,{audioPeakPercent:40})],epoch+100000),{start:10,end:12}).metrics.audioInput.average,null);
+});
 test("hardware tracks keep adapters, measured engines, gauge support and missing power states distinct", () => {
   const gpu = { id:"a",name:"GPU A",utilizationPercent:80,engines:[{id:"0",name:"3D #0",utilizationPercent:80},{id:"1",name:"Compute #1",utilizationPercent:0}],dedicatedUsedBytes:2*1024**3,sharedUsedBytes:0 };
   const capture = recordedCapture(day,[row(1,10,{cpuFrequencyMhz:3200,battery:{present:true,percent:50,pluggedIn:true,charging:false}}),

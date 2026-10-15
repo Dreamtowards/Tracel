@@ -20,6 +20,7 @@ pub struct CollectionSettings {
     pub network: bool,
     pub disk: bool,
     pub audio: bool,
+    pub audio_input: bool,
     pub media: bool,
     pub foreground: bool,
     pub background: bool,
@@ -45,6 +46,7 @@ impl CollectionSettings {
                 || self.network
                 || self.disk
                 || self.audio
+                || self.audio_input
                 || self.media
                 || self.foreground
                 || self.background
@@ -122,6 +124,9 @@ pub trait SystemReader {
     fn audio(&mut self) -> Result<f64, String> {
         Err("Unavailable".into())
     }
+    fn audio_input(&mut self) -> Result<f64, String> {
+        Err("Unavailable".into())
+    }
     fn media(&mut self) -> Result<Option<MediaObservation>, String> {
         Err("Unavailable".into())
     }
@@ -164,6 +169,7 @@ impl Sampler {
             disk_read_bytes_per_second: None,
             disk_write_bytes_per_second: None,
             audio_peak_percent: None,
+            audio_input_peak_percent: None,
             media: None,
             activity: None,
             errors: vec![],
@@ -235,6 +241,12 @@ impl Sampler {
                 }
                 Ok(None) => {}
                 Err(e) => sample.errors.push(format!("Disk: {e}")),
+            }
+        }
+        if settings.enabled && settings.audio_input {
+            match reader.audio_input() {
+                Ok(value) => sample.audio_input_peak_percent = Some(value),
+                Err(e) => sample.errors.push(format!("Audio input: {e}")),
             }
         }
         if settings.enabled && settings.audio {
@@ -309,6 +321,9 @@ impl SystemReader for NativeReader {
     fn audio(&mut self) -> Result<f64, String> {
         self.extended.audio()
     }
+    fn audio_input(&mut self) -> Result<f64, String> {
+        self.extended.audio_input()
+    }
     fn media(&mut self) -> Result<Option<MediaObservation>, String> {
         self.extended.media()
     }
@@ -356,6 +371,59 @@ pub fn foreground_info(captured_at_ms: u64) -> Result<ForegroundInfo, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn microphone_is_opt_in_independent_and_preserves_zero_and_errors() {
+        struct Input {
+            calls: u32,
+            fail: bool,
+        }
+        impl SystemReader for Input {
+            fn cpu_times(&mut self) -> Result<CpuTimes, String> {
+                panic!("CPU disabled")
+            }
+            fn memory(&mut self) -> Result<(u64, u64), String> {
+                panic!("RAM disabled")
+            }
+            fn audio(&mut self) -> Result<f64, String> {
+                panic!("Output disabled")
+            }
+            fn audio_input(&mut self) -> Result<f64, String> {
+                self.calls += 1;
+                if self.fail {
+                    Err("No capture endpoint".into())
+                } else {
+                    Ok(0.0)
+                }
+            }
+        }
+        let old: CollectionSettings =
+            serde_json::from_str(r#"{"enabled":true,"audio":true}"#).unwrap();
+        assert!(!old.audio_input);
+        let mut settings = CollectionSettings {
+            audio_input: true,
+            ..Default::default()
+        };
+        let mut sampler = Sampler::default();
+        let mut reader = Input {
+            calls: 0,
+            fail: false,
+        };
+        sampler.sample(&settings, &mut reader, 10000);
+        assert_eq!(reader.calls, 0);
+        settings.enabled = true;
+        assert!(settings.collecting());
+        let sample = sampler.sample(&settings, &mut reader, 12000);
+        assert_eq!(sample.audio_input_peak_percent, Some(0.0));
+        assert_eq!(sample.audio_peak_percent, None);
+        reader.fail = true;
+        let sample = sampler.sample(&settings, &mut reader, 14000);
+        assert_eq!(sample.audio_input_peak_percent, None);
+        assert_eq!(sample.errors, vec!["Audio input: No capture endpoint"]);
+        settings.audio_input = false;
+        assert!(!settings.collecting());
+        sampler.sample(&settings, &mut reader, 16000);
+        assert_eq!(reader.calls, 2);
+    }
     #[test]
     fn hardware_is_selective_and_preserves_unavailable_zero_and_reset_semantics() {
         #[derive(Default)]

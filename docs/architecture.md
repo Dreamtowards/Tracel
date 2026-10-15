@@ -51,3 +51,7 @@ Desktop supplies neutral Timeline label tokens (--tx-label-muted / --tx-label-te
 ## Hardware metrics
 
 Schema 5 adds nullable CPU-frequency MHz and variable per-adapter GPU/battery observation fields to system_samples without rewriting history or state intervals. The recent-ring view and incremental queries return the new fields. Desktop supplies optional metric track definitions and metadata to the shared timeline, keeping Windows APIs outside the shared package. Each adapter has utilization (expandable per physical engine) and dedicated/shared used-memory tracks. Battery percentage and nullable plugged-in/charging state get separate tracks. GHz is a separate row adjacent to CPU rather than a percentage overlay. Web/demo captures have no hardware track definitions and retain their existing layout. Sources remain independently selectable and default off on preference migration. No extra Cargo package or runtime is bundled.
+
+## Input audio level
+
+The collector has an independent opt-in microphone meter source using the existing Core Audio endpoint meter, defaulting off for old settings. It reads default multimedia input peak only, with no audio client or raw recording. Schema 6 persists nullable input levels. Native Timeline adds an input lane immediately above output, while the Web/demo layout stays unchanged. System metrics, settings and exports expose the input source independently; the separate Audio diagnostics worker is unchanged.

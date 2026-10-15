@@ -144,6 +144,14 @@ pub fn write(
     let activity = s.activity.as_ref();
     db.execute("INSERT INTO system_samples(id,captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,errors_json,activity_present,background_observed,idle_ms) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)", params![original_id,start,interval,s.cpu_percent,s.memory_used_bytes.map(integer).transpose()?,s.memory_total_bytes.map(integer).transpose()?,s.network_receive_bytes_per_second,s.network_send_bytes_per_second,s.disk_read_bytes_per_second,s.disk_write_bytes_per_second,s.audio_peak_percent,serde_json::to_string(&s.errors).map_err(|e|e.to_string())?,activity.is_some(),activity.is_some_and(|a|a.background.is_some()),activity.and_then(|a|a.idle_ms).map(integer).transpose()?]).map_err(|e|e.to_string())?;
     let id = db.last_insert_rowid();
+    // Legacy migration 4 has no input column; old observations always have None.
+    if s.audio_input_peak_percent.is_some() {
+        db.execute(
+            "UPDATE system_samples SET audio_input_peak=?1 WHERE id=?2",
+            params![s.audio_input_peak_percent, id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
     // Legacy migration 4 runs this writer before the hardware columns exist.
     if s.cpu_frequency_mhz.is_some() || s.gpus.is_some() || s.battery.is_some() {
         db.execute("UPDATE system_samples SET cpu_frequency_mhz=?1,gpus_json=?2,battery_json=?3 WHERE id=?4", params![s.cpu_frequency_mhz,

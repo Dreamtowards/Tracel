@@ -40,7 +40,7 @@ impl Reader {
         if !s.enabled || !s.disk {
             self.disk = None;
         }
-        if !s.enabled || !(s.audio || s.media) {
+        if !s.enabled || !(s.audio || s.audio_input || s.media) {
             self.apartment = None;
         }
     }
@@ -87,21 +87,29 @@ impl Reader {
         result
     }
     pub fn audio(&mut self) -> Result<f64, String> {
+        self.audio_peak(eRender)
+    }
+    pub fn audio_input(&mut self) -> Result<f64, String> {
+        self.audio_peak(eCapture)
+    }
+    fn audio_peak(&mut self, direction: EDataFlow) -> Result<f64, String> {
         self.apartment()?;
         unsafe {
             let devices: IMMDeviceEnumerator =
                 CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
                     .map_err(|e| e.to_string())?;
             let endpoint = devices
-                .GetDefaultAudioEndpoint(eRender, eMultimedia)
+                .GetDefaultAudioEndpoint(direction, eMultimedia)
                 .map_err(|e| e.to_string())?;
             let meter: IAudioMeterInformation = endpoint
                 .Activate(CLSCTX_ALL, None)
                 .map_err(|e| e.to_string())?;
-            meter
-                .GetPeakValue()
-                .map(|v| v as f64 * 100.0)
-                .map_err(|e| e.to_string())
+            // Meter only: never initialize/start an audio client or read sample buffers.
+            let value = meter.GetPeakValue().map_err(|e| e.to_string())?;
+            if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+                return Err("Invalid audio peak value".into());
+            }
+            Ok(value as f64 * 100.0)
         }
     }
     pub fn media(&mut self) -> Result<Option<MediaObservation>, String> {
@@ -312,6 +320,29 @@ impl Disk {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_input_meter_and_input_only_apartment_lifecycle() {
+        std::thread::spawn(|| {
+            let mut reader = Reader::default();
+            let settings = CollectionSettings {
+                enabled: true,
+                audio_input: true,
+                ..Default::default()
+            };
+            reader.configure(&settings);
+            match reader.audio_input() {
+                Ok(value) => assert!((0.0..=100.0).contains(&value)),
+                Err(error) => eprintln!("Input meter unavailable on this host: {error}"),
+            }
+            assert!(reader.apartment.is_some());
+            reader.configure(&settings);
+            assert!(reader.apartment.is_some());
+            reader.configure(&CollectionSettings::default());
+            assert!(reader.apartment.is_none());
+        })
+        .join()
+        .unwrap();
+    }
     #[test]
     fn native_network_disk_audio_and_media_read_only_smoke() {
         // Apartment and handles remain on this dedicated test thread.

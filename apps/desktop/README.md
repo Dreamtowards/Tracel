@@ -111,3 +111,5 @@ To inspect storage after running the native client with collection enabled: open
 ## EXE release rule
 
 When several commits have accumulated since the previous EXE, increase at least the Desktop patch version before building (unless the user specifies a version). Keep npm, npm lockfile, Cargo, Cargo lockfile and Tauri versions consistent. Preserve earlier versioned artifacts and save each new EXE under target/portable/Tracel-<version>-windows-x64/Tracel.exe; do not overwrite a previous release there. target/release/tracel-desktop.exe is only the current build output. Default to EXE only; ZIP or installers require an explicit request.
+
+Microphone input level is an independent opt-in collection source (off by default). Native Timeline places Audio input immediately above Audio output. Settings, recent metrics, archive and exports retain its sampled peak percentage; no audio is recorded and no capture stream is started. Idle or exclusive microphone usage can report zero. No new runtime or driver is bundled.

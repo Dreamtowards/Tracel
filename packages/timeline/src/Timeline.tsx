@@ -197,12 +197,13 @@ export function Timeline({
     all.push({
       id: "sound",
       name: "AUDIO & MEDIA",
-      subtitle: "2 tracks",
+      subtitle: data.kind === "recorded" ? "3 tracks" : "2 tracks",
       height: 32,
       kind: "group",
     });
     if (!closed.includes("sound"))
       all.push(
+        ...(data.kind === "recorded" ? [{ id: "audioInput", name: "Audio input", subtitle: "Microphone level · %", height: 44, kind: "metric" as const, keys: ["audioInput" as MetricKey] }] : []),
         {
           id: "audio",
           name: "Audio output",

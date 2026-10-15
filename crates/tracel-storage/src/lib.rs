@@ -31,6 +31,10 @@ pub const MIGRATIONS: &[Migration] = &[
         version: 5,
         sql: include_str!("../migrations/0005_hardware.sql"),
     },
+    Migration {
+        version: 6,
+        sql: include_str!("../migrations/0006_audio_input.sql"),
+    },
 ];
 
 /// Implementations must apply migrations and commit batches atomically.

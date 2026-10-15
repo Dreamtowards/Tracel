@@ -27,7 +27,7 @@ export type ActivityInterval = Range & {
 export type AfkInterval = Range & { reason: string };
 export type BackgroundLifetime = Range & { appId: string };
 export type MetricKey =
-  "cpu" | "ram" | "gpu" | "download" | "upload" | "read" | "write" | "audio" | "cpuFrequency" | "battery" | "pluggedIn" | "charging" | `gpu:${string}`;
+  "cpu" | "ram" | "gpu" | "download" | "upload" | "read" | "write" | "audio" | "audioInput" | "cpuFrequency" | "battery" | "pluggedIn" | "charging" | `gpu:${string}`;
 export type MetricSample = {
   time: number;
   /** Explicit support interval for irregular native samples; legacy demo uses samplePeriod. */
@@ -149,6 +149,7 @@ export const metricInfo: Record<Exclude<MetricKey, `gpu:${string}`>, MetricInfo>
   upload: { name: "Send", color: "#d783c3", max: 32, unit: "MB/s" },
   read: { name: "Read", color: "#83bc68", max: 160, unit: "MB/s" },
   write: { name: "Write", color: "#83bc68", max: 160, unit: "MB/s" },
+  audioInput: { name: "Audio input", color: "#71bcb1", max: 100, unit: "%" },
   audio: { name: "Audio", color: "#ae9bdd", max: 100, unit: "%" },
 };
 export function getMetricInfo(data: Capture | null | undefined, key: MetricKey) {

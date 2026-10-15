@@ -1,4 +1,12 @@
 export const desktopZh: Readonly<Record<string, string>> = {
+  "Audio input": "音频输入",
+  "Audio input level": "音频输入电平",
+  "Microphone level · %": "麦克风电平 · %",
+  "Default microphone peak only · no audio recording": "仅默认麦克风峰值 · 不录音",
+  "Default microphone · peak amplitude": "默认麦克风 · 峰值幅度",
+  "Level only, no recording. The meter may stay at zero when the microphone is idle or used exclusively.": "仅采集电平，不录音。麦克风空闲或被独占使用时，电平可能保持为零。",
+  "3 tracks": "3 条轨道",
+
   "GPU usage and memory": "GPU 利用率与显存",
   "Per GPU · engines, dedicated and shared memory": "按显卡采集 · 各引擎、专用显存和共享内存",
   "Battery and power": "电池与供电",

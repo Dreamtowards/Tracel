@@ -105,6 +105,7 @@ pub struct SystemObservation {
     pub disk_read_bytes_per_second: Option<f64>,
     pub disk_write_bytes_per_second: Option<f64>,
     pub audio_peak_percent: Option<f64>,
+    pub audio_input_peak_percent: Option<f64>,
     pub media: Option<MediaObservation>,
     pub activity: Option<ActivityObservation>,
     pub errors: Vec<String>,

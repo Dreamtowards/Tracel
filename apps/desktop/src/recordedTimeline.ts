@@ -97,7 +97,7 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
       hardwareValues[gpuKey(gpu.id,"dedicated")] = gpu.dedicatedUsedBytes == null ? null : gpu.dedicatedUsedBytes / 1024 ** 3;
       hardwareValues[gpuKey(gpu.id,"shared")] = gpu.sharedUsedBytes == null ? null : gpu.sharedUsedBytes / 1024 ** 3;
     }
-    add(time, end, { ...emptyValues(), ...hardwareValues, ram: sample.memoryUsedBytes == null ? null : sample.memoryUsedBytes / 1024 ** 3, audio: sample.audioPeakPercent });
+    add(time, end, { ...emptyValues(), ...hardwareValues, ram: sample.memoryUsedBytes == null ? null : sample.memoryUsedBytes / 1024 ** 3, audioInput: sample.audioInputPeakPercent ?? null, audio: sample.audioPeakPercent });
     const start = Math.max(0, time), observed = sample.activity;
     if (observed && start < end) {
       const window = observed.foreground;
