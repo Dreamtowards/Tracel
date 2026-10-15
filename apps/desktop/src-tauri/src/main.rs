@@ -3,6 +3,7 @@ mod audio;
 mod file_usage;
 mod screen_timeout;
 mod storage_tools;
+mod system_tools;
 mod telemetry;
 mod tools;
 use tauri::Manager;
@@ -14,6 +15,23 @@ struct AppInfo {
     version: String,
     platform: &'static str,
     device_name: String,
+}
+
+#[tauri::command]
+async fn developer_environment() -> Result<system_tools::EnvironmentReport, String> {
+    tauri::async_runtime::spawn_blocking(system_tools::environment)
+        .await
+        .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn windows_update_policy(action: String) -> Result<system_tools::UpdateStatus, String> {
+    tauri::async_runtime::spawn_blocking(move || system_tools::updates(&action))
+        .await
+        .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+fn open_system_shortcut(target: String) -> Result<(), String> {
+    system_tools::open_shortcut(&target)
 }
 
 #[tauri::command]
@@ -164,6 +182,9 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
+            developer_environment,
+            windows_update_policy,
+            open_system_shortcut,
             audio_status,
             media_sessions,
             set_audio_monitor,

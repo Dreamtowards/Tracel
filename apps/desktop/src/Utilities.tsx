@@ -1,4 +1,5 @@
 import { ScreenTimeout } from "./ScreenTimeout";
+import { SystemUtilities } from "./SystemUtilities";
 import { useRef, useState } from "react";
 import { useI18n } from "@tracel/timeline";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -67,5 +68,6 @@ export default function Utilities({ status, busy, error, onAwake }: {
         </li>)}</ul> : <p role="status">{t("Windows reported no apps using this file. Some file handles may not be detected.")}</p>}
       </>}
     </SettingsGroup>
+    <SystemUtilities />
   </div>;
 }

@@ -4,6 +4,11 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { RangeExport } from "@tracel/timeline";
 
 export const nativeClient = isTauri();
+export type EnvironmentReport = { entries: { kind: string; version: string; path: string; source: string }[]; warnings: string[] };
+export type UpdatePolicy = { edition: string; supported: boolean; administrator: boolean; disabled: boolean; owned: boolean; since: string | null };
+export const inspectEnvironment = () => invoke<EnvironmentReport>("developer_environment");
+export const updatePolicy = (action: "read" | "disable" | "restore") => invoke<UpdatePolicy>("windows_update_policy", { action });
+export const openSystemShortcut = (target: string) => invoke<void>("open_system_shortcut", { target });
 
 export type AppInfo = { version: string; platform: string; deviceName: string };
 

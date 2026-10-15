@@ -271,3 +271,16 @@ a { color: inherit; text-decoration: none; }
 .audio-page .settings-footnote { margin: 12px 0; }
 .audio-empty { padding: 20px 0; }
 @media (max-width: 720px) { .audio-defaults { grid-template-columns: 1fr; gap: 20px; } }
+/* Explicit tools share the compact settings rows, with wrapping at high zoom. */
+.system-tools-action { flex-wrap: wrap; }
+.system-tools-action > div { flex: 1 1 180px; }
+.utility-policy-details { display: grid; gap: 5px; padding: 0 0 14px; color: var(--text-secondary, #92929d); font-size: 12px; }
+.utility-policy-details p { margin: 0; }
+.environment-results { border-top: 1px solid var(--border, #29292e); max-height: 420px; overflow: auto; }
+.environment-entry { padding: 12px 0; border-bottom: 1px solid var(--border, #29292e); }
+.environment-entry:last-child { border-bottom: 0; }
+.environment-entry > div { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 12px; }
+.environment-entry small { margin-left: auto; color: #92929d; font-size: 11px; }
+.environment-entry code { display: block; margin-top: 5px; overflow-wrap: anywhere; font-family: inherit; font-size: 12px; color: #92929d; user-select: text; }
+.system-shortcuts { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 12px 0; }
+.system-shortcuts button { gap: 7px; }
