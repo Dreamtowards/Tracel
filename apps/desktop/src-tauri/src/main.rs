@@ -31,6 +31,18 @@ fn audio_status(state: tauri::State<'_, audio::Monitor>) -> audio::Snapshot {
     state.status()
 }
 #[tauri::command]
+async fn media_sessions() -> Result<tracel_agent::MediaSessions, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        static SCAN: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _guard = SCAN
+            .try_lock()
+            .map_err(|_| "A media scan is already in progress".to_string())?;
+        tracel_agent::media_sessions()
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+#[tauri::command]
 fn set_audio_monitor(
     enabled: bool,
     state: tauri::State<'_, audio::Monitor>,
@@ -145,6 +157,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             app_info,
             audio_status,
+            media_sessions,
             set_audio_monitor,
             open_sound_settings,
             collection_status,

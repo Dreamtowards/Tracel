@@ -65,6 +65,24 @@ pub fn cpu_percent(previous: CpuTimes, current: CpuTimes) -> Option<f64> {
 
 pub use tracel_core::{MediaObservation, SystemObservation};
 
+#[derive(Default, Debug, Serialize)]
+pub struct MediaSessions {
+    pub sessions: Vec<MediaObservation>,
+    pub errors: Vec<String>,
+}
+
+/// On-demand diagnostics; independent of archived single-session collection.
+pub fn media_sessions() -> Result<MediaSessions, String> {
+    #[cfg(windows)]
+    {
+        extended::Reader::default().all_media()
+    }
+    #[cfg(not(windows))]
+    {
+        Err("Windows only".into())
+    }
+}
+
 pub trait SystemReader {
     fn activity(
         &mut self,

@@ -13,6 +13,7 @@ import Settings from "./Settings";
 import SystemMetrics from "./SystemMetrics";
 import Audio from "./Audio";
 import { useAudioMonitor } from "./useAudioMonitor";
+import { useMediaSessions } from "./useMediaSessions";
 import { useRecordedTimeline } from "./useRecordedTimeline";
 import { useCollection } from "./useCollection";
 import { useAppearance } from "./useAppearance";
@@ -57,6 +58,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
   useEffect(() => { ui.current?.querySelector(".tx-main")?.scrollTo(0, 0); }, [page]);
   const collection = useCollection(page === "metrics");
   const audio = useAudioMonitor(page === "audio");
+  const media = useMediaSessions(page === "audio" && !!audio.status?.monitoring);
   const timeline = useRecordedTimeline(page === "timeline");
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [infoError, setInfoError] = useState(false);
@@ -98,7 +100,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
         onShowTimeline={() => setPage("timeline")}
         captureLabel={t(nativeClient ? "Recorded metrics" : "Demo capture")}
         navigation={<Navigation page={page} expanded={appearance.expanded} width={appearance.navigationWidth} onWidth={appearance.setNavigationWidth} onToggle={appearance.toggleNavigation} onNavigate={setPage} onAbout={() => about.current?.showModal()} />}
-        pageContent={page === "audio" ? <Audio monitor={audio} /> : page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} zoom={appearance.zoom} onZoom={appearance.setZoom} accent={appearance.accent} onAccent={appearance.setAccent} language={appearance.language} onLanguage={appearance.setLanguage} /> : page === "utilities" ? <Utilities status={collection.status} busy={collection.busy} error={collection.error} onAwake={collection.changeAwake} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
+        pageContent={page === "audio" ? <Audio monitor={audio} media={media} /> : page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} zoom={appearance.zoom} onZoom={appearance.setZoom} accent={appearance.accent} onAccent={appearance.setAccent} language={appearance.language} onLanguage={appearance.setLanguage} /> : page === "utilities" ? <Utilities status={collection.status} busy={collection.busy} error={collection.error} onAwake={collection.changeAwake} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
       />
       <div className="desktop-notice" role="status" aria-live="polite">{t(notice)}</div>
       <dialog ref={about} className="desktop-about" onClick={(event) => { if (event.target === event.currentTarget) about.current?.close(); }}>

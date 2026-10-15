@@ -2,6 +2,7 @@
 use super::{CollectionSettings, MediaObservation};
 use ::windows::{
     Media::Control::{
+        GlobalSystemMediaTransportControlsSession as MediaSession,
         GlobalSystemMediaTransportControlsSessionManager as MediaManager,
         GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
     },
@@ -120,41 +121,98 @@ impl Reader {
             Err(e) if e.code().0 == 0x80004003u32 as i32 => return Ok(None),
             Err(e) => return Err(e.to_string()),
         };
-        let request = session
-            .TryGetMediaPropertiesAsync()
-            .map_err(|e| e.to_string())?;
-        let deadline = Instant::now() + std::time::Duration::from_secs(1);
+        read_media_session(&session, Instant::now() + std::time::Duration::from_secs(1)).map(Some)
+    }
+    pub fn all_media(&mut self) -> Result<super::MediaSessions, String> {
+        self.apartment()?;
+        let deadline = Instant::now() + std::time::Duration::from_secs(2);
+        let request = MediaManager::RequestAsync().map_err(|e| e.to_string())?;
         while request.Status().map_err(|e| e.to_string())?.0 == 0 {
             if Instant::now() >= deadline {
                 let _ = request.Cancel();
-                return Err("Media metadata timed out".into());
+                return Err("Media session enumeration timed out".into());
             }
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
-        let properties = request.GetResults().map_err(|e| e.to_string())?;
-        let status = session
-            .GetPlaybackInfo()
-            .and_then(|p| p.PlaybackStatus())
+        let sessions = request
+            .GetResults()
+            .and_then(|m| m.GetSessions())
             .map_err(|e| e.to_string())?;
-        Ok(Some(MediaObservation {
-            title: properties.Title().map_err(|e| e.to_string())?.to_string(),
-            artist: properties.Artist().map_err(|e| e.to_string())?.to_string(),
-            application: session
-                .SourceAppUserModelId()
-                .map_err(|e| e.to_string())?
-                .to_string(),
-            playback_status: match status {
-                PlaybackStatus::Playing => "Playing",
-                PlaybackStatus::Paused => "Paused",
-                PlaybackStatus::Stopped => "Stopped",
-                PlaybackStatus::Closed => "Closed",
-                PlaybackStatus::Opened => "Opened",
-                PlaybackStatus::Changing => "Changing",
-                _ => "Unknown",
+        let count = sessions.Size().map_err(|e| e.to_string())?;
+        let mut result = super::MediaSessions::default();
+        if count > 32 {
+            result
+                .errors
+                .push("Media session limit exceeded; showing first 32 sessions".into());
+        }
+        for index in 0..count.min(32) {
+            if Instant::now() >= deadline {
+                result
+                    .errors
+                    .push("Media scan timed out; list may be incomplete".into());
+                break;
             }
-            .into(),
-        }))
+            let item_deadline =
+                deadline.min(Instant::now() + std::time::Duration::from_millis(350));
+            match sessions
+                .GetAt(index)
+                .map_err(|e| e.to_string())
+                .and_then(|session| read_media_session(&session, item_deadline))
+            {
+                Ok(media) => result.sessions.push(media),
+                Err(error) => result
+                    .errors
+                    .push(format!("Media session {}: {error}", index + 1)),
+            }
+        }
+        result
+            .sessions
+            .sort_by_key(|m| match m.playback_status.as_str() {
+                "Playing" => 0,
+                "Paused" => 1,
+                _ => 2,
+            });
+        Ok(result)
     }
+}
+
+fn read_media_session(
+    session: &MediaSession,
+    deadline: Instant,
+) -> Result<MediaObservation, String> {
+    let request = session
+        .TryGetMediaPropertiesAsync()
+        .map_err(|e| e.to_string())?;
+    while request.Status().map_err(|e| e.to_string())?.0 == 0 {
+        if Instant::now() >= deadline {
+            let _ = request.Cancel();
+            return Err("Media metadata timed out".into());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    let properties = request.GetResults().map_err(|e| e.to_string())?;
+    let status = session
+        .GetPlaybackInfo()
+        .and_then(|p| p.PlaybackStatus())
+        .map_err(|e| e.to_string())?;
+    Ok(MediaObservation {
+        title: properties.Title().map_err(|e| e.to_string())?.to_string(),
+        artist: properties.Artist().map_err(|e| e.to_string())?.to_string(),
+        application: session
+            .SourceAppUserModelId()
+            .map_err(|e| e.to_string())?
+            .to_string(),
+        playback_status: match status {
+            PlaybackStatus::Playing => "Playing",
+            PlaybackStatus::Paused => "Paused",
+            PlaybackStatus::Stopped => "Stopped",
+            PlaybackStatus::Closed => "Closed",
+            PlaybackStatus::Opened => "Opened",
+            PlaybackStatus::Changing => "Changing",
+            _ => "Unknown",
+        }
+        .into(),
+    })
 }
 
 fn rates(
@@ -274,6 +332,10 @@ mod tests {
                 Ok(_) => {}
                 Err(e) => eprintln!("Media unavailable on this host: {e}"),
             }
+            let media = reader
+                .all_media()
+                .expect("Read-only enumeration of Windows media sessions");
+            assert!(media.sessions.len() <= 32);
             reader.configure(&CollectionSettings::default());
             assert!(
                 reader.network.is_none() && reader.disk.is_none() && reader.apartment.is_none()

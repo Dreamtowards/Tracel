@@ -56,3 +56,5 @@ export type AudioSnapshot = { monitoring: boolean; capturedAtMs: number; devices
 export const getAudioStatus = () => invoke<AudioSnapshot>("audio_status");
 export const setAudioMonitor = (enabled: boolean) => invoke<AudioSnapshot>("set_audio_monitor", { enabled });
 export const openSoundSettings = () => invoke<void>("open_sound_settings");
+export type MediaSessions = { sessions: NonNullable<SystemObservation["media"]>[]; errors: string[] };
+export const getMediaSessions = () => invoke<MediaSessions>("media_sessions");
