@@ -18,10 +18,14 @@ export const defaultAppearance: TimelineAppearance = {
 
 export function DisplaySettings({
   value,
+  categoryColors,
+  onCategoryColors,
   onChange,
   onClose,
 }: {
   value: TimelineAppearance;
+  categoryColors?: boolean;
+  onCategoryColors?: (value: boolean) => void;
   onChange: (value: TimelineAppearance) => void;
   onClose: () => void;
 }) {
@@ -103,10 +107,14 @@ export function DisplaySettings({
         <span>{t("Show current time")}</span>
         <input type="checkbox" checked={value.currentTime} onChange={(e) => onChange({ ...value, currentTime: e.target.checked })} />
       </label>
+      {categoryColors !== undefined && <label className="tx-setting-check">
+        <span>{t("Color apps by category")}</span>
+        <input type="checkbox" checked={categoryColors} onChange={event => onCategoryColors?.(event.target.checked)} />
+      </label>}
       <footer>
         <button
           className="tx-text-button"
-          onClick={() => onChange(defaultAppearance)}
+          onClick={() => { onChange(defaultAppearance); onCategoryColors?.(false); }}
         >
           <RotateCcw size={12} /> {" "}{t("Reset defaults")}</button>
         <span>{t("Session preferences")}</span>

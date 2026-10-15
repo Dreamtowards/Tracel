@@ -1,5 +1,11 @@
 # Architecture
 
+## Editable application categories
+
+Desktop creates `categories.json` in Tauri's app config directory on first read; existing files are never overwritten. The default JSON ships with the shared Timeline package and contains a single category tree and exact executable rules. Native IPC reads at most 1 MiB on a blocking worker; the shared parser rejects cycles, missing references, duplicate identities/rules and invalid colors. Desktop reloads on window focus, retains the last valid in-memory configuration on errors, and exposes the actual path and config-folder shortcut in Settings. There is no category editor or tags system yet.
+
+Classification is derived at display/query time, not written into SQLite observations. Case-insensitive normalized full paths override basename rules; unmatched applications remain Uncategorized. Rules currently apply to executables only, not titles/URLs. Each application receives one category. Range Overview adds an Apps/Categories switch with AFK-excluded active time; parents include descendant totals and must not be added to their children. Display optionally colors app lanes by category (inheriting the nearest ancestor color); defaults retain application colors. Editing the JSON reclassifies historical views without rewriting the archive. The standalone Web demo remains unchanged; the Desktop browser preview uses the same default JSON.
+
 ## Implemented
 
 The root is an npm and Cargo workspace. `apps/web` owns Next.js routes, Radar, MapLibre/Three.js, Tailwind and static Cloudflare export. `apps/desktop` owns a lean Vite/React entry point and Tauri 2 lifecycle; it imports neither Radar nor Next.js.

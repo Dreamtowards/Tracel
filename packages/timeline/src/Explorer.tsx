@@ -35,6 +35,7 @@ import {
   Terminal,
   X,
 } from "lucide-react";
+import { categoryResolver, categoryTotals, type CategoryConfig } from "./categories";
 import { analyze } from "./analytics";
 import {
   Capture,
@@ -77,6 +78,7 @@ export type RangeExport = {
   epoch: string;
   range: Range;
   analytics: ReturnType<typeof analyze>;
+  classification?: { config: CategoryConfig; totals: ReturnType<typeof categoryTotals> };
   metrics?: Capture["metrics"];
   media?: Capture["media"];
   apps?: Capture["apps"];
@@ -105,8 +107,10 @@ export default function Explorer({
   capture,
   calendar,
   dataError,
+  categories,
 }: {
   provider: DataProvider;
+  categories?: CategoryConfig;
   capture?: Capture;
   calendar?: { value: string; min: string; max: string; onChange: (value: string) => void };
   dataError?: string;
@@ -128,7 +132,14 @@ export default function Explorer({
 }) {
   const { t, duration, locale } = useI18n();
   const [loadedData, setData] = useState<Capture | null>(null);
-  const data = capture ?? loadedData;
+  const rawData = capture ?? loadedData;
+  const [categoryColors, setCategoryColors] = useState(false);
+  const [activityGrouping, setActivityGrouping] = useState<"apps" | "categories">("apps");
+  const data = useMemo(() => {
+    if (!rawData || !categories || !categoryColors) return rawData;
+    const resolver = categoryResolver(categories);
+    return { ...rawData, apps: rawData.apps.map(app => ({ ...app, color: resolver.color(resolver.resolve(app)) })) };
+  }, [rawData, categories, categoryColors]);
   const { clock, dateLabel } = useCaptureTime(data);
   const metricInfo = useMemo(() => Object.fromEntries([...new Set([...Object.keys(defaultMetricInfo), ...Object.keys(data?.metricOverrides ?? {})])].map((key) => [key, getMetricInfo(data,key as keyof typeof defaultMetricInfo)])) as typeof defaultMetricInfo,[data]);
   const [loadError, setLoadError] = useState(false);
@@ -197,6 +208,7 @@ export default function Explorer({
     () => (data ? analyze(data, range) : null),
     [data, range],
   );
+  const categoryStats = useMemo(() => categories && stats ? categoryTotals(categories, stats.apps) : [], [categories, stats]);
   if (!data || !stats)
     return (
       <main className="tx-app tx-loading">
@@ -254,6 +266,7 @@ export default function Explorer({
       epoch: data.epoch,
       range,
       analytics: stats,
+      ...(categories ? { classification: { config: categories, totals: categoryStats } } : {}),
       ...(recorded ? {
         apps: data.apps,
         activity: data.activity.filter((a) => overlap(a,range) > 0).map((a) => ({...a,start:Math.max(a.start,range.start),end:Math.min(a.end,range.end),contexts:a.contexts.filter((c) => overlap(c,range)>0).map((c) => ({...c,start:Math.max(c.start,range.start),end:Math.min(c.end,range.end)}))})),
@@ -475,6 +488,8 @@ export default function Explorer({
                 <SlidersHorizontal size={14} /> {" "}{t("Display")}</button>
               {settings && (
                 <DisplaySettings
+                  categoryColors={categories ? categoryColors : undefined}
+                  onCategoryColors={setCategoryColors}
                   value={appearance}
                   onChange={setAppearance}
                   onClose={() => setSettings(false)}
@@ -721,6 +736,17 @@ export default function Explorer({
                             />
                           ))}
                       </div>
+                      {categories && <div className="tx-segmented tx-category-grouping" aria-label={t("Activity grouping")}>
+                        <button className={activityGrouping === "apps" ? "active" : ""} onClick={() => setActivityGrouping("apps")}>{t("Applications")}</button>
+                        <button className={activityGrouping === "categories" ? "active" : ""} onClick={() => { setActivityGrouping("categories"); setFocus(null); }}>{t("Categories")}</button>
+                      </div>}
+                      {activityGrouping === "categories" && categories ? <div className="tx-category-list">
+                        {categoryStats.map(category => <div className="tx-stat-line" key={category.id} style={{ paddingLeft: category.depth * 12 }} title={`${category.path}${categories.categories.some(item => item.parentId === category.id) ? ` · ${t("Includes subcategories")}` : ""}`}>
+                          <span><i style={{ display: "inline-block", width: 6, height: 6, borderRadius: 2, background: category.color, marginRight: 8 }} />{t(category.name)}</span>
+                          <strong>{duration(category.active)}</strong>
+                        </div>)}
+                        {!categoryStats.length && <p className="tx-empty">{t("No active time in this range.")}</p>}
+                      </div> : <>
                       <div className="tx-section-heading">
                         {t("APPLICATIONS")}{" "}<span>{t("ACTIVE TIME")}</span>
                       </div>
@@ -768,6 +794,7 @@ export default function Explorer({
                             </button>
                           ))}
                       </div>
+                      </>}
                       <div className="tx-stat-line">
                         <span>{t("App switches")}</span>
                         <strong>{stats.switches}</strong>

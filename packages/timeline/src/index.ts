@@ -7,3 +7,5 @@ export * from "./model";
 export { I18nProvider, useI18n, translate, type Locale, type Messages } from "./i18n";
 export { analyze } from "./analytics";
 export { overviewPath } from "./overview";
+export * from "./categories";
+export { default as defaultCategories } from "./categories.default.json";

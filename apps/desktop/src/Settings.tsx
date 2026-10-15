@@ -1,4 +1,4 @@
-import { useI18n, type Locale } from "@tracel/timeline";
+import { useI18n, type Locale, type CategoryConfig } from "@tracel/timeline";
 import { Button } from "./components/ui/Button";
 import { SettingsGroup, SettingToggle as Toggle } from "./components/SettingsGroup";
 import { Select } from "./components/ui/Select";
@@ -6,10 +6,12 @@ import { accentPresets, defaultAccent } from "./theme";
 import { useState } from "react";
 import { FolderOpen } from "lucide-react";
 import { InfoTip } from "./components/ui/InfoTip";
+import { openCategoryFolder } from "./native";
 import { inspectForeground, openDatabaseFolder, nativeClient, type CollectionSettings, type CollectionStatus, type ForegroundInfo } from "./native";
 import { zoomLevels } from "./useAppearance";
 
-export default function Settings({ status, busy, error, onSettings, zoom, onZoom, accent, onAccent, language, onLanguage }: {
+export default function Settings({ categories, status, busy, error, onSettings, zoom, onZoom, accent, onAccent, language, onLanguage }: {
+  categories: { config: CategoryConfig; path: string; error: string };
   status: CollectionStatus | null; busy: boolean; error: string;
   onSettings: (settings: CollectionSettings) => Promise<void>;
   language: Locale; onLanguage: (language: Locale) => void;
@@ -23,6 +25,7 @@ export default function Settings({ status, busy, error, onSettings, zoom, onZoom
   const [toolMessage, setToolMessage] = useState("");
   const [toolError, setToolError] = useState("");
   const [folderError, setFolderError] = useState("");
+  const [categoryFolderError, setCategoryFolderError] = useState("");
   const [openingFolder, setOpeningFolder] = useState(false);
   const openFolder = async () => {
     setFolderError(""); setOpeningFolder(true);
@@ -53,6 +56,12 @@ export default function Settings({ status, busy, error, onSettings, zoom, onZoom
           {accent !== defaultAccent && <Button className="tx-text-button" onClick={() => onAccent(defaultAccent)}>{t("Reset")}</Button>}
         </div>
       </div>
+    </SettingsGroup>
+    <SettingsGroup title={t("Categories")}>
+      <div className="settings-action"><div><strong>categories.json</strong><small>{t("Edit this file, then return to Tracel to reload categories.")}</small><small style={{ overflowWrap: "anywhere" }}>{categories.path || t("Browser preview uses the default categories.")}</small></div></div>
+      {categories.error && <p role="alert" className="settings-error">{categories.error}</p>}
+      <Button disabled={!nativeClient} onClick={() => { setCategoryFolderError(""); void openCategoryFolder().catch(reason => setCategoryFolderError(String(reason))); }}><FolderOpen size={14} />{t("Open configuration folder")}</Button>
+      {categoryFolderError && <p role="alert" className="settings-error">{categoryFolderError}</p>}
     </SettingsGroup>
     <SettingsGroup title={t("Collection")}>
       <Toggle label="Enable collection" description="Every 2 seconds. Disabled sources are not queried." checked={settings.enabled} disabled={unavailable} pending={busy} onChange={(enabled) => { void onSettings({ ...settings, enabled }); }} />

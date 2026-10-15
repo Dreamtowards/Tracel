@@ -1,4 +1,7 @@
 export const desktopZh: Readonly<Record<string, string>> = {
+  "Edit this file, then return to Tracel to reload categories.": "编辑此文件，切回 Tracel 后重新加载分类。",
+  "Browser preview uses the default categories.": "浏览器预览使用默认分类。",
+  "Open configuration folder": "打开配置文件夹",
   "Audio input": "音频输入",
   "Audio input level": "音频输入电平",
   "Microphone level · %": "麦克风电平 · %",

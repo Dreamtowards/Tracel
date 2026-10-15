@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "categories": [
+    { "id": "work", "name": "Work", "color": "#8094b8" },
+    { "id": "development", "name": "Development", "parentId": "work" },
+    { "id": "design", "name": "Design", "parentId": "work", "color": "#af8fb0" },
+    { "id": "communication", "name": "Communication", "parentId": "work", "color": "#9f9bbd" },
+    { "id": "entertainment", "name": "Entertainment", "color": "#be9b73" },
+    { "id": "music", "name": "Music", "parentId": "entertainment" },
+    { "id": "games", "name": "Games", "parentId": "entertainment" },
+    { "id": "utilities", "name": "Utilities", "color": "#92929c" }
+  ],
+  "rules": [
+    { "exe": "Code.exe", "categoryId": "development" },
+    { "exe": "Unity.exe", "categoryId": "development" },
+    { "exe": "devenv.exe", "categoryId": "development" },
+    { "exe": "Figma.exe", "categoryId": "design" },
+    { "exe": "Spotify.exe", "categoryId": "music" },
+    { "exe": "cloudmusic.exe", "categoryId": "music" },
+    { "exe": "WindowsTerminal.exe", "categoryId": "development" }
+  ]
+}

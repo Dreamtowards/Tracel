@@ -4,6 +4,7 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { RangeExport } from "@tracel/timeline";
 
 export const nativeClient = isTauri();
+export const openCategoryFolder = () => invoke<void>("open_category_folder");
 export type EnvironmentReport = { entries: { kind: string; version: string; path: string; source: string }[]; warnings: string[] };
 export type UpdatePolicy = { edition: string; supported: boolean; administrator: boolean; disabled: boolean; owned: boolean; since: string | null };
 export const inspectEnvironment = () => invoke<EnvironmentReport>("developer_environment");

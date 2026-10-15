@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod audio;
+mod categories;
 mod file_usage;
 mod screen_timeout;
 mod storage_tools;
@@ -168,6 +169,33 @@ mod safety_tests {
     }
 }
 
+#[tauri::command]
+async fn category_configuration(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let path = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| e.to_string())?
+        .join("categories.json");
+    tauri::async_runtime::spawn_blocking(move || {
+        let config = categories::read(&path)?;
+        Ok(serde_json::json!({ "path": path, "config": config }))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn open_category_folder(app: tauri::AppHandle) -> Result<(), String> {
+    let path = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| e.to_string())?
+        .join("categories.json");
+    tauri::async_runtime::spawn_blocking(move || storage_tools::open_database_folder(&path))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -182,6 +210,8 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
+            category_configuration,
+            open_category_folder,
             developer_environment,
             windows_update_policy,
             open_system_shortcut,
