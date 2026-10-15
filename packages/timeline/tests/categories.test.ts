@@ -9,6 +9,7 @@ test("executable rules normalize Windows paths, prefer exact paths and preserve 
   const config = parseCategories({ ...defaults, rules: [...defaults.rules, { exe: "C:/Special/Code.exe", categoryId: "design" }] });
   const resolver = categoryResolver(config);
   assert.equal(resolver.resolve(app("C:\\SPECIAL\\Code.EXE")).id, "design");
+  assert.equal(resolver.resolve({ ...app("Code.exe"), executablePath: "C:\\SPECIAL\\Code.EXE" }).id, "design");
   assert.equal(resolver.resolve(app("C:\\Apps\\CODE.exe")).id, "development");
   assert.equal(resolver.resolve(app("chrome.exe")).id, "__uncategorized");
   assert.equal(resolver.color(resolver.resolve(app("Code.exe"))), "#8094b8");

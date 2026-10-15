@@ -39,6 +39,7 @@ import { categoryResolver, categoryTotals, type CategoryConfig } from "./categor
 import { analyze } from "./analytics";
 import {
   Capture,
+  Application,
   DataProvider,
   Range,
   DAY,
@@ -108,9 +109,12 @@ export default function Explorer({
   calendar,
   dataError,
   categories,
+  renderAppIcon,
 }: {
   provider: DataProvider;
   categories?: CategoryConfig;
+  /** Optional native-host icon renderer; the shared Timeline never reads executable files. */
+  renderAppIcon?: (app: Application, fallback: ReactNode) => ReactNode;
   capture?: Capture;
   calendar?: { value: string; min: string; max: string; onChange: (value: string) => void };
   dataError?: string;
@@ -768,7 +772,7 @@ export default function Explorer({
                                   background: a.color + "15",
                                 }}
                               >
-                                <AppIcon id={a.id} />
+                                {renderAppIcon ? renderAppIcon(a, <AppIcon id={a.id} />) : <AppIcon id={a.id} />}
                               </span>
                               <span className="tx-app-name">
                                 {a.name}

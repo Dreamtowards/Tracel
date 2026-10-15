@@ -8,6 +8,8 @@ export type Application = {
   id: string;
   name: string;
   exe: string;
+  /** Native source path, separate from the compact EXE name shown in tooltips. */
+  executablePath?: string;
   color: string;
   glyph: string;
 };

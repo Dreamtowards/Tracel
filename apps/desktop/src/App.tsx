@@ -12,6 +12,7 @@ import Utilities from "./Utilities";
 import Settings from "./Settings";
 import SystemMetrics from "./SystemMetrics";
 import Audio from "./Audio";
+import ApplicationIcon from "./ApplicationIcon";
 import { useAudioMonitor } from "./useAudioMonitor";
 import { useMediaSessions } from "./useMediaSessions";
 import { useRecordedTimeline } from "./useRecordedTimeline";
@@ -89,6 +90,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
       <Explorer
         provider={demoProvider}
         categories={categories.config}
+        renderAppIcon={nativeClient ? (app, fallback) => <ApplicationIcon executable={app.executablePath ?? app.exe} fallback={fallback} /> : undefined}
         capture={nativeClient ? timeline.capture : undefined}
         calendar={nativeClient ? timeline.calendar : undefined}
         dataError={nativeClient ? (timeline.error || (collection.status?.storageError ? `${t("Storage unavailable:")} ${collection.status.storageError}` : "")) : undefined}

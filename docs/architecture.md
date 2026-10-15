@@ -1,5 +1,15 @@
 # Architecture
 
+## Application icons
+
+Desktop's Range Overview application list supplies an optional icon-renderer slot to the shared Explorer; Web keeps its existing fallbacks. The native Capture adapter retains `Application.executablePath` independently of the tooltip's short `exe` name. Exact-path category rules also use this full source path. No database schema change is needed.
+
+The `application_icon` IPC reads local absolute EXE paths on a blocking worker, extracts the first resource with Windows `ExtractIconExW`, renders 32×32 pixels with GDI and encodes PNG. Two background passes preserve modern alpha and legacy mask transparency. RAII releases the icon, bitmap and drawing context; no executable is launched or Shell extension invoked. Missing/protected/uninstalled/iconless apps fall back to the existing generic glyph. PNG encoding reuses the already locked `png 0.17.16` crate as a runtime dependency; no new package version, driver, icon pack or external runtime is added. Release-size impact has not been measured.
+
+PNG files live under `app_local_data_dir/icon-cache`, beside `activity.sqlite3`, rather than inside SQLite. A versioned hash of normalized executable path, file size and modification timestamp selects the cache entry. Corrupt/oversized entries are regenerated, cache write failures still return extracted icons, and pruning keeps at most 512 owned PNG files by creation/write age. The cache may be deleted while the client is closed; icons are regenerated on later requests. It stores no activity history. Updating an EXE invalidates its native cache key on the next request; the frontend shares successful and failed requests during the current session, so a restart refreshes already displayed icons.
+
+Frontend icon requests are deduplicated by path, bounded to 256 remembered promises and limited to four concurrent IPC calls. Collector polling does not reread icons. Each mounted image owns and releases its Blob URL; failed reads/decodes keep the fallback. The existing `img-src blob:` policy suffices, with no new filesystem capability or broad file-serving scope. Native extraction/cache behavior is tested against a copied Windows executable; browser integration uses mocked IPC.
+
 ## Editable application categories
 
 Desktop creates `categories.json` in Tauri's app config directory on first read; existing files are never overwritten. The default JSON ships with the shared Timeline package and contains a single category tree and exact executable rules. Native IPC reads at most 1 MiB on a blocking worker; the shared parser rejects cycles, missing references, duplicate identities/rules and invalid colors. Desktop reloads on window focus, retains the last valid in-memory configuration on errors, and exposes the actual path and config-folder shortcut in Settings. There is no category editor or tags system yet.

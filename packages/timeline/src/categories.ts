@@ -35,7 +35,7 @@ export function categoryResolver(config: CategoryConfig) {
   const byId = new Map(config.categories.map(category => [category.id, category]));
   const rules = new Map(config.rules.map(rule => [normalize(rule.exe), rule.categoryId]));
   const resolve = (app: Application) => {
-    const path = normalize(app.exe);
+    const path = normalize(app.executablePath ?? app.exe);
     return byId.get(rules.get(path) ?? rules.get(path.split("/").at(-1) ?? "") ?? "") ?? uncategorized;
   };
   const lineage = (category: Category) => {

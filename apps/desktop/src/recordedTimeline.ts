@@ -56,7 +56,7 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
       appIds.add(id);
       const palette = ["#879bb7", "#a49cbe", "#b5a483", "#83a9ad", "#b591a2"];
       const hash = Array.from(id).reduce((value, letter) => (value * 31 + letter.charCodeAt(0)) >>> 0, 0);
-      apps.push({ id, name: process.name, exe: process.executable?.split(/[\\/]/).at(-1) ?? "", color: palette[hash % palette.length], glyph: process.name.slice(0,1).toUpperCase() });
+      apps.push({ id, name: process.name, exe: process.executable?.split(/[\\/]/).at(-1) ?? "", executablePath: process.executable ?? undefined, color: palette[hash % palette.length], glyph: process.name.slice(0,1).toUpperCase() });
     }
     return id;
   };

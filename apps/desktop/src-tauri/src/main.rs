@@ -1,4 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod app_icons;
 mod audio;
 mod categories;
 mod file_usage;
@@ -185,6 +186,21 @@ async fn category_configuration(app: tauri::AppHandle) -> Result<serde_json::Val
 }
 
 #[tauri::command]
+async fn application_icon(
+    executable: String,
+    app: tauri::AppHandle,
+) -> Result<Option<Vec<u8>>, String> {
+    let folder = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("icon-cache");
+    tauri::async_runtime::spawn_blocking(move || app_icons::load(&executable, &folder))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 async fn open_category_folder(app: tauri::AppHandle) -> Result<(), String> {
     let path = app
         .path()
@@ -210,6 +226,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
+            application_icon,
             category_configuration,
             open_category_folder,
             developer_environment,
