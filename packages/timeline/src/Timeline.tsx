@@ -111,19 +111,19 @@ export function Timeline({
         all.push({
           id: "context",
           name: "Window context",
-          subtitle: "Files · URLs · projects",
+          subtitle: data.kind === "recorded" ? "Window titles" : "Files · URLs · projects",
           height: 24 + appearance.padding * 2,
           kind: "context",
         });
       all.push({
         id: "background",
         name: "Background apps",
-        subtitle: "Running applications",
+        subtitle: data.kind === "recorded" ? "Apps with desktop windows" : "Running applications",
         height: 26 + appearance.padding * 2,
         kind: "background",
       });
       if (expanded.includes("background"))
-        for (const app of data.apps)
+        for (const app of data.apps.filter((app) => data.kind !== "recorded" || data.background.some((lifetime) => lifetime.appId === app.id)))
           all.push({
             id: `bg-${app.id}`,
             name: app.name,
@@ -213,7 +213,7 @@ export function Timeline({
           kind: "media",
         },
       );
-    const visible = data.kind === "recorded" ? all.filter((track) => !["activity", "foreground", "context", "background", "afk", "gpu"].includes(track.id) && !track.id.startsWith("bg-")) : all;
+    const visible = data.kind === "recorded" ? all.filter((track) => track.id !== "gpu") : all;
     let y = 32;
     return visible.map((track) => {
       const height = heights[track.id] ?? track.height;
@@ -619,7 +619,7 @@ export function Timeline({
         title = app.name;
         executable = app.exe;
         timing = intervalTiming(interval);
-        lines = [event.windowTitle, context?.value].filter(Boolean).join("\n");
+        lines = [...new Set([event.windowTitle, context?.value].filter(Boolean))].join("\n");
       } else if (row.keys)
         lines +=
           "\n" +

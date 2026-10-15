@@ -56,7 +56,7 @@ impl SqliteStore {
     pub fn append(&mut self, samples: &[SystemObservation]) -> Result<(), String> {
         let transaction = self.connection.transaction().map_err(|e| e.to_string())?;
         {
-            let mut insert = transaction.prepare_cached("INSERT INTO observations(captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,media_json,errors_json) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)").map_err(|e| e.to_string())?;
+            let mut insert = transaction.prepare_cached("INSERT INTO observations(captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,media_json,errors_json,foreground_id,background_id,idle_ms) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)").map_err(|e| e.to_string())?;
             for s in samples {
                 let media = s
                     .media
@@ -64,6 +64,24 @@ impl SqliteStore {
                     .map(serde_json::to_string)
                     .transpose()
                     .map_err(|e| e.to_string())?;
+                let foreground = s
+                    .activity
+                    .as_ref()
+                    .and_then(|a| a.foreground.as_ref())
+                    .map(|v| intern(&transaction, v))
+                    .transpose()?;
+                let background = s
+                    .activity
+                    .as_ref()
+                    .and_then(|a| a.background.as_ref())
+                    .map(|v| intern(&transaction, v))
+                    .transpose()?;
+                let idle = s
+                    .activity
+                    .as_ref()
+                    .and_then(|a| a.idle_ms)
+                    .map(integer)
+                    .transpose()?;
                 let errors = serde_json::to_string(&s.errors).map_err(|e| e.to_string())?;
                 insert
                     .execute(params![
@@ -78,7 +96,10 @@ impl SqliteStore {
                         s.disk_write_bytes_per_second,
                         s.audio_peak_percent,
                         media,
-                        errors
+                        errors,
+                        foreground,
+                        background,
+                        idle
                     ])
                     .map_err(|e| e.to_string())?;
             }
@@ -94,7 +115,7 @@ impl SqliteStore {
             .map_err(|e| e.to_string())
     }
     pub fn recent(&self) -> Result<Vec<SystemObservation>, String> {
-        let mut statement = self.connection.prepare("SELECT * FROM (SELECT * FROM observations ORDER BY id DESC LIMIT 1800) ORDER BY id").map_err(|e|e.to_string())?;
+        let mut statement = self.connection.prepare("SELECT * FROM (SELECT * FROM archived_observations ORDER BY id DESC LIMIT 1800) ORDER BY id").map_err(|e|e.to_string())?;
         let rows = statement.query_map([], decode).map_err(|e| e.to_string())?;
         rows.map(|r| r.map(|v| v.sample).map_err(|e| e.to_string()))
             .collect()
@@ -114,7 +135,7 @@ impl SqliteStore {
         connection
             .busy_timeout(Duration::from_secs(2))
             .map_err(|e| e.to_string())?;
-        let mut statement = connection.prepare("SELECT * FROM observations WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
+        let mut statement = connection.prepare("SELECT * FROM archived_observations WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
         let observations: Vec<_> = statement
             .query_map(
                 params![
@@ -178,6 +199,20 @@ fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredObservation> {
             audio_peak_percent: row.get(10)?,
             media: media.map(|s| json(&s, 11)).transpose()?,
             errors: json(&errors, 12)?,
+            activity: {
+                let foreground: Option<String> = row.get(13)?;
+                let background: Option<String> = row.get(14)?;
+                let idle: Option<i64> = row.get(15)?;
+                if foreground.is_none() && background.is_none() && idle.is_none() {
+                    None
+                } else {
+                    Some(tracel_core::ActivityObservation {
+                        foreground: foreground.map(|s| json(&s, 13)).transpose()?,
+                        background: background.map(|s| json(&s, 14)).transpose()?,
+                        idle_ms: idle.map(|v| v as u64),
+                    })
+                }
+            },
         },
     })
 }
@@ -185,6 +220,38 @@ fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredObservation> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn version_two_history_is_preserved_when_activity_columns_are_added() {
+        let path = std::env::temp_dir().join(format!(
+            "tracel-v2-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let old = Connection::open(&path).unwrap();
+        for migration in MIGRATIONS.iter().take(2) {
+            old.execute_batch(migration.sql).unwrap();
+        }
+        old.pragma_update(None, "user_version", 2).unwrap();
+        old.execute("INSERT INTO observations(captured_at_ms,cpu_percent,errors_json) VALUES(10000,12,'[]')",[]).unwrap();
+        drop(old);
+        let migrated = SqliteStore::open(&path).unwrap();
+        let history = migrated.recent().unwrap();
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].cpu_percent, Some(12.0));
+        assert!(history[0].activity.is_none());
+        assert_eq!(
+            migrated
+                .connection
+                .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
+                .unwrap(),
+            3
+        );
+        drop(migrated);
+        std::fs::remove_file(path).unwrap();
+    }
     #[test]
     fn persistence_intervals_nulls_unicode_cursors_and_atomic_batch_failure() {
         let path = std::env::temp_dir().join(format!(
@@ -200,6 +267,20 @@ mod tests {
             captured_at_ms: 10000,
             interval_start_ms: Some(8000),
             cpu_percent: Some(0.0),
+            activity: Some(tracel_core::ActivityObservation {
+                foreground: Some(tracel_core::WindowObservation {
+                    process: tracel_core::ProcessObservation {
+                        instance_id: "42:123".into(),
+                        process_id: 42,
+                        name: "Editor.exe".into(),
+                        executable: Some("C:\\Editor.exe".into()),
+                    },
+                    window_id: "100".into(),
+                    title: "测试文档".into(),
+                }),
+                background: Some(vec![]),
+                idle_ms: Some(300000),
+            }),
             media: Some(tracel_core::MediaObservation {
                 title: "测试曲目".into(),
                 artist: "Artist".into(),
@@ -241,6 +322,15 @@ mod tests {
         let incremental = SqliteStore::query(&path, 9000, 13000, page.next_cursor).unwrap();
         assert_eq!(incremental.observations.len(), 1);
         assert_eq!(incremental.observations[0].sample.captured_at_ms, 12000);
+        assert_eq!(
+            writer
+                .connection
+                .query_row("SELECT COUNT(*) FROM activity_values", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            2,
+            "repeated activity payloads must be deduplicated"
+        );
         assert!(SqliteStore::query(&path, 0, 26 * 3600 * 1000, 0).is_err());
         drop(writer);
         // A future-version database must be rejected without rewriting its version or rows.
@@ -279,4 +369,21 @@ fn unsigned(row: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<u64> {
             Box::new(e),
         )
     })
+}
+
+fn intern<T: serde::Serialize>(connection: &Connection, value: &T) -> Result<i64, String> {
+    let payload = serde_json::to_string(value).map_err(|e| e.to_string())?;
+    connection
+        .execute(
+            "INSERT INTO activity_values(payload) VALUES (?1) ON CONFLICT(payload) DO NOTHING",
+            [&payload],
+        )
+        .map_err(|e| e.to_string())?;
+    connection
+        .query_row(
+            "SELECT id FROM activity_values WHERE payload=?1",
+            [&payload],
+            |r| r.get(0),
+        )
+        .map_err(|e| e.to_string())
 }

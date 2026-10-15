@@ -16,6 +16,9 @@ pub struct CollectionSettings {
     pub disk: bool,
     pub audio: bool,
     pub media: bool,
+    pub foreground: bool,
+    pub background: bool,
+    pub idle: bool,
 }
 
 impl CollectionSettings {
@@ -29,7 +32,15 @@ impl CollectionSettings {
     }
     pub fn collecting(&self) -> bool {
         self.enabled
-            && (self.cpu || self.ram || self.network || self.disk || self.audio || self.media)
+            && (self.cpu
+                || self.ram
+                || self.network
+                || self.disk
+                || self.audio
+                || self.media
+                || self.foreground
+                || self.background
+                || self.idle)
     }
 }
 
@@ -55,6 +66,16 @@ pub fn cpu_percent(previous: CpuTimes, current: CpuTimes) -> Option<f64> {
 pub use tracel_core::{MediaObservation, SystemObservation};
 
 pub trait SystemReader {
+    fn activity(
+        &mut self,
+        _settings: &CollectionSettings,
+        _timestamp: u64,
+    ) -> (tracel_core::ActivityObservation, Vec<String>) {
+        (
+            Default::default(),
+            vec!["Application collection unavailable".into()],
+        )
+    }
     fn configure(&mut self, _settings: &CollectionSettings) {}
     fn reset(&mut self) {}
     fn network(&mut self) -> Result<Option<(f64, f64)>, String> {
@@ -106,6 +127,7 @@ impl Sampler {
             disk_write_bytes_per_second: None,
             audio_peak_percent: None,
             media: None,
+            activity: None,
             errors: vec![],
         };
         self.previous_observation_ms = settings.collecting().then_some(captured_at_ms);
@@ -167,6 +189,11 @@ impl Sampler {
                 Err(e) => sample.errors.push(format!("Media: {e}")),
             }
         }
+        if settings.enabled && (settings.foreground || settings.background || settings.idle) {
+            let (activity, errors) = reader.activity(settings, captured_at_ms);
+            sample.activity = Some(activity);
+            sample.errors.extend(errors);
+        }
         sample
     }
 }
@@ -178,6 +205,13 @@ pub struct NativeReader {
 }
 #[cfg(windows)]
 impl SystemReader for NativeReader {
+    fn activity(
+        &mut self,
+        settings: &CollectionSettings,
+        timestamp: u64,
+    ) -> (tracel_core::ActivityObservation, Vec<String>) {
+        windows::activity(settings, timestamp)
+    }
     fn configure(&mut self, settings: &CollectionSettings) {
         self.extended.configure(settings);
     }
@@ -347,6 +381,7 @@ mod tests {
         let old: CollectionSettings =
             serde_json::from_str(r#"{"enabled":true,"cpu":true,"ram":true}"#).unwrap();
         assert!(!old.network && !old.disk && !old.audio && !old.media);
+        assert!(!old.foreground && !old.background && !old.idle);
         let mut sampler = Sampler::default();
         let mut reader = Sources([0; 4]);
         let mut settings = CollectionSettings {
@@ -380,11 +415,69 @@ mod tests {
         assert_eq!(reader.0, [1, 1, 1, 1]);
     }
     #[test]
+    fn application_collection_is_opt_in_and_independent_of_system_metrics() {
+        struct ActivityReader(u32);
+        impl SystemReader for ActivityReader {
+            fn cpu_times(&mut self) -> Result<CpuTimes, String> {
+                panic!("CPU disabled")
+            }
+            fn memory(&mut self) -> Result<(u64, u64), String> {
+                panic!("RAM disabled")
+            }
+            fn activity(
+                &mut self,
+                settings: &CollectionSettings,
+                _: u64,
+            ) -> (tracel_core::ActivityObservation, Vec<String>) {
+                self.0 += 1;
+                assert!(settings.idle && !settings.foreground && !settings.background);
+                (
+                    tracel_core::ActivityObservation {
+                        idle_ms: Some(300000),
+                        ..Default::default()
+                    },
+                    vec![],
+                )
+            }
+        }
+        let mut reader = ActivityReader(0);
+        let mut sampler = Sampler::default();
+        let mut settings = CollectionSettings::default();
+        assert!(sampler.sample(&settings, &mut reader, 0).activity.is_none());
+        settings.idle = true;
+        assert!(!settings.collecting());
+        assert!(sampler.sample(&settings, &mut reader, 1).activity.is_none());
+        settings.enabled = true;
+        assert!(settings.collecting());
+        assert_eq!(
+            sampler
+                .sample(&settings, &mut reader, 2)
+                .activity
+                .unwrap()
+                .idle_ms,
+            Some(300000)
+        );
+        settings.idle = false;
+        assert!(sampler.sample(&settings, &mut reader, 3).activity.is_none());
+        assert_eq!(reader.0, 1);
+    }
+    #[test]
     #[cfg(windows)]
     fn native_system_metrics_are_available() {
         let mut reader = NativeReader::default();
         assert!(reader.cpu_times().is_ok());
         let (used, total) = reader.memory().unwrap();
         assert!(total > 0 && used <= total);
+        let (activity, errors) = reader.activity(
+            &CollectionSettings {
+                foreground: true,
+                background: true,
+                idle: true,
+                ..Default::default()
+            },
+            1,
+        );
+        assert!(activity.background.is_some(), "{errors:?}");
+        assert!(activity.idle_ms.is_some(), "{errors:?}");
     }
 }

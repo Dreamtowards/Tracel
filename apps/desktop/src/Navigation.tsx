@@ -25,8 +25,8 @@ export default function Navigation({ page, expanded, width, onWidth, onToggle, o
   const items = [
     { page: "timeline" as const, label: "Timeline explorer", text: "Timeline", Icon: Activity },
     { page: "metrics" as const, label: "System metrics", text: "System metrics", Icon: ChartNoAxesCombined },
-    { page: "audio" as const, label: "Audio", text: "Audio", Icon: Volume2 },
     { page: "utilities" as const, label: "Utilities", text: "Utilities", Icon: Wrench },
+    { page: "audio" as const, label: "Audio", text: "Audio", Icon: Volume2 },
     { page: "settings" as const, label: "Settings", text: "Settings", Icon: Settings },
   ];
   return <nav ref={nav} style={{ "--nav-width": `${displayedWidth}px` } as CSSProperties} className={`desktop-navigation${expanded ? " expanded" : ""}${resizing ? " resizing" : ""}`} aria-label={t("Main navigation")}>

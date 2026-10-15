@@ -102,5 +102,29 @@ pub struct SystemObservation {
     pub disk_write_bytes_per_second: Option<f64>,
     pub audio_peak_percent: Option<f64>,
     pub media: Option<MediaObservation>,
+    pub activity: Option<ActivityObservation>,
     pub errors: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessObservation {
+    pub instance_id: String,
+    pub process_id: u32,
+    pub name: String,
+    pub executable: Option<String>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowObservation {
+    pub process: ProcessObservation,
+    pub window_id: String,
+    pub title: String,
+}
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityObservation {
+    pub foreground: Option<WindowObservation>,
+    pub background: Option<Vec<ProcessObservation>>,
+    pub idle_ms: Option<u64>,
 }

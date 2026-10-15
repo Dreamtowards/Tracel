@@ -47,6 +47,7 @@ import {
   metricInfo as defaultMetricInfo,
   getMetricInfo,
   sampleEnd,
+  overlap,
 } from "./model";
 import { Timeline, type TimelinePalette } from "./Timeline";
 import { OverviewViewport } from "./OverviewViewport";
@@ -74,6 +75,10 @@ export type RangeExport = {
   analytics: ReturnType<typeof analyze>;
   metrics?: Capture["metrics"];
   media?: Capture["media"];
+  apps?: Capture["apps"];
+  activity?: Capture["activity"];
+  background?: Capture["background"];
+  afk?: Capture["afk"];
   metricUnits?: Record<string, { value: string; integral: string }>;
 };
 
@@ -158,9 +163,9 @@ export default function Explorer({
   }, [provider, loadAttempt, !!capture]);
   useEffect(() => {
     if (data?.kind !== "recorded") return;
-    setView(data.initialView ?? data.bounds); setSelection(null); setFocus(null); setTab("Performance"); setPreset("1 hour");
+    setView(data.initialView ?? data.bounds); setSelection(null); setFocus(null); setTab(data.activity.length || data.background.length || data.afk.length ? "Activity" : "Performance"); setPreset("1 hour");
     setFollow(calendar?.value === calendar?.max);
-  }, [data?.epoch, data?.kind, !!(data?.metrics.length || data?.media.length)]);
+  }, [data?.epoch, data?.kind, !!(data?.metrics.length || data?.media.length || data?.activity.length || data?.background.length || data?.afk.length)]);
   useEffect(() => {
     if (follow && data?.kind === "recorded" && data.initialView && calendar?.value === calendar?.max) setView(data.initialView);
   }, [data,follow,calendar?.value,calendar?.max]);
@@ -246,6 +251,10 @@ export default function Explorer({
       range,
       analytics: stats,
       ...(recorded ? {
+        apps: data.apps,
+        activity: data.activity.filter((a) => overlap(a,range) > 0).map((a) => ({...a,start:Math.max(a.start,range.start),end:Math.min(a.end,range.end),contexts:a.contexts.filter((c) => overlap(c,range)>0).map((c) => ({...c,start:Math.max(c.start,range.start),end:Math.min(c.end,range.end)}))})),
+        background: data.background.filter((a) => overlap(a,range)>0).map((a) => ({...a,start:Math.max(a.start,range.start),end:Math.min(a.end,range.end)})),
+        afk: data.afk.filter((a) => overlap(a,range)>0).map((a) => ({...a,start:Math.max(a.start,range.start),end:Math.min(a.end,range.end)})),
         metrics: data.metrics.filter((s) => s.time < range.end && sampleEnd(s,data.samplePeriod) > range.start).map((s) => ({...s,time:Math.max(s.time,range.start),end:Math.min(sampleEnd(s,data.samplePeriod),range.end)})),
         media: stats.media.map((m) => ({...m,start:Math.max(m.start,range.start),end:Math.min(m.end,range.end)})),
         metricUnits: Object.fromEntries(Object.entries(metricInfo).map(([key, info]) => [key, { value: info.unit, integral: info.unit === "MiB/s" ? "MiB" : `${info.unit}·s` }])),
@@ -421,24 +430,29 @@ export default function Explorer({
                 <ChevronRight size={15} />
               </button>
             </div>
-            <button
+            {!recorded && <button
               className="tx-text-button"
-              onClick={() => { if (recorded && calendar) { calendar.onChange(calendar.max); setFollow(true); setSelection(null); setView(data.initialView ?? data.bounds); } else navigate(6, "Day"); }}
+              onClick={() => navigate(6, "Day")}
             >
-              {t("Today")}</button>
+              {t("Today")}</button>}
             <div className="tx-separator" />
-            {recorded && <button className="tx-text-button" aria-pressed={follow} onClick={() => { calendar?.onChange(calendar.max); setFollow(!follow); }}>{t("Live")}</button>}
             <div className="tx-segmented">
-              {(recorded ? ["1 hour", "Day"] : ["1 hour", "Day", "Week"]).map((p) => (
+              {["1 hour", "Day", "Week"].map((p) => (
                 <button
                   className={preset === p ? "active" : ""}
                   key={t(p)}
+                  disabled={recorded && p === "Week"}
+                  title={recorded && p === "Week" ? t("Week view requires multi-day history queries") : undefined}
                   onClick={() => navigate(day, p)}
                 >
                   {t(p)}
                 </button>
               ))}
             </div>
+            {recorded && <><div className="tx-separator" /><button className="tx-text-button" aria-pressed={follow} title={t(follow ? "Pause live following" : "Jump to today and follow new records")} onClick={() => {
+              if (follow) { setFollow(false); return; }
+              calendar?.onChange(calendar.max); setFollow(true); setPreset("1 hour"); setSelection(null); setView(data.initialView ?? data.bounds);
+            }}><Radio size={14} opacity={follow ? 1 : 0.35} />{t("Live")}</button></>}
             <div className="tx-toolbar-space" />
             {compact && <>
               <button className="tx-icon-button" aria-label={t("Keyboard shortcuts")} title={t("Keyboard shortcuts")} onClick={() => setHelp(true)}><HelpCircle size={16} /></button>
@@ -521,7 +535,7 @@ export default function Explorer({
           </div>
           {compact && exportError && <p className="tx-export-error" role="alert">{t("Could not save the export. Please try again.")}</p>}
           {dataError && <p role="alert" className="tx-export-error">{dataError}</p>}
-          {recorded && !data.metrics.length && !data.media.length && <p role="status" className="tx-note">{t("No recorded metrics for this day. Enable collection in Settings.")}</p>}
+          {recorded && !data.metrics.length && !data.media.length && !data.activity.length && !data.background.length && !data.afk.length && <p role="status" className="tx-note">{t("No recorded metrics for this day. Enable collection in Settings.")}</p>}
           <div className="tx-overview">
             <div className="tx-overview-heading">
               <span>
@@ -659,7 +673,7 @@ export default function Explorer({
                   )}
                 </div>
                 <div className="tx-tabs">
-                  {(recorded ? ["Performance", "Media"] as const : ["Activity", "Performance", "Media"] as const).map((tabLabel) => (
+                  {(["Activity", "Performance", "Media"] as const).map((tabLabel) => (
                     <button
                       className={tab === tabLabel ? "active" : ""}
                       key={tabLabel}

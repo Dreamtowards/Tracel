@@ -17,6 +17,10 @@ pub const MIGRATIONS: &[Migration] = &[
         version: 2,
         sql: include_str!("../migrations/0002_observations.sql"),
     },
+    Migration {
+        version: 3,
+        sql: include_str!("../migrations/0003_activity.sql"),
+    },
 ];
 
 /// Implementations must apply migrations and commit batches atomically.

@@ -12,7 +12,7 @@ export type Application = {
   glyph: string;
 };
 export type ActivityContext = Range & {
-  kind: "file" | "url" | "project";
+  kind: "file" | "url" | "project" | "window";
   title: string;
   value: string;
 };
@@ -20,6 +20,8 @@ export type ActivityInterval = Range & {
   id: string;
   appId: string;
   windowTitle: string;
+  windowId?: string;
+  processInstanceId?: string;
   contexts: ActivityContext[];
 };
 export type AfkInterval = Range & { reason: string };

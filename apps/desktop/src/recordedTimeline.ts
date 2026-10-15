@@ -1,5 +1,5 @@
 import type { Capture, MetricKey, MetricSample, MediaInterval } from "@tracel/timeline/model";
-import type { StoredObservation } from "./native";
+import type { StoredObservation, ObservedProcess } from "./native";
 
 export function localDate(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -18,6 +18,18 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
   const samples = [...rows].sort((a, b) => a.sample.capturedAtMs - b.sample.capturedAtMs || a.id - b.id);
   const metrics: MetricSample[] = [], media: MediaInterval[] = [], apps: Capture["apps"] = [];
   const appIds = new Set<string>();
+  const activity: Capture["activity"] = [], background: Capture["background"] = [], afk: Capture["afk"] = [];
+  const lastBackground = new Map<string, Capture["background"][number]>();
+  const application = (process: ObservedProcess) => {
+    const id = `app:${process.executable?.toLowerCase() ?? process.instanceId}`;
+    if (!appIds.has(id)) {
+      appIds.add(id);
+      const palette = ["#879bb7", "#a49cbe", "#b5a483", "#83a9ad", "#b591a2"];
+      const hash = Array.from(id).reduce((value, letter) => (value * 31 + letter.charCodeAt(0)) >>> 0, 0);
+      apps.push({ id, name: process.name, exe: process.executable?.split(/[\\/]/).at(-1) ?? "", color: palette[hash % palette.length], glyph: process.name.slice(0,1).toUpperCase() });
+    }
+    return id;
+  };
   const seconds = (ms: number) => (ms - startMs) / 1000;
   const add = (start: number, end: number, values: MetricSample["values"]) => {
     start = Math.max(bounds.start, start); end = Math.min(bounds.end, end);
@@ -39,6 +51,27 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
     const continuous = next?.intervalStartMs === sample.capturedAtMs && next.capturedAtMs - sample.capturedAtMs <= 6000;
     const end = Math.min(bounds.end, seconds(continuous ? next.capturedAtMs : sample.capturedAtMs + 2000), next ? seconds(next.capturedAtMs) : Infinity, seconds(now));
     add(time, end, { ...emptyValues(), ram: sample.memoryUsedBytes == null ? null : sample.memoryUsedBytes / 1024 ** 3, audio: sample.audioPeakPercent });
+    const start = Math.max(0, time), observed = sample.activity;
+    if (observed && start < end) {
+      const window = observed.foreground;
+      if (window) {
+        const appId = application(window.process), previous = activity.at(-1);
+        if (previous && previous.end === start && previous.appId === appId && previous.windowTitle === window.title && previous.windowId === window.windowId && previous.processInstanceId === window.process.instanceId) {
+          previous.end = end; previous.contexts.forEach((context) => { context.end = end; });
+        } else activity.push({ id: `native-${samples[i].id}`, start, end, appId, windowTitle: window.title, windowId: window.windowId, processInstanceId: window.process.instanceId,
+          contexts: window.title ? [{ start, end, kind: "window", title: window.title, value: window.title }] : [] });
+      }
+      for (const appId of new Set((observed.background ?? []).map(application))) {
+        const previous = lastBackground.get(appId);
+        if (previous?.end === start) previous.end = end;
+        else { const lifetime = { start, end, appId }; background.push(lifetime); lastBackground.set(appId,lifetime); }
+      }
+      if (observed.idleMs != null && observed.idleMs >= 300000) {
+        const previous = afk.at(-1);
+        if (previous?.end === start) previous.end = end;
+        else afk.push({ start, end, reason: "No input for 5 minutes" });
+      }
+    }
     const m = sample.media;
     if (m && (m.playbackStatus === "Playing" || m.playbackStatus === "Paused") && time < bounds.end && end > Math.max(0,time)) {
       if (!appIds.has(m.application)) {
@@ -59,5 +92,5 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
   return { kind: "recorded", source: "Tracel recorded system metrics", epoch: new Date(startMs).toISOString(), bounds,
     initialView: { start: Math.max(0, latest - 3600), end: latest }, samplePeriod: 2, maxSampleSpan: 6,
     metricOverrides: { ram: { max: memoryMax, unit: "GiB" }, download: { max: rateMax, unit: "MiB/s" }, upload: { max: rateMax, unit: "MiB/s" }, read: { max: diskMax, unit: "MiB/s" }, write: { max: diskMax, unit: "MiB/s" } },
-    apps, activity: [], background: [], afk: [], metrics, media, events: [] };
+    apps, activity, background, afk, metrics, media, events: [] };
 }

@@ -11,8 +11,10 @@ export function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("app_info");
 }
 
-export type CollectionSettings = { enabled: boolean; cpu: boolean; ram: boolean; network: boolean; disk: boolean; audio: boolean; media: boolean };
-export type SystemObservation = { capturedAtMs: number; intervalStartMs: number | null; cpuPercent: number | null; memoryUsedBytes: number | null; memoryTotalBytes: number | null; networkReceiveBytesPerSecond: number | null; networkSendBytesPerSecond: number | null; diskReadBytesPerSecond: number | null; diskWriteBytesPerSecond: number | null; audioPeakPercent: number | null; media: { title: string; artist: string; application: string; playbackStatus: string } | null; errors: string[] };
+export type CollectionSettings = { enabled: boolean; cpu: boolean; ram: boolean; network: boolean; disk: boolean; audio: boolean; media: boolean; foreground?: boolean; background?: boolean; idle?: boolean };
+export type ObservedProcess = { instanceId: string; processId: number; name: string; executable: string | null };
+export type ObservedActivity = { foreground: { process: ObservedProcess; windowId: string; title: string } | null; background: ObservedProcess[] | null; idleMs: number | null };
+export type SystemObservation = { capturedAtMs: number; intervalStartMs: number | null; cpuPercent: number | null; memoryUsedBytes: number | null; memoryTotalBytes: number | null; networkReceiveBytesPerSecond: number | null; networkSendBytesPerSecond: number | null; diskReadBytesPerSecond: number | null; diskWriteBytesPerSecond: number | null; audioPeakPercent: number | null; media: { title: string; artist: string; application: string; playbackStatus: string } | null; activity?: ObservedActivity | null; errors: string[] };
 export type CollectionStatus = {
   settings: CollectionSettings; supported: boolean; periodMs: number; sampleCount: number;
   latest: SystemObservation | null; keepAwakeRequested: boolean; keepAwakeActive: boolean;

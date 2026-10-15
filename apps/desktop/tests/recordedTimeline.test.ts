@@ -7,6 +7,20 @@ import { overviewPath } from "../../../packages/timeline/src/overview";
 import type { StoredObservation, SystemObservation } from "../src/native";
 
 const day = "2026-10-15", epoch = dayRange(day).startMs;
+test("real app activity merges contiguous snapshots, preserves window changes and gaps, and thresholds idle", () => {
+  const process = { instanceId:"42:1234", processId:42, name:"Editor.exe", executable:"C:\\Editor.exe" };
+  const activity = { foreground:{process,windowId:"100",title:"Document"}, background:[process, {...process, instanceId:"43:2345",processId:43}],idleMs:300000 };
+  const capture = recordedCapture(day,[row(1,10,{activity}),row(2,12,{intervalStartMs:epoch+10000,activity}),
+    row(3,14,{intervalStartMs:epoch+12000,activity:{...activity,foreground:{...activity.foreground,title:"Other"},idleMs:0}}),row(4,30,{activity})],epoch+100000);
+  assert.deepEqual(capture.activity.map(({start,end,windowTitle})=>({start,end,windowTitle})),[{start:10,end:14,windowTitle:"Document"},{start:14,end:16,windowTitle:"Other"},{start:30,end:32,windowTitle:"Document"}]);
+  assert.equal(capture.apps.length,1);
+  assert.deepEqual(capture.background.map(({start,end})=>({start,end})),[{start:10,end:16},{start:30,end:32}]);
+  assert.deepEqual(capture.afk.map(({start,end})=>({start,end})),[{start:10,end:14},{start:30,end:32}]);
+  assert.equal(capture.activity[0].contexts[0].kind,"window");
+  assert.equal(capture.activity[0].contexts[0].end,14);
+  const reused = recordedCapture(day,[row(1,10,{activity}),row(2,12,{intervalStartMs:epoch+10000,activity:{...activity,foreground:{...activity.foreground,process:{...process,instanceId:"42:9999"}}}})],epoch+100000);
+  assert.equal(reused.activity.length,2,"a reused PID/window must not merge process instances");
+});
 function row(id: number, second: number, changes: Partial<SystemObservation> = {}): StoredObservation {
   return { id, sample: { capturedAtMs: epoch + second * 1000, intervalStartMs: null,
     cpuPercent: null, memoryUsedBytes: null, memoryTotalBytes: null, networkReceiveBytesPerSecond: null, networkSendBytesPerSecond: null,
