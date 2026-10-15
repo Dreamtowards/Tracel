@@ -3609,6 +3609,7 @@ dependencies = [
  "serde_json",
  "tracel-core",
  "tracel-storage",
+ "windows",
  "windows-sys 0.61.2",
 ]
 

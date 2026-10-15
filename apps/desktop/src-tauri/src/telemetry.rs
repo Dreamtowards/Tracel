@@ -6,7 +6,7 @@ use std::{
     thread::JoinHandle,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use tracel_agent::{CollectionSettings, NativeReader, Sampler, SystemObservation};
+use tracel_agent::{CollectionSettings, NativeReader, Sampler, SystemObservation, SystemReader};
 
 pub const PERIOD_MS: u64 = 2000;
 const MAX_SAMPLES: usize = 1800;
@@ -90,7 +90,7 @@ impl Telemetry {
             .spawn(move || {
                 let (lock, wake) = &*worker_shared;
                 let mut sampler = Sampler::default();
-                let mut reader = NativeReader;
+                let mut reader = NativeReader::default();
                 let mut revision = u64::MAX;
                 let mut last_sample: Option<Instant> = None;
                 let mut inner = lock.lock().unwrap_or_else(|e| e.into_inner());
@@ -112,18 +112,27 @@ impl Telemetry {
                     }
                     if inner.revision != revision {
                         sampler.reset();
+                        reader.reset();
                         revision = inner.revision;
                     }
+                    reader.configure(&inner.settings);
                     if inner.settings.collecting() && cfg!(windows) {
                         if last_sample.is_some_and(|time| {
                             time.elapsed() > Duration::from_millis(PERIOD_MS * 3)
                         }) {
                             sampler.reset();
+                            reader.reset();
                         }
                         last_sample = Some(Instant::now());
-                        // Hold the config lock through the brief calls: after set_settings returns,
-                        // disabled collectors cannot perform another query with stale configuration.
-                        let sample = sampler.sample(&inner.settings, &mut reader, now_ms());
+                        // Native media providers may take time. Keep IPC and power requests responsive;
+                        // discard an in-flight sample if settings changed while it was being read.
+                        let settings = inner.settings.clone();
+                        drop(inner);
+                        let sample = sampler.sample(&settings, &mut reader, now_ms());
+                        inner = lock.lock().unwrap_or_else(|e| e.into_inner());
+                        if inner.stopping || inner.revision != revision {
+                            continue;
+                        }
                         if inner.samples.len() == MAX_SAMPLES {
                             inner.samples.pop_front();
                         }
@@ -135,6 +144,7 @@ impl Telemetry {
                         inner = waited.0;
                     } else {
                         sampler.reset();
+                        reader.reset();
                         inner = wake.wait(inner).unwrap_or_else(|e| e.into_inner());
                     }
                 }
@@ -248,6 +258,7 @@ mod tests {
                 enabled: true,
                 cpu: true,
                 ram: true,
+                ..CollectionSettings::default()
             })
             .is_err());
         assert_eq!(service.status().settings, CollectionSettings::initial());
@@ -271,6 +282,7 @@ mod tests {
                 enabled: true,
                 cpu: true,
                 ram: true,
+                ..CollectionSettings::default()
             })
             .unwrap();
         let deadline = std::time::Instant::now() + Duration::from_secs(8);
@@ -312,6 +324,7 @@ mod tests {
             enabled: false,
             cpu: false,
             ram: true,
+            ..CollectionSettings::default()
         };
         service.set_settings(settings.clone()).unwrap();
         assert_eq!(service.status().settings, settings);

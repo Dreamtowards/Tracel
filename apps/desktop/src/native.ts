@@ -11,8 +11,8 @@ export function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("app_info");
 }
 
-export type CollectionSettings = { enabled: boolean; cpu: boolean; ram: boolean };
-export type SystemObservation = { capturedAtMs: number; cpuPercent: number | null; memoryUsedBytes: number | null; memoryTotalBytes: number | null; errors: string[] };
+export type CollectionSettings = { enabled: boolean; cpu: boolean; ram: boolean; network: boolean; disk: boolean; audio: boolean; media: boolean };
+export type SystemObservation = { capturedAtMs: number; cpuPercent: number | null; memoryUsedBytes: number | null; memoryTotalBytes: number | null; networkReceiveBytesPerSecond: number | null; networkSendBytesPerSecond: number | null; diskReadBytesPerSecond: number | null; diskWriteBytesPerSecond: number | null; audioPeakPercent: number | null; media: { title: string; artist: string; application: string; playbackStatus: string } | null; errors: string[] };
 export type CollectionStatus = {
   settings: CollectionSettings; supported: boolean; periodMs: number; sampleCount: number;
   latest: SystemObservation | null; keepAwakeRequested: boolean; keepAwakeActive: boolean;
@@ -38,3 +38,7 @@ export async function saveRange(payload: RangeExport, title = "Export timeline r
 
 export type FileUsage = { path: string; checkedAtMs: number; modifiedAtMs: number | null; processes: { processId: number; startedAtTicks: string; name: string; service: string; executable: string | null }[] };
 export const inspectFileUsers = (path: string) => invoke<FileUsage>("inspect_file_usage", { path });
+
+export type DisplayTimeout = { schemeId: string; acSeconds: number; dcSeconds: number };
+export const readDisplayTimeout = () => invoke<DisplayTimeout>("read_display_timeout");
+export const setDisplayTimeout = (expected: DisplayTimeout, acSeconds: number, dcSeconds: number) => invoke<DisplayTimeout>("set_display_timeout", { expected, acSeconds, dcSeconds });

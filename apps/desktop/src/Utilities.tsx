@@ -1,3 +1,4 @@
+import { ScreenTimeout } from "./ScreenTimeout";
 import { useRef, useState } from "react";
 import { useI18n } from "@tracel/timeline";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -34,7 +35,7 @@ export default function Utilities({ status, busy, error, onAwake }: {
     {error && <p className="settings-error" role="alert">{t(error)}</p>}
     <SettingsGroup title={t("Power")}>
       <SettingToggle label="Prevent automatic sleep" description="While Tracel runs. Normal display timeout still works." checked={status?.keepAwakeRequested ?? false} disabled={unavailable} pending={busy} onChange={(enabled) => { void onAwake(enabled); }} />
-      <div className="settings-action"><div><strong>{t("Display timeout")}</strong><small>{t("Use Windows display timeout. Manual screen-off is unavailable.")}</small></div><Button className="tx-button" disabled>{t("Turn display off")}</Button></div>
+      <ScreenTimeout unavailable={unavailable} />
       {status?.keepAwakeRequested !== status?.keepAwakeActive && <p role="status">{t("Applying power request…")}</p>}
       {status?.powerError && <p role="alert" className="settings-error">{t("Power request failed:")}{" "}{status.powerError}</p>}
     </SettingsGroup>

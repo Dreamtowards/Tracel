@@ -10,8 +10,8 @@ fn main() {
     };
     match std::env::args().nth(1).as_deref() {
         Some("--sample") => {
-            let settings = CollectionSettings { enabled: true, cpu: true, ram: true };
-            let mut sampler = Sampler::default(); let mut reader = NativeReader;
+            let settings = CollectionSettings { enabled: true, cpu: true, ram: true, ..CollectionSettings::default() };
+            let mut sampler = Sampler::default(); let mut reader = NativeReader::default();
             sampler.sample(&settings, &mut reader, now());
             std::thread::sleep(std::time::Duration::from_secs(2));
             println!("{}", serde_json::to_string_pretty(&sampler.sample(&settings, &mut reader, now())).unwrap());

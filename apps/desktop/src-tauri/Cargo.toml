@@ -17,4 +17,4 @@ serde_json = "1"
 tracel-agent = { path = "../../../crates/tracel-agent" }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_System_Power", "Win32_System_RestartManager", "Win32_System_Threading"] }
+windows-sys = { version = "0.61", features = ["Win32_System_Power", "Win32_System_Registry", "Win32_System_RestartManager", "Win32_System_Threading"] }

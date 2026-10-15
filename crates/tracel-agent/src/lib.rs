@@ -2,6 +2,8 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(windows)]
+mod extended;
+#[cfg(windows)]
 mod windows;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -10,6 +12,10 @@ pub struct CollectionSettings {
     pub enabled: bool,
     pub cpu: bool,
     pub ram: bool,
+    pub network: bool,
+    pub disk: bool,
+    pub audio: bool,
+    pub media: bool,
 }
 
 impl CollectionSettings {
@@ -18,10 +24,12 @@ impl CollectionSettings {
             enabled: false,
             cpu: true,
             ram: true,
+            ..Self::default()
         }
     }
     pub fn collecting(&self) -> bool {
-        self.enabled && (self.cpu || self.ram)
+        self.enabled
+            && (self.cpu || self.ram || self.network || self.disk || self.audio || self.media)
     }
 }
 
@@ -44,7 +52,30 @@ pub fn cpu_percent(previous: CpuTimes, current: CpuTimes) -> Option<f64> {
     Some(100.0 * (total - idle) as f64 / total as f64)
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaObservation {
+    pub title: String,
+    pub artist: String,
+    pub application: String,
+    pub playback_status: String,
+}
+
 pub trait SystemReader {
+    fn configure(&mut self, _settings: &CollectionSettings) {}
+    fn reset(&mut self) {}
+    fn network(&mut self) -> Result<Option<(f64, f64)>, String> {
+        Err("Unavailable".into())
+    }
+    fn disk(&mut self) -> Result<Option<(f64, f64)>, String> {
+        Err("Unavailable".into())
+    }
+    fn audio(&mut self) -> Result<f64, String> {
+        Err("Unavailable".into())
+    }
+    fn media(&mut self) -> Result<Option<MediaObservation>, String> {
+        Err("Unavailable".into())
+    }
     fn cpu_times(&mut self) -> Result<CpuTimes, String>;
     fn memory(&mut self) -> Result<(u64, u64), String>;
 }
@@ -56,6 +87,12 @@ pub struct SystemObservation {
     pub cpu_percent: Option<f64>,
     pub memory_used_bytes: Option<u64>,
     pub memory_total_bytes: Option<u64>,
+    pub network_receive_bytes_per_second: Option<f64>,
+    pub network_send_bytes_per_second: Option<f64>,
+    pub disk_read_bytes_per_second: Option<f64>,
+    pub disk_write_bytes_per_second: Option<f64>,
+    pub audio_peak_percent: Option<f64>,
+    pub media: Option<MediaObservation>,
     pub errors: Vec<String>,
 }
 
@@ -79,8 +116,15 @@ impl Sampler {
             cpu_percent: None,
             memory_used_bytes: None,
             memory_total_bytes: None,
+            network_receive_bytes_per_second: None,
+            network_send_bytes_per_second: None,
+            disk_read_bytes_per_second: None,
+            disk_write_bytes_per_second: None,
+            audio_peak_percent: None,
+            media: None,
             errors: vec![],
         };
+        reader.configure(settings);
         if settings.enabled && settings.cpu {
             match reader.cpu_times() {
                 Ok(current) => {
@@ -106,13 +150,67 @@ impl Sampler {
                 Err(error) => sample.errors.push(format!("RAM: {error}")),
             }
         }
+        if settings.enabled && settings.network {
+            match reader.network() {
+                Ok(Some((rx, tx))) => {
+                    sample.network_receive_bytes_per_second = Some(rx);
+                    sample.network_send_bytes_per_second = Some(tx);
+                }
+                Ok(None) => {}
+                Err(e) => sample.errors.push(format!("Network: {e}")),
+            }
+        }
+        if settings.enabled && settings.disk {
+            match reader.disk() {
+                Ok(Some((read, write))) => {
+                    sample.disk_read_bytes_per_second = Some(read);
+                    sample.disk_write_bytes_per_second = Some(write);
+                }
+                Ok(None) => {}
+                Err(e) => sample.errors.push(format!("Disk: {e}")),
+            }
+        }
+        if settings.enabled && settings.audio {
+            match reader.audio() {
+                Ok(value) => sample.audio_peak_percent = Some(value),
+                Err(e) => sample.errors.push(format!("Audio: {e}")),
+            }
+        }
+        if settings.enabled && settings.media {
+            match reader.media() {
+                Ok(value) => sample.media = value,
+                Err(e) => sample.errors.push(format!("Media: {e}")),
+            }
+        }
         sample
     }
 }
 
-pub struct NativeReader;
+#[derive(Default)]
+pub struct NativeReader {
+    #[cfg(windows)]
+    extended: extended::Reader,
+}
 #[cfg(windows)]
 impl SystemReader for NativeReader {
+    fn configure(&mut self, settings: &CollectionSettings) {
+        self.extended.configure(settings);
+    }
+    fn reset(&mut self) {
+        self.extended.reset();
+    }
+    fn network(&mut self) -> Result<Option<(f64, f64)>, String> {
+        self.extended.network()
+    }
+    fn disk(&mut self) -> Result<Option<(f64, f64)>, String> {
+        self.extended.disk()
+    }
+    fn audio(&mut self) -> Result<f64, String> {
+        self.extended.audio()
+    }
+    fn media(&mut self) -> Result<Option<MediaObservation>, String> {
+        self.extended.media()
+    }
     fn cpu_times(&mut self) -> Result<CpuTimes, String> {
         windows::cpu_times()
     }
@@ -235,9 +333,71 @@ mod tests {
         );
     }
     #[test]
+    fn new_sources_are_independent_and_old_preferences_do_not_enable_them() {
+        struct Sources([u32; 4]);
+        impl SystemReader for Sources {
+            fn cpu_times(&mut self) -> Result<CpuTimes, String> {
+                panic!("CPU disabled")
+            }
+            fn memory(&mut self) -> Result<(u64, u64), String> {
+                panic!("RAM disabled")
+            }
+            fn network(&mut self) -> Result<Option<(f64, f64)>, String> {
+                self.0[0] += 1;
+                Ok(Some((0.0, 10.0)))
+            }
+            fn disk(&mut self) -> Result<Option<(f64, f64)>, String> {
+                self.0[1] += 1;
+                Ok(None)
+            }
+            fn audio(&mut self) -> Result<f64, String> {
+                self.0[2] += 1;
+                Ok(0.0)
+            }
+            fn media(&mut self) -> Result<Option<MediaObservation>, String> {
+                self.0[3] += 1;
+                Ok(None)
+            }
+        }
+        let old: CollectionSettings =
+            serde_json::from_str(r#"{"enabled":true,"cpu":true,"ram":true}"#).unwrap();
+        assert!(!old.network && !old.disk && !old.audio && !old.media);
+        let mut sampler = Sampler::default();
+        let mut reader = Sources([0; 4]);
+        let mut settings = CollectionSettings {
+            enabled: true,
+            network: true,
+            ..Default::default()
+        };
+        let value = sampler.sample(&settings, &mut reader, 1);
+        assert_eq!(value.network_receive_bytes_per_second, Some(0.0));
+        assert_eq!(reader.0, [1, 0, 0, 0]);
+        settings.network = false;
+        settings.disk = true;
+        assert!(sampler
+            .sample(&settings, &mut reader, 2)
+            .disk_read_bytes_per_second
+            .is_none());
+        assert_eq!(reader.0, [1, 1, 0, 0]);
+        settings.disk = false;
+        settings.audio = true;
+        assert_eq!(
+            sampler.sample(&settings, &mut reader, 3).audio_peak_percent,
+            Some(0.0)
+        );
+        assert_eq!(reader.0, [1, 1, 1, 0]);
+        settings.audio = false;
+        settings.media = true;
+        assert!(sampler.sample(&settings, &mut reader, 4).media.is_none());
+        assert_eq!(reader.0, [1, 1, 1, 1]);
+        settings.enabled = false;
+        sampler.sample(&settings, &mut reader, 5);
+        assert_eq!(reader.0, [1, 1, 1, 1]);
+    }
+    #[test]
     #[cfg(windows)]
     fn native_system_metrics_are_available() {
-        let mut reader = NativeReader;
+        let mut reader = NativeReader::default();
         assert!(reader.cpu_times().is_ok());
         let (used, total) = reader.memory().unwrap();
         assert!(total > 0 && used <= total);

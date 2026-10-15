@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod file_usage;
+mod screen_timeout;
 mod telemetry;
 mod tools;
 use tauri::Manager;
@@ -69,6 +70,25 @@ fn display_off() -> Result<(), String> {
     Err("Display-off is disabled after a wake-up reliability issue.".into())
 }
 
+#[tauri::command]
+async fn read_display_timeout() -> Result<screen_timeout::Timeout, String> {
+    tauri::async_runtime::spawn_blocking(screen_timeout::read)
+        .await
+        .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn set_display_timeout(
+    expected: screen_timeout::Timeout,
+    ac_seconds: u32,
+    dc_seconds: u32,
+) -> Result<screen_timeout::Timeout, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        screen_timeout::update(expected, ac_seconds, dc_seconds)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg(test)]
 mod safety_tests {
     #[test]
@@ -97,6 +117,8 @@ fn main() {
             set_keep_awake,
             inspect_foreground,
             inspect_file_usage,
+            read_display_timeout,
+            set_display_timeout,
             display_off
         ])
         .build(tauri::generate_context!())

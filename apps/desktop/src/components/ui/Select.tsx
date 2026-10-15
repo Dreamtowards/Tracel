@@ -2,11 +2,11 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 /** shadcn/ui composition, styled with Desktop's shared design tokens. */
-export function Select({ id, label, value, onValueChange, options }: {
-  id: string; label: string; value: string; onValueChange: (value: string) => void;
+export function Select({ id, label, value, onValueChange, options, disabled }: {
+  disabled?: boolean; id: string; label: string; value: string; onValueChange: (value: string) => void;
   options: { value: string; label: string }[];
 }) {
-  return <SelectPrimitive.Root value={value} onValueChange={onValueChange}>
+  return <SelectPrimitive.Root disabled={disabled} value={value} onValueChange={onValueChange}>
     <SelectPrimitive.Trigger id={id} className="ui-select-trigger" aria-label={label}>
       <SelectPrimitive.Value /><SelectPrimitive.Icon asChild><ChevronDown size={14} /></SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
