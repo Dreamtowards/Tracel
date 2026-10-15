@@ -92,6 +92,10 @@ export function clampRange(range: Range, bounds: Range): Range {
   );
   return { start, end: start + span };
 }
+/** Move a viewport without changing its duration, except when bounds are smaller. */
+export function followRange(view: Range, end: number, bounds: Range): Range {
+  return clampRange({ start: end - (view.end - view.start), end }, bounds);
+}
 export function zoomRange(
   view: Range,
   factor: number,

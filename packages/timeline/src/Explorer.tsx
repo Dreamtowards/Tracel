@@ -39,6 +39,7 @@ import {
   Range,
   DAY,
   clampRange,
+  followRange,
   zoomRange,
   clock,
   dateLabel,
@@ -146,7 +147,7 @@ export default function Explorer({
   const [settings, setSettings] = useState(false);
   const [appearance, setAppearance] = useState(defaultAppearance);
   const [day, setDay] = useState(6);
-  const [preset, setPreset] = useState("Day");
+  const [preset, setPreset] = useState(capture?.kind === "recorded" ? "1 hour" : "Day");
   const [follow, setFollow] = useState(capture?.kind === "recorded");
   useEffect(() => {
     if (capture) return;
@@ -163,11 +164,11 @@ export default function Explorer({
   }, [provider, loadAttempt, !!capture]);
   useEffect(() => {
     if (data?.kind !== "recorded") return;
-    setView(data.initialView ?? data.bounds); setSelection(null); setFocus(null); setTab(data.activity.length || data.background.length || data.afk.length ? "Activity" : "Performance"); setPreset("1 hour");
+    setView(current => followRange(current, data.initialView?.end ?? data.bounds.end, data.bounds)); setSelection(null); setFocus(null); setTab(data.activity.length || data.background.length || data.afk.length ? "Activity" : "Performance");
     setFollow(calendar?.value === calendar?.max);
   }, [data?.epoch, data?.kind, !!(data?.metrics.length || data?.media.length || data?.activity.length || data?.background.length || data?.afk.length)]);
   useEffect(() => {
-    if (follow && data?.kind === "recorded" && data.initialView && calendar?.value === calendar?.max) setView(data.initialView);
+    if (follow && data?.kind === "recorded" && data.initialView && calendar?.value === calendar?.max) setView(current => followRange(current, data.initialView!.end, data.bounds));
   }, [data,follow,calendar?.value,calendar?.max]);
   useEffect(() => {
     if (!help) return;
@@ -451,7 +452,8 @@ export default function Explorer({
             </div>
             {recorded && <><div className="tx-separator" /><button className="tx-text-button" aria-pressed={follow} title={t(follow ? "Pause live following" : "Jump to today and follow new records")} onClick={() => {
               if (follow) { setFollow(false); return; }
-              calendar?.onChange(calendar.max); setFollow(true); setPreset("1 hour"); setSelection(null); setView(data.initialView ?? data.bounds);
+              calendar?.onChange(calendar.max); setFollow(true); setSelection(null);
+              if (calendar?.value === calendar?.max) setView(current => followRange(current, data.initialView?.end ?? data.bounds.end, data.bounds));
             }}><Radio size={14} opacity={follow ? 1 : 0.35} />{t("Live")}</button></>}
             <div className="tx-toolbar-space" />
             {compact && <>

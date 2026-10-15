@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
 import type { TimelineAppearance } from "./DisplaySettings";
+import { CurrentTimeLine } from "./CurrentTimeLine";
 import {
   Capture,
   Range,
@@ -527,7 +528,7 @@ export function Timeline({
           ctx.font = '9px "Segoe UI", "Microsoft YaHei UI", sans-serif';
           ctx.textAlign = "right";
           ctx.fillStyle = "#839198";
-          ctx.fillText(`${scale.max} ${scale.unit}`, width - 7, y + 13);
+          ctx.fillText(`${Number(scale.max.toFixed(2))} ${scale.unit}`, width - 7, y + 13);
           ctx.textAlign = "left";
         }
       }
@@ -933,6 +934,7 @@ export function Timeline({
             if (tip.current) tip.current.style.display = "none";
           }}
         />
+        {appearance.currentTime && <CurrentTimeLine epoch={data.epoch} view={view} labelWidth={LABEL} width={width} />}
         <div ref={cursor} className="tx-hover-cursor" />
         {typeof document !== "undefined" &&
           createPortal(<div ref={tip} className="tx-tooltip" />, document.body)}

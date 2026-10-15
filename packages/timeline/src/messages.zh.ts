@@ -136,4 +136,5 @@ export const timelineZh: Readonly<Record<string, string>> = {
   "Zoom the focused timeline": "缩放当前时间轴", "Pan the focused timeline": "平移当前时间轴",
   "Clear selection on the timeline": "清除时间轴选区",
   "playing": "播放中", "paused": "已暂停", "Paused": "已暂停",
+  "Current time": "当前时间", "Show current time": "显示当前时间线",
 };

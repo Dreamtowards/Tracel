@@ -6,12 +6,14 @@ export type TimelineAppearance = {
   backgroundHeight: number;
   contextOpacity: number;
   durationLabels: boolean;
+  currentTime: boolean;
 };
 export const defaultAppearance: TimelineAppearance = {
   padding: 3,
   backgroundHeight: 16,
   contextOpacity: 72,
   durationLabels: true,
+  currentTime: true,
 };
 
 export function DisplaySettings({
@@ -96,6 +98,10 @@ export function DisplaySettings({
             onChange({ ...value, durationLabels: e.target.checked })
           }
         />
+      </label>
+      <label className="tx-setting-check">
+        <span>{t("Show current time")}</span>
+        <input type="checkbox" checked={value.currentTime} onChange={(e) => onChange({ ...value, currentTime: e.target.checked })} />
       </label>
       <footer>
         <button

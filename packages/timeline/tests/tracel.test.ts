@@ -2,11 +2,19 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createCapture } from "../src/data";
 import { analyze } from "../src/analytics";
-import { DAY, clampRange, zoomRange } from "../src/model";
+import { DAY, clampRange, zoomRange, followRange } from "../src/model";
 import { overviewPath } from "../src/overview";
 
 const data = createCapture();
 const at = (hour: number) => 6 * DAY + hour * 3600;
+
+test("live following preserves custom duration and respects calendar-day bounds", () => {
+  const view = { start: 10000, end: 11800 };
+  assert.deepEqual(followRange(view, 15000, { start: 0, end: DAY }), { start: 13200, end: 15000 });
+  assert.deepEqual(followRange(view, 100, { start: 0, end: DAY }), { start: 0, end: 1800 });
+  assert.equal(followRange({ start: 0, end: DAY }, 30000, { start: 0, end: DAY }).end, DAY);
+  assert.deepEqual(followRange({ start: 0, end: DAY }, 30000, { start: 0, end: 23 * 3600 }), { start: 0, end: 23 * 3600 });
+});
 
 test("overview breaks at missing samples even between downsampled points", () => {
   const sample = data.metrics.find((s) => s.values)!;

@@ -594,6 +594,15 @@
 .tx-track-resize:focus {
   opacity: 1;
 }
+.tx-current-time {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #ef5555;
+  pointer-events: none;
+  z-index: 2;
+}
 .tx-hover-cursor {
   position: absolute;
   top: 32px;
