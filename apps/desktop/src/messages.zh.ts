@@ -59,6 +59,7 @@ export const desktopZh: Readonly<Record<string, string>> = {
   "No playing or paused media sessions.": "没有正在播放或暂停的媒体会话。",
   "All Windows media sessions · updates while this page is open": "全部 Windows 媒体会话 · 在此页面中自动刷新",
   "Only apps publishing Windows media information appear here. Application audio below can detect sound without song metadata.": "这里只显示向 Windows 发布媒体信息的应用。下方应用音频无需歌曲信息即可检测声音。",
+  "About media sessions": "关于媒体会话",
   "Application activity": "应用活动",
   "Foreground apps and window titles": "前台应用与窗口标题",
   "Window titles only · no URLs or file contents": "仅窗口标题 · 不采集网址或文件内容",

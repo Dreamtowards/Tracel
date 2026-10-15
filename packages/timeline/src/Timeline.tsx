@@ -481,17 +481,10 @@ export function Timeline({
                 });
               }
             }
-            ctx.fillStyle = info.color + (keyIndex ? "10" : "16");
             ctx.strokeStyle = info.color;
             ctx.lineWidth = 1;
             ctx.beginPath();
             for (const [px, bucket] of buckets) {
-              ctx.fillRect(
-                px,
-                bottom - (bucket.max / info.max) * h,
-                1,
-                (bucket.max / info.max) * h,
-              );
               ctx.moveTo(px, bottom - (bucket.min / info.max) * h);
               ctx.lineTo(px, bottom - (bucket.max / info.max) * h);
             }
@@ -499,15 +492,35 @@ export function Timeline({
             ctx.stroke();
             ctx.globalAlpha = 1;
             ctx.setLineDash(key === "write" || key === "upload" ? [5, 4] : []);
-            ctx.beginPath();
+            // The fill and outline share one path. The faint min/max whiskers
+            // above retain sub-pixel spikes without changing the filled curve.
+            const outline = new Path2D(), area = new Path2D();
+            let run = new Path2D(), first = 0, last = 0, lastY = bottom;
+            const finishRun = () => {
+              if (previous < 0) return;
+              run.lineTo(last + 1, lastY);
+              outline.addPath(run);
+              const fill = new Path2D(run);
+              fill.lineTo(last + 1, bottom);
+              fill.lineTo(first, bottom);
+              fill.closePath();
+              area.addPath(fill);
+            };
             let previous = -2;
             for (const [px, bucket] of buckets) {
               const py = bottom - (bucket.last / info.max) * h;
-              if (px !== previous + 1) ctx.moveTo(px, py);
-              else ctx.lineTo(px, py);
+              if (px !== previous + 1) {
+                finishRun();
+                run = new Path2D(); first = px;
+                run.moveTo(px, py);
+              } else run.lineTo(px, py);
+              last = px; lastY = py;
               previous = px;
             }
-            ctx.stroke();
+            finishRun();
+            ctx.fillStyle = info.color + (keyIndex ? "10" : "16");
+            ctx.fill(area);
+            ctx.stroke(outline);
             ctx.setLineDash([]);
           }
           const scale = getMetricInfo(data, row.keys![0]);
@@ -627,7 +640,7 @@ export function Timeline({
             .join("\n");
       else if (row.kind === "media") {
         const media = data.media.find((m) => m.start <= time && m.end > time);
-        if (media) timing = intervalTiming(media);
+        if (media) { timing = intervalTiming(media); title = t(media.state === "paused" ? "Paused" : "Now playing"); }
         lines += media
           ? `\n${media.title}\n${media.artist}\n${data.apps.find((a) => a.id === media.appId)?.name} · ${t(media.state)}`
           : "\n" + t("No media session");

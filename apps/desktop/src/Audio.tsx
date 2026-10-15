@@ -31,7 +31,10 @@ export default function Audio({ monitor, media }: { monitor: ReturnType<typeof u
       <div className="settings-action"><div><small>{t("Change default devices in Windows sound settings. This page updates automatically while monitoring.")}</small></div><Button disabled={!nativeClient} onClick={()=>{void settings();}}><ExternalLink size={14}/>{t("Windows sound settings")}</Button></div>
       {settingsError && <p role="alert" className="settings-error">{settingsError}</p>}
     </SettingsGroup>
-    <SettingsGroup title={t("Media sessions")}>
+    <SettingsGroup title={t("Media sessions")} help={<InfoTip label={t("About media sessions")}>
+      <p>{t(status?.monitoring ? "All Windows media sessions · updates while this page is open" : "Monitoring paused. Recent results are frozen.")}</p>
+      <p>{t("Only apps publishing Windows media information appear here. Application audio below can detect sound without song metadata.")}</p>
+    </InfoTip>}>
       <ul className="audio-sessions audio-media">{mediaRows.map((session,index) => <li key={`${session.application}:${index}`} className={session.playbackStatus === "Paused" ? "is-paused" : undefined}>
         <div className="audio-session-heading"><div><strong>{session.title || t("Untitled media")}</strong>{session.artist && <small>{session.artist}</small>}</div><span>{t(session.playbackStatus === "Playing" ? "playing" : "paused")}</span></div>
         <div className="audio-session-detail"><span>{session.application}</span></div>
@@ -39,8 +42,6 @@ export default function Audio({ monitor, media }: { monitor: ReturnType<typeof u
       {media.error && <p role="alert" className="settings-error">{t("Could not refresh media sessions. Previous results may be stale.")} {media.error}</p>}
       {media.snapshot?.errors.map((message,index) => <p role="alert" className="settings-error" key={index}>{message}</p>)}
       {!mediaRows.length && !media.error && <p role="status" className="audio-empty">{t(!nativeClient ? "Open the Windows client to inspect media sessions." : media.loading ? "Reading media sessions…" : !status?.monitoring ? "Monitoring paused." : "No playing or paused media sessions.")}</p>}
-      <p className="settings-footnote">{t(status?.monitoring ? "All Windows media sessions · updates while this page is open" : "Monitoring paused. Recent results are frozen.")}</p>
-      <p className="settings-footnote">{t("Only apps publishing Windows media information appear here. Application audio below can detect sound without song metadata.")}</p>
     </SettingsGroup>
     <SettingsGroup title={t("Application audio")} help={<InfoTip label={t("About application audio")}>
       <p>{t(status?.monitoring ? "Monitoring continues on other pages. Recent sounds stay for 60 seconds." : "Monitoring paused. Recent results are frozen.")}</p>

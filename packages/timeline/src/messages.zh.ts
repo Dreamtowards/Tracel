@@ -135,5 +135,5 @@ export const timelineZh: Readonly<Record<string, string>> = {
   "Click app": "点击应用", "Focus its activity and context": "聚焦该应用及其上下文",
   "Zoom the focused timeline": "缩放当前时间轴", "Pan the focused timeline": "平移当前时间轴",
   "Clear selection on the timeline": "清除时间轴选区",
-  "playing": "播放中", "paused": "已暂停",
+  "playing": "播放中", "paused": "已暂停", "Paused": "已暂停",
 };
