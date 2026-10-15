@@ -4,7 +4,9 @@ import { SettingsGroup, SettingToggle as Toggle } from "./components/SettingsGro
 import { Select } from "./components/ui/Select";
 import { accentPresets, defaultAccent } from "./theme";
 import { useState } from "react";
-import { inspectForeground, nativeClient, type CollectionSettings, type CollectionStatus, type ForegroundInfo } from "./native";
+import { FolderOpen } from "lucide-react";
+import { InfoTip } from "./components/ui/InfoTip";
+import { inspectForeground, openDatabaseFolder, nativeClient, type CollectionSettings, type CollectionStatus, type ForegroundInfo } from "./native";
 import { zoomLevels } from "./useAppearance";
 
 export default function Settings({ status, busy, error, onSettings, zoom, onZoom, accent, onAccent, language, onLanguage }: {
@@ -20,6 +22,14 @@ export default function Settings({ status, busy, error, onSettings, zoom, onZoom
   const [debugging, setDebugging] = useState(false);
   const [toolMessage, setToolMessage] = useState("");
   const [toolError, setToolError] = useState("");
+  const [folderError, setFolderError] = useState("");
+  const [openingFolder, setOpeningFolder] = useState(false);
+  const openFolder = async () => {
+    setFolderError(""); setOpeningFolder(true);
+    try { await openDatabaseFolder(); }
+    catch (reason) { setFolderError(String(reason)); }
+    finally { setOpeningFolder(false); }
+  };
   const inspect = async () => {
     setDebugging(true); setToolError(""); setToolMessage("Switch to the window you want to inspect. Capturing in 3 seconds…");
     try { setDebug(await inspectForeground()); setToolMessage("Snapshot captured."); }
@@ -61,7 +71,11 @@ export default function Settings({ status, busy, error, onSettings, zoom, onZoom
       <p className="settings-footnote">{t("Uses the collection master switch. New activity is saved locally; earlier activity cannot be recovered.")}</p>
     </SettingsGroup>
     <SettingsGroup title={t("Storage")}>
-      <div className="settings-action"><div><strong>SQLite</strong><small>{t("Saved observations")}: {status?.persistedCount?.toLocaleString(locale) ?? "—"}</small></div></div>
+      <div className="settings-action"><div><strong>SQLite</strong><small>{t("Saved observations")}: {status?.persistedCount?.toLocaleString(locale) ?? "—"}</small></div>
+        <div className="storage-size"><span>{status?.databaseSizeBytes == null ? "—" : `${(status.databaseSizeBytes / 1000000).toLocaleString(locale,{minimumFractionDigits:2,maximumFractionDigits:2})} MB`}</span><InfoTip label={t("About storage size")}>{t("Includes the database, WAL and shared-memory files.")}</InfoTip></div>
+        <Button disabled={unavailable || !status?.databasePath || openingFolder} onClick={() => { void openFolder(); }}><FolderOpen size={14}/>{t("Open folder")}</Button>
+      </div>
+      {folderError && <p role="alert" className="settings-error">{t("Could not open database folder.")} {folderError}</p>}
       {status?.databasePath && <p className="settings-storage-path">{status.databasePath}</p>}
       <p className="settings-footnote">{t("History survives restart. Close Tracel before copying the database for backup.")}</p>
     </SettingsGroup>

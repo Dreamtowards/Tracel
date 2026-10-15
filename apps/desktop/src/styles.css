@@ -73,7 +73,8 @@ a { color: inherit; text-decoration: none; }
 .settings-debug dd, .desktop-about dd { margin: 0; overflow-wrap: anywhere; }
 .settings-debug dd { font-family: Consolas, monospace; }
 .settings-tool-status { margin-top: 12px !important; }
-.settings-group:last-child .settings-card { padding: 16px 20px; }
+.settings-page .settings-group:last-child .settings-card { padding: 16px 20px; }
+.audio-page .settings-group:last-child .settings-card { padding: 14px 20px; }
 .metrics-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .metrics-state { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
 .metrics-state > i { width: 6px; height: 6px; border-radius: 50%; background: #777b87; }
@@ -104,7 +105,7 @@ a { color: inherit; text-decoration: none; }
 
 /* Settings headings belong to their section, outside the reusable card. */
 .settings-group { margin-bottom: 24px; }
-.settings-group > h2 { margin: 0 0 10px 2px; font-size: 13px; font-weight: 600; color: #b4b4bd; }
+.settings-group-heading h2 { font-size: 13px; font-weight: 600; color: #b4b4bd; }
 .ui-card { background: var(--surface); border: 1px solid #ffffff08; border-radius: 10px; box-shadow: 0 1px 2px #0002; }
 .settings-group .settings-card { margin: 0; }
 .settings-card > .settings-action:first-child, .settings-card > .settings-toggle:first-child { border-top: 0; }
@@ -229,6 +230,20 @@ a { color: inherit; text-decoration: none; }
 .media-app { display: block; margin-top: 14px; color: var(--muted); overflow-wrap: anywhere; }
 .media-state { font-size: 12px; color: var(--text); }
 .screen-timeout { border-top: 1px solid var(--border); }
+.screen-timeout-row { flex-wrap: wrap; gap: 12px 20px; }
+.screen-timeout-row > div:first-child { flex: 1 1 150px; }
+.screen-timeout-title { display: flex; align-items: center; gap: 5px; }
+.screen-timeout-row > .screen-timeout-controls { flex: 0 1 auto; display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.screen-timeout-field { display: flex; align-items: center; gap: 8px; }
+.screen-timeout-field label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.screen-timeout-controls > button { min-height: 30px; padding: 5px 8px; font-size: 12px; }
+.settings-action > .storage-size { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.info-tip-trigger { width: 22px; height: 22px; padding: 0; color: var(--muted); flex-shrink: 0; }
+.info-tip-content { max-width: min(calc(330px * var(--ui-scale)), calc(100vw - 24px)); max-height: var(--radix-tooltip-content-available-height); overflow-y: auto; padding: calc(10px * var(--ui-scale)) calc(12px * var(--ui-scale)); overflow-wrap: anywhere; }
+.info-tip-content p { margin: 0; }
+.info-tip-content p + p { margin-top: .65em; }
+.settings-group-heading { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+.settings-group-heading h2 { margin: 0; }
 .screen-timeout > .settings-action > small { flex: 1; }
 .settings-storage-path { overflow-wrap: anywhere; font-family: Consolas, monospace; font-size: 12px; }
 

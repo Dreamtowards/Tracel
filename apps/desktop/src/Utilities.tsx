@@ -4,6 +4,7 @@ import { useI18n } from "@tracel/timeline";
 import { open } from "@tauri-apps/plugin-dialog";
 import { FileSearch, RefreshCw } from "lucide-react";
 import { Button } from "./components/ui/Button";
+import { InfoTip } from "./components/ui/InfoTip";
 import { SettingsGroup, SettingToggle } from "./components/SettingsGroup";
 import { inspectFileUsers, nativeClient, type CollectionStatus, type FileUsage } from "./native";
 
@@ -39,8 +40,12 @@ export default function Utilities({ status, busy, error, onAwake }: {
       {status?.keepAwakeRequested !== status?.keepAwakeActive && <p role="status">{t("Applying power request…")}</p>}
       {status?.powerError && <p role="alert" className="settings-error">{t("Power request failed:")}{" "}{status.powerError}</p>}
     </SettingsGroup>
-    <SettingsGroup title={t("File usage")}>
-      <div className="settings-action"><div><strong>{t("Find apps using a file")}</strong><small>{t("A current snapshot from Windows. No programs are closed.")}</small></div>
+    <SettingsGroup title={t("File usage")} help={<InfoTip label={t("About file usage")}>
+      <p>{t("A current snapshot from Windows. No programs are closed.")}</p>
+      <p>{t("Results may be incomplete and can change. A listed app is not necessarily blocking deletion.")}</p>
+      <p>{t("Past modifying programs are unavailable without prior auditing. The modified time does not identify an app.")}</p>
+    </InfoTip>}>
+      <div className="settings-action"><div><strong>{t("Find apps using a file")}</strong></div>
         <Button variant="secondary" className="tx-button" disabled={!nativeClient || checking} onClick={() => { void check(true); }}><FileSearch size={14} />{t("Choose file")}</Button>
         <Button className="tx-icon-button" title={t("Refresh file usage")} aria-label={t("Refresh file usage")} disabled={!nativeClient || !path || checking} onClick={() => { void check(false); }}><RefreshCw size={14} /></Button>
       </div>
@@ -60,9 +65,7 @@ export default function Utilities({ status, busy, error, onAwake }: {
           <small>{process.executable ?? t("Process path unavailable")}</small>
           {process.service && <small>{t("Service")}: {process.service}</small>}
         </li>)}</ul> : <p role="status">{t("Windows reported no apps using this file. Some file handles may not be detected.")}</p>}
-        <p className="settings-footnote">{t("Results may be incomplete and can change. A listed app is not necessarily blocking deletion.")}</p>
       </>}
-      <p className="settings-footnote">{t("Past modifying programs are unavailable without prior auditing. The modified time does not identify an app.")}</p>
     </SettingsGroup>
   </div>;
 }

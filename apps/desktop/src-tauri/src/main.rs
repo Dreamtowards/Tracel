@@ -2,6 +2,7 @@
 mod audio;
 mod file_usage;
 mod screen_timeout;
+mod storage_tools;
 mod telemetry;
 mod tools;
 use tauri::Manager;
@@ -29,6 +30,13 @@ fn app_info(app: tauri::AppHandle) -> AppInfo {
 #[tauri::command]
 fn audio_status(state: tauri::State<'_, audio::Monitor>) -> audio::Snapshot {
     state.status()
+}
+#[tauri::command]
+async fn open_database_folder(state: tauri::State<'_, telemetry::Telemetry>) -> Result<(), String> {
+    let path = state.database_path();
+    tauri::async_runtime::spawn_blocking(move || storage_tools::open_database_folder(&path))
+        .await
+        .map_err(|e| e.to_string())?
 }
 #[tauri::command]
 async fn media_sessions() -> Result<tracel_agent::MediaSessions, String> {
@@ -161,6 +169,7 @@ fn main() {
             set_audio_monitor,
             open_sound_settings,
             collection_status,
+            open_database_folder,
             set_collection_settings,
             system_history,
             timeline_observations,

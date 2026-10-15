@@ -35,6 +35,7 @@ struct Inner {
 #[serde(rename_all = "camelCase")]
 pub struct Status {
     database_path: String,
+    database_size_bytes: Option<u64>,
     settings: CollectionSettings,
     supported: bool,
     period_ms: u64,
@@ -198,9 +199,11 @@ impl Telemetry {
     }
 
     pub fn status(&self) -> Status {
+        let database_size_bytes = crate::storage_tools::database_size_bytes(&self.database_path);
         let inner = self.shared.0.lock().unwrap_or_else(|e| e.into_inner());
         Status {
             database_path: self.database_path.to_string_lossy().into_owned(),
+            database_size_bytes,
             settings: inner.settings.clone(),
             supported: cfg!(windows),
             period_ms: PERIOD_MS,

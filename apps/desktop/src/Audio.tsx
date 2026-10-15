@@ -4,6 +4,7 @@ import { ExternalLink, Mic, Pause, Play, Volume2 } from "lucide-react";
 import { Button } from "./components/ui/Button";
 import { Select } from "./components/ui/Select";
 import { SettingsGroup } from "./components/SettingsGroup";
+import { InfoTip } from "./components/ui/InfoTip";
 import { nativeClient, openSoundSettings } from "./native";
 import type { useAudioMonitor } from "./useAudioMonitor";
 import type { useMediaSessions } from "./useMediaSessions";
@@ -41,9 +42,11 @@ export default function Audio({ monitor, media }: { monitor: ReturnType<typeof u
       <p className="settings-footnote">{t(status?.monitoring ? "All Windows media sessions · updates while this page is open" : "Monitoring paused. Recent results are frozen.")}</p>
       <p className="settings-footnote">{t("Only apps publishing Windows media information appear here. Application audio below can detect sound without song metadata.")}</p>
     </SettingsGroup>
-    <SettingsGroup title={t("Application audio")}>
+    <SettingsGroup title={t("Application audio")} help={<InfoTip label={t("About application audio")}>
+      <p>{t(status?.monitoring ? "Monitoring continues on other pages. Recent sounds stay for 60 seconds." : "Monitoring paused. Recent results are frozen.")}</p>
+      <p>{t("Signal levels are sampled, not recordings. Very short sounds, exclusive playback and protected apps may be missed.")}</p>
+    </InfoTip>}>
       <div className="audio-filters"><div className="audio-filter-buttons"><Button variant={!recent ? "secondary" : "ghost"} aria-pressed={!recent} onClick={()=>setRecent(false)}>{t("All sessions")}</Button><Button variant={recent ? "secondary" : "ghost"} aria-pressed={recent} onClick={()=>setRecent(true)}>{t("Recent sounds")}</Button></div><Select id="audio-output" label={t("Output device")} value={selected} onValueChange={setDevice} options={[{value:"all",label:t("All outputs")},...outputs.map((d)=>({value:d.id,label:d.name}))]}/></div>
-      <p className="settings-footnote">{t(status?.monitoring ? "Monitoring continues on other pages. Recent sounds stay for 60 seconds." : "Monitoring paused. Recent results are frozen.")}</p>
       <ul className="audio-sessions">{rows.map((session)=>{
         const exe = session.executable?.split(/[\\/]/).at(-1);
         return <li key={session.id}>
@@ -54,7 +57,6 @@ export default function Audio({ monitor, media }: { monitor: ReturnType<typeof u
         </li>;
       })}</ul>
       {!rows.length && <p role="status" className="audio-empty">{t(!nativeClient ? "Open the Windows client to inspect application audio." : !status?.capturedAtMs && status?.monitoring ? "Connecting to audio devices…" : recent ? "No sounds detected in the last minute." : "No audio sessions on these outputs.")}</p>}
-      <p className="settings-footnote">{t("Signal levels are sampled, not recordings. Very short sounds, exclusive playback and protected apps may be missed.")}</p>
     </SettingsGroup>
   </div>;
 }

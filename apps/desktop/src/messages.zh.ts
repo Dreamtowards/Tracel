@@ -1,4 +1,11 @@
 export const desktopZh: Readonly<Record<string, string>> = {
+  "About application audio": "应用音频说明",
+  "About file usage": "文件占用说明",
+  "About storage size": "存储大小说明",
+  "About display timeout": "屏幕超时说明",
+  "Includes the database, WAL and shared-memory files.": "包含数据库、WAL 日志和共享内存文件。",
+  "Open folder": "打开文件夹",
+  "Could not open database folder.": "无法打开数据库文件夹。",
   "Could not refresh media sessions. Previous results may be stale.": "无法刷新媒体会话，之前的结果可能已过时。",
   "Open the Windows client to inspect media sessions.": "请在 Windows 客户端查看媒体会话。",
   "Reading media sessions…": "正在读取媒体会话…",

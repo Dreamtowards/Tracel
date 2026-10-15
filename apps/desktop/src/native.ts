@@ -21,6 +21,7 @@ export type CollectionStatus = {
   powerError: string | null; startupWarning: string | null;
   storageError: string | null; persistedCount: number;
   databasePath: string;
+  databaseSizeBytes?: number | null;
 };
 export type StoredObservation = { id: number; sample: SystemObservation };
 export type ArchivePage = { observations: StoredObservation[]; nextCursor: number; firstAtMs: number | null; lastAtMs: number | null };
@@ -56,5 +57,6 @@ export type AudioSnapshot = { monitoring: boolean; capturedAtMs: number; devices
 export const getAudioStatus = () => invoke<AudioSnapshot>("audio_status");
 export const setAudioMonitor = (enabled: boolean) => invoke<AudioSnapshot>("set_audio_monitor", { enabled });
 export const openSoundSettings = () => invoke<void>("open_sound_settings");
+export const openDatabaseFolder = () => invoke<void>("open_database_folder");
 export type MediaSessions = { sessions: NonNullable<SystemObservation["media"]>[]; errors: string[] };
 export const getMediaSessions = () => invoke<MediaSessions>("media_sessions");

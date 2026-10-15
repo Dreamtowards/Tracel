@@ -3,9 +3,9 @@ import { useI18n } from "@tracel/timeline";
 import { Card } from "./ui/Card";
 import { Switch } from "./ui/Switch";
 
-export function SettingsGroup({ title, children }: { title: string; children: ReactNode }) {
+export function SettingsGroup({ title, children, help }: { title: string; children: ReactNode; help?: ReactNode }) {
   const id = useId();
-  return <section className="settings-group" aria-labelledby={id}><h2 id={id}>{title}</h2><Card className="settings-card">{children}</Card></section>;
+  return <section className="settings-group" aria-labelledby={id}><div className="settings-group-heading"><h2 id={id}>{title}</h2>{help}</div><Card className="settings-card">{children}</Card></section>;
 }
 
 export function SettingToggle({ label, description, checked, disabled, pending, onChange }: {
