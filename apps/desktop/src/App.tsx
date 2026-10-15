@@ -45,7 +45,7 @@ export default function App() {
 function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearance> }) {
   const { t, locale } = useI18n();
   const [page, setPage] = useState<Page>("timeline");
-  const palette = useMemo(() => ({ background: "#111113", grid: "#232326", divider: "#29292d", group: "#19191c", focus: `${appearance.accent}12`, selection: appearance.accent }), [appearance.accent]);
+  const palette = useMemo(() => ({ background: "#111113", grid: "#232326", divider: "#29292d", group: "#19191c", focus: `${appearance.accent}12`, selection: appearance.accent, text: "#ececef", muted: "#a1a1aa" }), [appearance.accent]);
   useLayoutEffect(() => {
     // Body portals inherit the same theme; their dimensions scale without a zoomed positioning ancestor.
     document.documentElement.lang = locale;

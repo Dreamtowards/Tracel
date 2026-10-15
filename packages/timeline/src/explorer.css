@@ -14,7 +14,7 @@
   --tx-muted: #8a959b;
   --tx-accent: #a4cfb7;
   background: #101416;
-  color: #dce2e5;
+  color: var(--tx-label-text, #dce2e5);
   min-height: 100dvh;
   font-family: Inter, "Segoe UI", sans-serif;
   font-size: 12px;
@@ -66,7 +66,7 @@
   place-items: center;
   width: 29px;
   height: 31px;
-  color: #a4cfb7;
+  color: var(--tx-label-text, #a4cfb7);
 }
 .tx-brand-divider {
   height: 21px;
@@ -78,12 +78,12 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  color: #89949b;
+  color: var(--tx-label-muted, #89949b);
   font-size: 12px;
 }
 .tx-workspace strong {
   font-weight: 500;
-  color: #d4dade;
+  color: var(--tx-label-text, #d4dade);
 }
 .tx-header-end {
   margin-left: auto;
@@ -95,7 +95,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #b7c5b9;
+  color: var(--tx-label-text, #b7c5b9);
   font-size: 11px;
 }
 .tx-demo i,
@@ -110,11 +110,11 @@
 .tx-machine {
   font-family: Consolas, monospace;
   font-size: 10px;
-  color: #879298;
+  color: var(--tx-label-muted, #879298);
 }
 .tx-machine span {
   margin: 0 8px;
-  color: #475258;
+  color: var(--tx-label-muted, #475258);
 }
 .tx-avatar {
   width: 26px;
@@ -125,7 +125,7 @@
   display: grid;
   place-items: center;
   font-size: 11px;
-  color: #b8cebf;
+  color: var(--tx-label-text, #b8cebf);
 }
 .tx-shell {
   display: flex;
@@ -149,16 +149,16 @@
   height: 36px;
   display: grid;
   place-items: center;
-  color: #77848b;
+  color: var(--tx-label-muted, #77848b);
   border-radius: 5px;
 }
 .tx-rail > button:hover {
   background: #252e31;
-  color: #dce2e5;
+  color: var(--tx-label-text, #dce2e5);
 }
 .tx-rail > button.tx-rail-active {
   background: #25362f;
-  color: #b0d2bd;
+  color: var(--tx-label-text, #b0d2bd);
   position: relative;
 }
 .tx-rail-active:before {
@@ -175,7 +175,7 @@
   align-items: center;
   flex-direction: column;
   gap: 11px;
-  color: #718087;
+  color: var(--tx-label-muted, #718087);
 }
 .tx-rail-bottom span {
   font:
@@ -203,7 +203,7 @@
   font-size: 9px;
   font-family: Consolas, monospace;
   letter-spacing: 1.7px;
-  color: #91b49d;
+  color: var(--tx-label-muted, #91b49d);
   margin-bottom: 8px;
 }
 .tx-page-heading h1 {
@@ -219,14 +219,14 @@
   font:
     8px Consolas,
     monospace;
-  color: #8b9a92;
+  color: var(--tx-label-muted, #8b9a92);
   letter-spacing: 1px;
   border: 1px solid #354139;
   padding: 2px 5px;
   border-radius: 3px;
 }
 .tx-page-heading p {
-  color: #89959c;
+  color: var(--tx-label-muted, #89959c);
   font-size: 12px;
   margin: 0;
 }
@@ -254,12 +254,12 @@
   width: 29px;
   height: 29px;
   border-radius: 4px;
-  color: #9aa6ad !important;
+  color: var(--tx-label-muted, #9aa6ad) !important;
   flex-shrink: 0;
 }
 .tx-icon-button:hover {
   background: #2a3439;
-  color: #edf1f3 !important;
+  color: var(--tx-label-text, #edf1f3) !important;
 }
 .tx-text-button {
   border: 0;
@@ -293,12 +293,12 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #aab5bc;
+  color: var(--tx-label-muted, #aab5bc);
 }
 .tx-date input {
   background: transparent;
   border: none;
-  color: #cdd6db;
+  color: var(--tx-label-text, #cdd6db);
   font-size: 11px;
   width: 120px;
   outline: none;
@@ -325,12 +325,12 @@
   background: none;
   padding: 3px 12px;
   font-size: 11px;
-  color: #8d999f;
+  color: var(--tx-label-muted, #8d999f);
   border-radius: 3px;
 }
 .tx-segmented button.active {
   background: #303b40;
-  color: #e3e9eb;
+  color: var(--tx-label-text, #e3e9eb);
   box-shadow: 0 1px 3px #0003;
 }
 .tx-tools button {
@@ -344,7 +344,7 @@
   font:
     10px Consolas,
     monospace;
-  color: #a6b0b6;
+  color: var(--tx-label-muted, #a6b0b6);
   min-width: 48px;
   text-align: center;
 }
@@ -356,7 +356,7 @@
 .tx-overview-heading {
   display: flex;
   justify-content: space-between;
-  color: #808d94;
+  color: var(--tx-label-muted, #808d94);
   font:
     9px Consolas,
     monospace;
@@ -369,7 +369,7 @@
   gap: 8px;
 }
 .tx-overview-heading b {
-  color: #a7b4b9;
+  color: var(--tx-label-muted, #a7b4b9);
   font-weight: 400;
   padding-left: 9px;
   border-left: 1px solid #364047;
@@ -438,14 +438,14 @@
   font:
     9px Consolas,
     monospace;
-  color: #7c8990;
+  color: var(--tx-label-muted, #7c8990);
 }
 .tx-overview-days button span {
   margin-left: 5px;
-  color: #b2bcc1;
+  color: var(--tx-label-muted, #b2bcc1);
 }
 .tx-overview-days button.active {
-  color: #b2d6bd;
+  color: var(--tx-label-text, #b2d6bd);
 }
 .tx-content {
   display: flex;
@@ -474,12 +474,12 @@
   font:
     10px Consolas,
     monospace;
-  color: #839198;
+  color: var(--tx-label-muted, #839198);
   margin-left: 8px;
 }
 .tx-timeline-hint {
   font-size: 10px;
-  color: #78878f;
+  color: var(--tx-label-muted, #78878f);
   white-space: nowrap;
 }
 .tx-timeline-hint > span {
@@ -511,7 +511,7 @@
     9px Consolas,
     monospace;
   letter-spacing: 0.5px;
-  color: #91a0a7;
+  color: var(--tx-label-muted, #91a0a7);
   text-align: left;
   background: #141a1d;
   border: 0;
@@ -521,7 +521,7 @@
 .tx-axis-label span {
   float: right;
   font-size: 8px;
-  color: #6f7e86;
+  color: var(--tx-label-muted, #6f7e86);
 }
 .tx-track-label {
   position: absolute;
@@ -546,16 +546,16 @@
   text-align: left;
   font-size: 11px;
   padding: 0;
-  color: #c0cbd0;
+  color: var(--tx-label-text, #c0cbd0);
 }
 .tx-track-label button > svg {
-  color: #7f8e96;
+  color: var(--tx-label-muted, #7f8e96);
 }
 .tx-track-label small {
   display: block;
   font-size: 9px;
   margin-top: 3px;
-  color: #77878f;
+  color: var(--tx-label-muted, #77878f);
 }
 .tx-track-label button > i {
   width: 5px;
@@ -571,7 +571,7 @@
     9px Consolas,
     monospace;
   letter-spacing: 0.9px;
-  color: #b0bcc2;
+  color: var(--tx-label-muted, #b0bcc2);
 }
 .tx-group small {
   display: none;
@@ -619,7 +619,7 @@
   top: 0;
   left: 5px;
   background: #35413c;
-  color: #e2ece5;
+  color: var(--tx-label-text, #e2ece5);
   font:
     9px Consolas,
     monospace;
@@ -635,7 +635,7 @@
   border: 1px solid #46545a;
   border-radius: 5px;
   padding: 12px 14px;
-  color: #dce6e8;
+  color: var(--tx-label-text, #dce6e8);
   font:
     11px/1.8 Consolas,
     monospace;
@@ -651,7 +651,7 @@
   justify-content: space-between;
   padding: 0 18px;
   border-top: 1px solid var(--tx-line);
-  color: #809098;
+  color: var(--tx-label-muted, #809098);
   font-size: 9px;
 }
 .tx-timeline-bottom > span {
@@ -663,7 +663,7 @@
   font:
     9px Consolas,
     monospace;
-  color: #b2bec4;
+  color: var(--tx-label-text, #b2bec4);
   background: #20282c;
   border: 1px solid #39454b;
   border-radius: 3px;
@@ -696,7 +696,7 @@
   font:
     7px Consolas,
     monospace;
-  color: #84928c;
+  color: var(--tx-label-muted, #84928c);
   letter-spacing: 0.5px;
   border: 1px solid #36413b;
   padding: 2px 4px;
@@ -708,7 +708,7 @@
 }
 .tx-range > div {
   font-size: 10px;
-  color: #b2c0c6;
+  color: var(--tx-label-text, #b2c0c6);
   margin-bottom: 10px;
   display: flex;
   gap: 9px;
@@ -717,7 +717,7 @@
   font:
     10px Consolas,
     monospace;
-  color: #919fa7;
+  color: var(--tx-label-muted, #919fa7);
 }
 .tx-range > strong {
   display: block;
@@ -728,7 +728,7 @@
 }
 .tx-range > span {
   font-size: 10px;
-  color: #7e8e95;
+  color: var(--tx-label-muted, #7e8e95);
 }
 .tx-range .tx-button {
   display: flex;
@@ -748,10 +748,10 @@
   font-size: 11px;
   padding: 13px 0 11px;
   position: relative;
-  color: #88969d;
+  color: var(--tx-label-muted, #88969d);
 }
 .tx-tabs button.active {
-  color: #c3d5c9;
+  color: var(--tx-label-text, #c3d5c9);
 }
 .tx-tabs button.active:after {
   content: "";
@@ -778,7 +778,7 @@
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: #8f9fa6;
+  color: var(--tx-label-muted, #8f9fa6);
 }
 .tx-active-summary label i {
   width: 5px;
@@ -797,7 +797,7 @@
   letter-spacing: -0.6px;
 }
 .tx-active-summary > div:last-child strong {
-  color: #b3bab9;
+  color: var(--tx-label-muted, #b3bab9);
 }
 .tx-proportion {
   display: flex;
@@ -819,12 +819,12 @@
     9px Consolas,
     monospace;
   letter-spacing: 0.8px;
-  color: #a1afb6;
+  color: var(--tx-label-muted, #a1afb6);
   margin: 18px 0 11px;
 }
 .tx-section-heading > span {
   font-size: 8px;
-  color: #76878f;
+  color: var(--tx-label-muted, #76878f);
   letter-spacing: 0.2px;
 }
 .tx-app-list > button {
@@ -877,7 +877,7 @@
 .tx-app-duration small {
   display: block;
   font-size: 9px;
-  color: #7e8d95;
+  color: var(--tx-label-muted, #7e8d95);
   margin-top: 3px;
 }
 .tx-stat-line {
@@ -885,14 +885,14 @@
   justify-content: space-between;
   padding: 10px 0;
   font-size: 10px;
-  color: #88989f;
+  color: var(--tx-label-muted, #88989f);
   border-bottom: 1px solid #283136;
 }
 .tx-stat-line strong {
   font:
     11px Consolas,
     monospace;
-  color: #c0cbd0;
+  color: var(--tx-label-text, #c0cbd0);
 }
 .tx-context-list > div {
   border-bottom: 1px solid #283035;
@@ -903,17 +903,17 @@
   align-items: center;
   gap: 7px;
   font-size: 10px;
-  color: #becad0;
+  color: var(--tx-label-text, #becad0);
 }
 .tx-context-list svg {
-  color: #8fa697;
+  color: var(--tx-label-muted, #8fa697);
 }
 .tx-context-list small {
   display: block;
   font:
     9px Consolas,
     monospace;
-  color: #7d8c94;
+  color: var(--tx-label-muted, #7d8c94);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -928,12 +928,12 @@
   gap: 6px;
   padding: 0 15px;
   font-size: 9px;
-  color: #87968e;
+  color: var(--tx-label-muted, #87968e);
   margin-top: auto;
 }
 .tx-inspector-foot > span:last-child {
   margin-left: auto;
-  color: #77848b;
+  color: var(--tx-label-muted, #77848b);
 }
 .tx-summary-strip {
   display: grid;
@@ -954,7 +954,7 @@
   border-right: 0;
 }
 .tx-summary-icon {
-  color: #9ebfae;
+  color: var(--tx-label-muted, #9ebfae);
   background: #25362f;
   width: 32px;
   height: 34px;
@@ -979,7 +979,7 @@
   font:
     8px Consolas,
     monospace;
-  color: #8c9ba2;
+  color: var(--tx-label-muted, #8c9ba2);
   letter-spacing: 0.8px;
 }
 .tx-summary-strip strong {
@@ -988,17 +988,17 @@
   font-size: 20px;
   font-weight: 400;
   letter-spacing: -0.5px;
-  color: #d4dce0;
+  color: var(--tx-label-text, #d4dce0);
   line-height: 1.7;
 }
 .tx-summary-strip strong small {
   font-size: 11px;
-  color: #8c9ba2;
+  color: var(--tx-label-muted, #8c9ba2);
   margin-left: 4px;
 }
 .tx-summary-detail {
   font-size: 9px;
-  color: #7e8d95;
+  color: var(--tx-label-muted, #7e8d95);
   margin-left: auto;
   white-space: nowrap;
 }
@@ -1008,7 +1008,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 23px;
-  color: #77878f;
+  color: var(--tx-label-muted, #77878f);
   font:
     9px Consolas,
     monospace;
@@ -1019,7 +1019,7 @@
   gap: 9px;
 }
 .tx-status > span > span:not(.tx-live-dot) {
-  color: #46565e;
+  color: var(--tx-label-muted, #46565e);
 }
 .tx-performance-stat {
   padding: 8px 0 16px;
@@ -1029,7 +1029,7 @@
   align-items: center;
   gap: 7px;
   font-size: 11px;
-  color: #aebfc6;
+  color: var(--tx-label-text, #aebfc6);
 }
 .tx-performance-stat label i {
   width: 5px;
@@ -1048,13 +1048,13 @@
 }
 .tx-performance-stat strong small {
   font-size: 11px;
-  color: #9aa7af;
+  color: var(--tx-label-muted, #9aa7af);
 }
 .tx-performance-stat > div > span {
   font:
     11px Consolas,
     monospace;
-  color: #a4adb3;
+  color: var(--tx-label-muted, #a4adb3);
 }
 .tx-meter {
   height: 3px;
@@ -1075,7 +1075,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #9cabb2;
+  color: var(--tx-label-muted, #9cabb2);
   font-size: 11px;
 }
 .tx-transfer > strong {
@@ -1088,14 +1088,14 @@
   font:
     9px Consolas,
     monospace;
-  color: #768991;
+  color: var(--tx-label-muted, #768991);
   margin-top: 7px;
 }
 .tx-note,
 .tx-empty {
   font-size: 10px;
   line-height: 1.8;
-  color: #8b9ba2;
+  color: var(--tx-label-muted, #8b9ba2);
   margin-top: 20px;
 }
 .tx-media-item {
@@ -1109,7 +1109,7 @@
   width: 35px;
   height: 40px;
   background: #263d30;
-  color: #a9ccb5;
+  color: var(--tx-label-text, #a9ccb5);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -1125,13 +1125,13 @@
 }
 .tx-media-item small {
   font-size: 9px;
-  color: #8d9da5;
+  color: var(--tx-label-muted, #8d9da5);
   display: block;
   margin: 4px 0;
 }
 .tx-media-item div > span {
   font-size: 9px;
-  color: #a7baae;
+  color: var(--tx-label-muted, #a7baae);
 }
 .tx-media-item button {
   margin-left: auto;
@@ -1164,7 +1164,7 @@
 .tx-help p {
   font-size: 11px;
   line-height: 1.8;
-  color: #91a1a9;
+  color: var(--tx-label-muted, #91a1a9);
   margin-bottom: 20px;
 }
 .tx-help > div {
@@ -1182,7 +1182,7 @@
   display: grid;
   place-content: center;
   text-align: center;
-  color: #a4cfb7;
+  color: var(--tx-label-text, #a4cfb7);
 }
 .tx-loading svg {
   margin: auto;
@@ -1325,7 +1325,7 @@
 }
 .tx-settings-active {
   border-color: #7c9f89;
-  color: #cce4d4 !important;
+  color: var(--tx-label-text, #cce4d4) !important;
 }
 .tx-display-settings {
   position: absolute;
@@ -1352,7 +1352,7 @@
   font-weight: 500;
 }
 .tx-display-settings > p {
-  color: #94a49c;
+  color: var(--tx-label-muted, #94a49c);
   font-size: 10px;
   margin: 4px 0 20px;
 }
@@ -1363,7 +1363,7 @@
 }
 .tx-display-settings output {
   float: right;
-  color: #c4d9cb;
+  color: var(--tx-label-text, #c4d9cb);
   font:
     11px Consolas,
     monospace;
@@ -1379,7 +1379,7 @@
 .tx-display-settings small {
   display: block;
   font-size: 9px;
-  color: #8b9da4;
+  color: var(--tx-label-muted, #8b9da4);
   margin-top: 4px;
 }
 .tx-display-settings label.tx-setting-check {
@@ -1399,7 +1399,7 @@
 }
 .tx-display-settings footer > span {
   font-size: 9px;
-  color: #809189;
+  color: var(--tx-label-muted, #809189);
 }
 .tx-range > strong {
   display: flex;
@@ -1411,7 +1411,7 @@
 .tx-range > strong small {
   font-size: 9px;
   letter-spacing: 0;
-  color: #9caea5;
+  color: var(--tx-label-muted, #9caea5);
   font-weight: 400;
 }
 .tx-range > div {
@@ -1422,12 +1422,12 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0 8px;
-  color: #ecf4ed;
+  color: var(--tx-label-text, #ecf4ed);
   font-size: 12px;
 }
 .tx-tooltip-heading strong { font-weight: 600; }
-.tx-tooltip-exe { color: #93a0a5; font-size: 10px; font-weight: 400; }
-.tx-tooltip-time { color: #a8b4ba; }
+.tx-tooltip-exe { color: var(--tx-label-muted, #93a0a5); font-size: 10px; font-weight: 400; }
+.tx-tooltip-time { color: var(--tx-label-muted, #a8b4ba); }
 @media (max-width: 900px) {
   .tx-display-settings {
     right: auto;

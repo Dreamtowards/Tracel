@@ -12,7 +12,7 @@ a { color: inherit; text-decoration: none; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-thumb { background: #3b3d42; border-radius: 6px; }
 .desktop-ui { --ui-scale: 1.1; width: calc(100vw / var(--ui-scale)); height: calc(100dvh / var(--ui-scale)); zoom: var(--ui-scale); }
-.desktop-ui > .tx-app { --tx-line: #27272a; --tx-muted: #9b9da5; --tx-accent: var(--primary); height: 100%; min-height: 0; display: flex; flex-direction: column; background: #111113; color: var(--text); font-family: "Segoe UI", sans-serif; }
+.desktop-ui > .tx-app { --tx-line: #27272a; --tx-muted: var(--muted); --tx-label-muted: var(--muted); --tx-label-text: var(--text); --tx-accent: var(--primary); height: 100%; min-height: 0; display: flex; flex-direction: column; background: #111113; color: var(--text); font-family: "Segoe UI", sans-serif; }
 .desktop-ui .tx-shell { flex: 1; min-height: 0; overflow: hidden; }
 .desktop-ui .tx-main { min-height: 0; min-width: 0; overflow: auto; overscroll-behavior: contain; }
 .desktop-navigation { position: relative; width: 58px; flex-shrink: 0; display: flex; flex-direction: column; gap: 22px; padding: 14px 10px; border-right: 1px solid var(--border); background: #161618; }
@@ -168,7 +168,7 @@ a { color: inherit; text-decoration: none; }
 .desktop-ui .tx-display-settings input { accent-color: var(--primary); }
 .desktop-ui .tx-hover-cursor { border-color: var(--primary); }
 .desktop-ui .tx-hover-cursor::before { background: #303034; color: var(--text); }
-.tx-tooltip { background: #202023; border-color: #3b3b40; }
+.tx-tooltip { --tx-label-muted: var(--muted); --tx-label-text: var(--text); background: #202023; border-color: #3b3b40; }
 
 .desktop-ui .tx-app button:focus-visible, .desktop-ui .tx-app input:focus-visible { outline-color: var(--primary); }
 .desktop-ui .tx-hover-cursor { background: color-mix(in srgb, var(--primary) 55%, transparent); }
@@ -190,8 +190,8 @@ a { color: inherit; text-decoration: none; }
 .desktop-ui .tx-app-list > button:hover, .desktop-ui .tx-app-list > button.selected { border-color: transparent; }
 
 /* Use installed UI fonts for small labels instead of tiny bitmap-like monospace glyphs. */
-.desktop-ui > .tx-app { --tx-action-color: var(--primary); --tx-action-hover: var(--text); font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; }
-.desktop-ui .tx-text-button { color: var(--primary); }
+.desktop-ui > .tx-app { --tx-action-color: var(--text); --tx-action-hover: var(--text); font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; }
+.desktop-ui .tx-text-button { color: var(--text); }
 .desktop-ui .tx-display-settings output { color: var(--text); }
 .desktop-ui .tx-display-settings > p, .desktop-ui .tx-display-settings small { color: var(--muted); }
 .desktop-ui .tx-timeline-heading, .desktop-ui .tx-inspector-title { height: 34px; }

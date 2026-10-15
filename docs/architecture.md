@@ -45,3 +45,5 @@ Default input/output and communications devices are read through IMMDeviceEnumer
 ## Normalized archive
 
 Schema 4 stores metrics in system_samples and stores application/process/window/media entities separately from state intervals. tracel-storage owns atomic interval extension and queries because both depend on SQLite transaction boundaries; collectors continue to publish platform-neutral observations. Foreground focus and window titles have independent intervals, joined for Timeline. Process instances underpin Apps lifetimes without adding another UI track. Metadata is interned; sampling gaps and writer restart boundaries stay explicit. The old archive is converted transactionally without deleting history. See data-model.md for tables, continuity rules and migration limits. No background-title collector, LOD or automatic retention is added in this change.
+
+Desktop supplies neutral Timeline label tokens (--tx-label-muted / --tx-label-text) and Canvas text/muted palette entries. Ordinary labels and action icons stay neutral when the accent changes; selection and semantic series keep their colors. Shared CSS retains the original Web colors as token fallbacks.

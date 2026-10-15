@@ -36,6 +36,7 @@ type Track = {
 };
 export type TimelinePalette = {
   background: string; grid: string; divider: string; group: string; focus: string; selection: string;
+  text?: string; muted?: string;
 };
 const defaultPalette: TimelinePalette = {
   background: "#101416", grid: "#22292d", divider: "#242b2e", group: "#151a1d", focus: "#bacbbd12", selection: "#d7b17a",
@@ -280,7 +281,7 @@ export function Timeline({
           ctx.beginPath();
           ctx.rect(left + 5, y, Math.max(0, right - left - 10), h);
           ctx.clip();
-          ctx.fillStyle = "#e3e9ed";
+          ctx.fillStyle = palette.text ?? "#e3e9ed";
           ctx.font = '11px "Segoe UI", sans-serif';
           ctx.fillText(text, left + 9, y + h / 2 + 4);
           ctx.restore();
@@ -320,7 +321,7 @@ export function Timeline({
         ctx.moveTo(px, 25);
         ctx.lineTo(px, totalHeight);
         ctx.stroke();
-        ctx.fillStyle = "#869197";
+        ctx.fillStyle = palette.muted ?? "#869197";
         ctx.fillText(
           step >= DAY ? dateLabel(t) : clock(t, step < 60),
           px + 6,
@@ -527,7 +528,7 @@ export function Timeline({
           const scale = getMetricInfo(data, row.keys![0]);
           ctx.font = '9px "Segoe UI", "Microsoft YaHei UI", sans-serif';
           ctx.textAlign = "right";
-          ctx.fillStyle = "#839198";
+          ctx.fillStyle = palette.muted ?? "#839198";
           ctx.fillText(`${Number(scale.max.toFixed(2))} ${scale.unit}`, width - 7, y + 13);
           ctx.textAlign = "left";
         }
