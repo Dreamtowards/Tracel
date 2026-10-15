@@ -1,4 +1,4 @@
-# Tracel Activity desktop 0.2.7
+# Tracel Activity desktop 0.2.8
 
 Windows-first Tauri 2 client with opt-in real CPU/RAM/network/disk/audio/media collection, Settings and native tools. Native Timeline displays persisted system observations and estimated media intervals. Browser preview and Web retain the original October 8–14, 2026 demo; System metrics shows measured data only.
 
@@ -19,8 +19,8 @@ cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 
 Native prerequisites: Rust MSVC, C++ Build Tools/Windows SDK and WebView2. Outputs:
 
-- target/release/tracel-desktop.exe: standalone executable; WebView2 required.
-- target/portable/Tracel-0.2.7-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
+- target/release/tracel-desktop.exe: current build output; WebView2 required. Versioned release copy: target/portable/Tracel-0.2.8-windows-x64/Tracel.exe.
+- Optional build:desktop:portable output, target/portable/Tracel-0.2.8-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
 - Existing 0.2.0 NSIS installer artifacts and installer configuration are retained, but that version contains the reported display-off problem and should not be used. Default builds do not invoke NSIS.
 
 ## Collection and Settings
@@ -107,3 +107,7 @@ Apps (应用) shows observed desktop applications throughout foreground and back
 Opening a legacy archive performs a transactional schema-4 conversion in the same activity.sqlite3 file. Existing IDs, samples and metadata are retained; invalid history aborts and rolls back rather than resetting the database. Close the client and back up the archive before upgrading; older binaries cannot read schema 4. First startup can take longer for a large archive, and file size need not shrink immediately because SQLite reuses freed pages. There is no automatic pruning, VACUUM, rollup or new bundled database dependency.
 
 To inspect storage after running the native client with collection enabled: open the path shown in Settings using a SQLite viewer and inspect PRAGMA user_version (4), system_samples and the *_intervals tables. If state remains unchanged across many samples, system_samples grows while each active interval's end_ms advances and its row count stays stable. media_items and strings reuse repeated metadata. Browser preview remains demo data and does not create or open the native database.
+
+## EXE release rule
+
+When several commits have accumulated since the previous EXE, increase at least the Desktop patch version before building (unless the user specifies a version). Keep npm, npm lockfile, Cargo, Cargo lockfile and Tauri versions consistent. Preserve earlier versioned artifacts and save each new EXE under target/portable/Tracel-<version>-windows-x64/Tracel.exe; do not overwrite a previous release there. target/release/tracel-desktop.exe is only the current build output. Default to EXE only; ZIP or installers require an explicit request.

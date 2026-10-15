@@ -4,6 +4,8 @@ Read `docs/architecture.md`, `docs/data-model.md` and `docs/collectors.md` befor
 
 Run root `npm run typecheck`, `npm test`, `npm run build`; use `npm run check:rust` and `npm run test:rust` for native changes. Read `apps/web/AGENTS.md` for Next-specific guidance; dependencies and Next docs are normally hoisted to root node_modules.
 
+Desktop release rule: after several commits since the previous EXE, bump at least the patch version before building unless the user specifies otherwise. Keep all Desktop version declarations/lockfiles in sync. Preserve previous versioned EXEs and save the new EXE under `target/portable/Tracel-<version>-windows-x64/Tracel.exe`. Default to EXE only; ZIP/installers need an explicit request.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
