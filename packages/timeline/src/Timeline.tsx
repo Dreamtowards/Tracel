@@ -601,10 +601,15 @@ export function Timeline({
     if (tip.current && !drag.current && row && row.kind !== "group") {
       let title = row.appId ? row.name : t(row.name);
       let executable = "";
-      let timing = `${clock(time, true)} · ${dateLabel(time)}`;
+      const tooltipDate = (seconds: number) => {
+        if (data.kind !== "recorded") return `10.${8 + Math.floor(seconds / DAY)}`;
+        const date = new Date(Date.parse(data.epoch) + seconds * 1000);
+        return `${date.getMonth() + 1}.${date.getDate()}`;
+      };
+      let timing = `${clock(time, true)} · ${tooltipDate(time)}`;
       let lines = "";
       const intervalTiming = (interval: Range) =>
-        `${compactDuration(interval.end - interval.start)} · ${clock(interval.start, true)} — ${clock(interval.end, true)} · ${dateLabel(interval.start)}${dateLabel(interval.end) !== dateLabel(interval.start) ? ` — ${dateLabel(interval.end)}` : ""}`;
+        `${compactDuration(interval.end - interval.start)} · ${clock(interval.start, true)} — ${clock(interval.end, true)} · ${tooltipDate(interval.start)}${tooltipDate(interval.end) !== tooltipDate(interval.start) ? ` — ${tooltipDate(interval.end)}` : ""}`;
       if ((row.kind === "app" || row.kind === "context") && event) {
         const app = data.apps.find((a) => a.id === event.appId)!;
         const context = event.contexts.find(
