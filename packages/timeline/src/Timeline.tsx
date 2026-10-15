@@ -448,14 +448,17 @@ export function Timeline({
           for (const event of data.afk)
             rect(event, y + pad, height - pad * 2, "#bba16d77", "AFK");
         if (row.kind === "media")
-          for (const event of data.media)
+          for (const event of data.media) {
+            const paused = event.state === "paused";
+            const barHeight = paused ? Math.min(4, height - pad * 2) : height - pad * 2;
             rect(
               event,
-              y + pad,
-              height - pad * 2,
-              "#6da67f66",
-              `♫  ${event.title} · ${event.artist}`,
+              paused ? y + height - pad - barHeight : y + pad,
+              barHeight,
+              paused ? "#6da67f44" : "#6da67f66",
+              paused ? undefined : `♫  ${event.title} · ${event.artist}`,
             );
+          }
         if (row.kind === "metric") {
           for (const [keyIndex, key] of row.keys!.entries()) {
             const info = getMetricInfo(data,key);
