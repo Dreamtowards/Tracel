@@ -62,7 +62,7 @@ export const desktopZh: Readonly<Record<string, string>> = {
   "Application activity": "应用活动",
   "Foreground apps and window titles": "前台应用与窗口标题",
   "Window titles only · no URLs or file contents": "仅窗口标题 · 不采集网址或文件内容",
-  "Desktop app presence": "桌面应用列表",
+  "App presence": "应用存在",
   "Apps with desktop windows, including minimized windows": "带桌面窗口的应用，包含已最小化的窗口",
   "Idle / AFK detection": "空闲 / AFK 检测",
   "Idle after 5 minutes without keyboard or mouse input": "键盘、鼠标无输入超过 5 分钟视为空闲",

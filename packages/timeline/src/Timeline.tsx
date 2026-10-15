@@ -89,6 +89,8 @@ export function Timeline({
     pan: boolean;
     moved: boolean;
   } | null>(null);
+  const presenceApps = useMemo(() => data.apps.filter((app) =>
+    data.background.some((interval) => interval.appId === app.id)), [data]);
   const tracks = useMemo(() => {
     const all: Track[] = [
       {
@@ -117,13 +119,13 @@ export function Timeline({
         });
       all.push({
         id: "background",
-        name: "Background apps",
+        name: "App presence",
         subtitle: data.kind === "recorded" ? "Apps with desktop windows" : "Running applications",
-        height: 26 + appearance.padding * 2,
+        height: 20 + appearance.padding * 2,
         kind: "background",
       });
       if (expanded.includes("background"))
-        for (const app of data.apps.filter((app) => data.kind !== "recorded" || data.background.some((lifetime) => lifetime.appId === app.id)))
+        for (const app of presenceApps)
           all.push({
             id: `bg-${app.id}`,
             name: app.name,
@@ -221,7 +223,7 @@ export function Timeline({
       y += height;
       return row;
     });
-  }, [closed, expanded, heights, data, appearance]);
+  }, [closed, expanded, heights, data, appearance, presenceApps]);
   const totalHeight = tracks.reduce((s, t) => s + t.height, 32);
   const toggle = (id: string, group: boolean) =>
     (group ? setClosed : setExpanded)((previous) =>
@@ -411,38 +413,29 @@ export function Timeline({
             }
         }
         if (row.kind === "background") {
+          const barHeight = Math.max(1, Math.min(5, height - pad * 2));
           if (row.appId)
             for (const lifetime of data.background.filter(
               (b) => b.appId === row.appId,
             ))
               rect(
                 lifetime,
-                y + pad,
-                height - pad * 2,
+                y + (height - barHeight) / 2,
+                barHeight,
                 data.apps.find((a) => a.id === row.appId)!.color + "99",
               );
           else {
-            const stripe = (height - pad * 2) / data.apps.length;
-            data.apps.forEach((app, index) => {
+            const stripe = (height - pad * 2) / Math.max(1, presenceApps.length);
+            presenceApps.forEach((app, index) => {
               const top = y + pad + index * stripe;
               ctx.globalAlpha = focus && focus !== app.id ? 0.25 : 1;
               for (const lifetime of data.background.filter(
                 (b) => b.appId === app.id,
               ))
                 rect(lifetime, top, Math.max(1, stripe - 1), app.color + "bd");
-              for (const event of data.activity.filter(
-                (a) => a.appId === app.id,
-              ))
-                rect(event, top, Math.max(1, stripe - 1), palette.background);
               ctx.globalAlpha = 1;
             });
           }
-          // Running lifetimes exclude foreground slices in the expanded rows.
-          if (row.appId)
-            for (const event of data.activity.filter(
-              (a) => a.appId === row.appId,
-            ))
-              rect(event, y + pad, height - pad * 2, palette.background);
         }
         if (row.kind === "afk")
           for (const event of data.afk)
@@ -551,7 +544,7 @@ export function Timeline({
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", draw);
     };
-  }, [data, view, selection, tracks, width, totalHeight, focus, appearance, palette, duration, dateLabel]);
+  }, [data, view, selection, tracks, width, totalHeight, focus, appearance, palette, duration, dateLabel, presenceApps]);
 
   useEffect(() => {
     const element = canvas.current!;
@@ -645,16 +638,19 @@ export function Timeline({
           "\n" +
           (idle?.reason ?? t("Not idle"));
       }
-      else if (row.kind === "background")
-        lines +=
-          "\n" +
-          (data.background
-            .filter(
-              (b) =>
-                b.start <= time && b.end > time && b.appId !== event?.appId,
-            )
-            .map((b) => data.apps.find((a) => a.id === b.appId)!.name)
-            .join(", ") || t("No background apps"));
+      else if (row.kind === "background") {
+        // In the overview, resolve the stripe under the pointer; expanded rows have their own app ID.
+        const stripe = (row.height - appearance.padding * 2) / Math.max(1, presenceApps.length);
+        const offset = localY - row.y - appearance.padding;
+        const appId = row.appId ?? (offset >= 0 && offset < row.height - appearance.padding * 2
+          ? presenceApps[Math.floor(offset / stripe)]?.id : undefined);
+        const app = data.apps.find((a) => a.id === appId);
+        const interval = data.background.find((b) => b.appId === appId && b.start <= time && b.end > time);
+        if (!app || !interval) return { time, event, row };
+        title = app.name;
+        executable = app.exe;
+        timing = intervalTiming(interval);
+      }
       else lines += "\n" + t("No foreground activity");
       const heading = document.createElement("div");
       heading.className = "tx-tooltip-heading";
@@ -755,7 +751,7 @@ export function Timeline({
                     setHeights((h) => ({
                       ...h,
                       [row.id]: Math.max(
-                        row.appId ? 16 : 24,
+                        row.appId ? 14 : 24,
                         Math.min(
                           180,
                           row.height + (e.key === "ArrowDown" ? 10 : -10),
@@ -773,7 +769,7 @@ export function Timeline({
                   if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
                   // React clears currentTarget after dispatch; snapshot before the updater.
                   const height = Math.max(
-                    row.appId ? 16 : 24,
+                    row.appId ? 14 : 24,
                     Math.min(
                       180,
                       Number(e.currentTarget.dataset.height) +

@@ -1,5 +1,7 @@
 # Data model
 
+The UI labels `Capture.background` as App presence. It represents observed desktop application presence regardless of foreground focus; foreground intervals never subtract from these lifetimes. Expanded rows use compact 16px defaults and thin continuous bars. Hover resolves only the application's containing presence interval, including duration and start/end times, and stays empty across unobserved gaps. Existing archive/JSON field names remain unchanged. Presence still does not imply exact process start/exit or background CPU work.
+
 ## Current UI/demo
 
 packages/timeline/src/model.ts preserves Capture, application, foreground/context, AFK, background lifetime, system samples, playback and events. Capture.epoch anchors seconds relative to that epoch. Demo data covers October 8–14, 2026 at a 30-second sample period. Existing date labels remain demo-specific.

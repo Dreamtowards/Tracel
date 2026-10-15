@@ -9,7 +9,7 @@ export type TimelineAppearance = {
 };
 export const defaultAppearance: TimelineAppearance = {
   padding: 3,
-  backgroundHeight: 20,
+  backgroundHeight: 16,
   contextOpacity: 72,
   durationLabels: true,
 };
@@ -59,11 +59,11 @@ export function DisplaySettings({
         <small>{t("Applied above and below each lane’s content.")}</small>
       </label>
       <label>
-        {t("Background row height")}{" "}<output>{value.backgroundHeight} px</output>
+        {t("App presence row height")}{" "}<output>{value.backgroundHeight} px</output>
         <input
-          aria-label={t("Background row height")}
+          aria-label={t("App presence row height")}
           type="range"
-          min={16}
+          min={14}
           max={32}
           step={2}
           value={value.backgroundHeight}
