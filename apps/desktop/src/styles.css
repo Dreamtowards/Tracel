@@ -231,3 +231,27 @@ a { color: inherit; text-decoration: none; }
 .screen-timeout { border-top: 1px solid var(--border); }
 .screen-timeout > .settings-action > small { flex: 1; }
 .settings-storage-path { overflow-wrap: anywhere; font-family: Consolas, monospace; font-size: 12px; }
+
+.audio-defaults { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 18px 0; }
+.audio-defaults > div { min-width: 0; }
+.audio-defaults span { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.audio-defaults strong { display: block; font-size: 14px; font-weight: 500; margin: 10px 0 6px; overflow-wrap: anywhere; }
+.audio-defaults small { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.audio-filters { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.audio-filter-buttons { display: flex; gap: 4px; }
+.audio-filters .ui-select-trigger { max-width: min(100%, 280px); }
+.audio-sessions { list-style: none; margin: 0; padding: 0; }
+.audio-sessions li { padding: 16px 0; border-top: 1px solid var(--border); }
+.audio-session-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.audio-session-heading > div { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; min-width: 0; }
+.audio-session-heading strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.audio-session-heading small { color: var(--muted); font-size: 11px; }
+.audio-session-heading > span { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.audio-meter { height: 5px; border-radius: 4px; background: #ffffff08; overflow: hidden; margin: 10px 0; }
+.audio-meter > i { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
+.audio-meter.muted { opacity: .4; }
+.audio-session-detail, .audio-session-last { display: flex; gap: 6px 16px; flex-wrap: wrap; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.audio-session-last { color: #c3c3ca; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.audio-page .settings-footnote { margin: 12px 0; }
+.audio-empty { padding: 20px 0; }
+@media (max-width: 720px) { .audio-defaults { grid-template-columns: 1fr; gap: 20px; } }

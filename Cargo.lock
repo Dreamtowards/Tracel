@@ -3714,6 +3714,8 @@ dependencies = [
  "tauri-plugin-window-state",
  "tracel-agent",
  "tracel-storage",
+ "windows",
+ "windows-core",
  "windows-sys 0.61.2",
 ]
 

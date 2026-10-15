@@ -1,4 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod audio;
 mod file_usage;
 mod screen_timeout;
 mod telemetry;
@@ -23,6 +24,22 @@ fn app_info(app: tauri::AppHandle) -> AppInfo {
             .or_else(|_| std::env::var("HOSTNAME"))
             .unwrap_or_else(|_| "This device".into()),
     }
+}
+
+#[tauri::command]
+fn audio_status(state: tauri::State<'_, audio::Monitor>) -> audio::Snapshot {
+    state.status()
+}
+#[tauri::command]
+fn set_audio_monitor(
+    enabled: bool,
+    state: tauri::State<'_, audio::Monitor>,
+) -> Result<audio::Snapshot, String> {
+    state.enable(enabled)
+}
+#[tauri::command]
+fn open_sound_settings() -> Result<(), String> {
+    audio::open_settings()
 }
 
 #[tauri::command]
@@ -122,10 +139,14 @@ fn main() {
             let path = app.path().app_config_dir()?.join("collection.json");
             let database_path = app.path().app_local_data_dir()?.join("activity.sqlite3");
             app.manage(telemetry::Telemetry::with_database(path, database_path)?);
+            app.manage(audio::Monitor::new()?);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
+            audio_status,
+            set_audio_monitor,
+            open_sound_settings,
             collection_status,
             set_collection_settings,
             system_history,
@@ -142,6 +163,7 @@ fn main() {
     app.run(|app, event| {
         if matches!(event, tauri::RunEvent::Exit) {
             app.state::<telemetry::Telemetry>().stop();
+            app.state::<audio::Monitor>().stop();
         }
     });
 }

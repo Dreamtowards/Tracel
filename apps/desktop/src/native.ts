@@ -47,3 +47,10 @@ export const inspectFileUsers = (path: string) => invoke<FileUsage>("inspect_fil
 export type DisplayTimeout = { schemeId: string; acSeconds: number; dcSeconds: number };
 export const readDisplayTimeout = () => invoke<DisplayTimeout>("read_display_timeout");
 export const setDisplayTimeout = (expected: DisplayTimeout, acSeconds: number, dcSeconds: number) => invoke<DisplayTimeout>("set_display_timeout", { expected, acSeconds, dcSeconds });
+
+export type AudioDevice = { id: string; name: string; direction: "input" | "output"; defaultRoles: string[] };
+export type AudioSession = { id: string; deviceId: string; processId: number; name: string; executable: string | null; systemSounds: boolean; multiProcess: boolean; state: string; peakPercent: number | null; volumePercent: number | null; muted: boolean | null; lastHeardAtMs: number | null; heldPeakPercent: number };
+export type AudioSnapshot = { monitoring: boolean; capturedAtMs: number; devices: AudioDevice[]; sessions: AudioSession[]; errors: string[] };
+export const getAudioStatus = () => invoke<AudioSnapshot>("audio_status");
+export const setAudioMonitor = (enabled: boolean) => invoke<AudioSnapshot>("set_audio_monitor", { enabled });
+export const openSoundSettings = () => invoke<void>("open_sound_settings");

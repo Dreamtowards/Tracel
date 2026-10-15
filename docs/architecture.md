@@ -29,3 +29,9 @@ The agent must eventually outlive UI windows. Process supervision, autostart and
 Radar visitor models and Activity desktop models remain independent. TS/Rust semantic compatibility is documented without premature generated bindings.
 
 The agent owns selective GetIfTable2, PDH, Core Audio and WinRT SMTC readers, with lazy resources confined to one collector thread. Native reads run outside the IPC state mutex; settings revisions discard stale in-flight observations. Desktop Utilities separately owns explicit AC/DC Windows display-timeout editing with conflict detection and best-effort rollback; no screen-off broadcast or sleep-plan edit is introduced.
+
+## Audio diagnostics page
+
+Desktop owns a separate on-demand Core Audio monitor, independent of the two-second telemetry collector. Its MTA worker is idle at startup, starts on the first Audio-page visit, keeps running across navigation/minimization, and releases COM/session resources on pause or exit. It samples cached session meters every 50 ms, refreshes active endpoints and defaults every second, and publishes snapshots to the UI every 500 ms. New-session notifications retain agile references in a bounded queue; the worker resolves them and owns the session list. Periodic enumeration supplements notifications, rather than trusting a single default-device snapshot. Endpoint/session limits are reported explicitly. Recent signal observations stay in bounded memory for 60 seconds, survive session exit, and are never persisted to SQLite. Paused results remain frozen until monitoring resumes.
+
+Default input/output and communications devices are read through IMMDeviceEnumerator. A fixed ms-settings:sound action opens Windows settings for explicit user selection; the app does not use private IPolicyConfig interfaces, registry audio-policy writes or device overrides. Only existing windows/windows-core bindings and system DLLs are used; no new Cargo packages, driver or audio runtime are introduced.

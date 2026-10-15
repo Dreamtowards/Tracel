@@ -1,6 +1,6 @@
 # Tracel
 
-Tracel contains two independent experiences: **Radar**, a simulated website visitor map/globe at `/`, and **Activity**, a personal computer activity/performance explorer. The website `/timeline` and Desktop browser preview use demo data; native Desktop Timeline displays real observations persisted in SQLite. The Windows client also offers opt-in real CPU/RAM/network/disk/audio/media collection, Settings and power tools (including AC/DC Windows display timeouts).
+Tracel contains two independent experiences: **Radar**, a simulated website visitor map/globe at `/`, and **Activity**, a personal computer activity/performance explorer. The website `/timeline` and Desktop browser preview use demo data; native Desktop Timeline displays real observations persisted in SQLite. The Windows client also offers opt-in real CPU/RAM/network/disk/audio/media collection, Settings and power tools (including AC/DC Windows display timeouts), plus an on-demand Audio page for per-session levels and recent sounds across output devices.
 
 ## Layout
 
