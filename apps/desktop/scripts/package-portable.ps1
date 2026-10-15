@@ -11,10 +11,12 @@ Copy-Item -LiteralPath $exePath -Destination (Join-Path $releasePath 'Tracel.exe
 @'
 Tracel Activity: extract this ZIP and double-click Tracel.exe. No installer required.
 Requires Windows x64 and Microsoft Edge WebView2 Runtime (normally installed on Windows 11).
-Preferences and window placement still use the Windows user application-data directory.
+Preferences, window placement and the SQLite archive use the Windows user application-data directory.
 Prevent automatic sleep allows normal display timeout. It resets off on restart.
 The manual display-off action is disabled after a wake-up reliability issue.
-Closing the application stops collection. Metric history is in memory only.
+Closing the application stops collection. Recorded Timeline history persists in local SQLite.
+Settings shows the database path. Close Tracel before copying the database for backup.
+Audio diagnostics use temporary recent-signal history and do not record sound.
 '@ | Set-Content -LiteralPath (Join-Path $releasePath 'README.txt') -Encoding UTF8
 $zipPath = Join-Path $portableRoot "$releaseName.zip"
 Compress-Archive -LiteralPath (Join-Path $releasePath 'Tracel.exe'), (Join-Path $releasePath 'README.txt') -DestinationPath $zipPath -Force

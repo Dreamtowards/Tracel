@@ -1,4 +1,4 @@
-# Tracel Activity desktop 0.2.5
+# Tracel Activity desktop 0.3.0
 
 Windows-first Tauri 2 client with opt-in real CPU/RAM/network/disk/audio/media collection, Settings and native tools. Native Timeline displays persisted system observations and estimated media intervals. Browser preview and Web retain the original October 8–14, 2026 demo; System metrics shows measured data only.
 
@@ -20,7 +20,7 @@ cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 Native prerequisites: Rust MSVC, C++ Build Tools/Windows SDK and WebView2. Outputs:
 
 - target/release/tracel-desktop.exe: standalone executable; WebView2 required.
-- target/portable/Tracel-0.2.5-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
+- target/portable/Tracel-0.3.0-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
 - Existing 0.2.0 NSIS installer artifacts and installer configuration are retained, but that version contains the reported display-off problem and should not be used. Default builds do not invoke NSIS.
 
 ## Collection and Settings
