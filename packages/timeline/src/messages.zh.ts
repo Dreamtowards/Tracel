@@ -1,6 +1,15 @@
 /** Interface copy only. Captured titles, URLs, app names and export data are never translated. */
 export const timelineZh: Readonly<Record<string, string>> = {
   "Categories": "分类",
+  "of active time": "占总活跃时间",
+  "Office & notes": "办公与笔记",
+  "AI assistants": "AI 助手",
+  "Video & recording": "视频创作与录制",
+  "Browsing": "网页浏览",
+  "Video": "视频",
+  "Files & transfers": "文件与传输",
+  "System tools": "系统工具",
+  "Network tools": "网络工具",
   "Includes subcategories": "包含子分类",
   "Applications": "应用",
   "Activity grouping": "活动分组",

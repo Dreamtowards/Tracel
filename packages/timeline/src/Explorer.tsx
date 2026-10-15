@@ -745,10 +745,16 @@ export default function Explorer({
                         <button className={activityGrouping === "categories" ? "active" : ""} onClick={() => { setActivityGrouping("categories"); setFocus(null); }}>{t("Categories")}</button>
                       </div>}
                       {activityGrouping === "categories" && categories ? <div className="tx-category-list">
-                        {categoryStats.map(category => <div className="tx-stat-line" key={category.id} style={{ paddingLeft: category.depth * 12 }} title={`${category.path}${categories.categories.some(item => item.parentId === category.id) ? ` · ${t("Includes subcategories")}` : ""}`}>
-                          <span><i style={{ display: "inline-block", width: 6, height: 6, borderRadius: 2, background: category.color, marginRight: 8 }} />{t(category.name)}</span>
-                          <strong>{duration(category.active)}</strong>
-                        </div>)}
+                        {categoryStats.map(category => {
+                          const percent = category.active / Math.max(1, stats.active) * 100;
+                          return <div className="tx-category-row" key={category.id} style={{ paddingLeft: category.depth * 12 }} title={`${category.path} · ${percent.toFixed(1)}% ${t("of active time")}${categories.categories.some(item => item.parent_id === category.id) ? ` · ${t("Includes subcategories")}` : ""}`}>
+                            <div className="tx-category-heading">
+                              <span><i style={{ background: category.color }} />{t(category.name)}</span>
+                              <strong>{duration(category.active)}<small>{Math.round(percent)}%</small></strong>
+                            </div>
+                            <div className="tx-category-bar" role="meter" aria-label={t(category.name)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Number(percent.toFixed(1))} aria-valuetext={`${percent.toFixed(1)}% ${t("of active time")}`}><i style={{ width: `${percent}%`, background: category.color }} /></div>
+                          </div>;
+                        })}
                         {!categoryStats.length && <p className="tx-empty">{t("No active time in this range.")}</p>}
                       </div> : <>
                       <div className="tx-section-heading">

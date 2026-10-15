@@ -336,6 +336,14 @@
 .tx-category-grouping { margin: 14px 0 8px; }
 .tx-category-grouping button { flex: 1; }
 .tx-category-list { margin-bottom: 12px; }
+.tx-category-row { padding-top: 10px; padding-bottom: 10px; }
+.tx-category-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--tx-label-muted, #8d999f); font-size: 11px; }
+.tx-category-heading > span { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tx-category-heading > span > i { width: 6px; height: 6px; border-radius: 2px; flex-shrink: 0; }
+.tx-category-heading strong { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; font: 11px Consolas, monospace; color: var(--tx-label-text, #e3e9eb); }
+.tx-category-heading small { min-width: 28px; text-align: right; color: var(--tx-label-muted, #8d999f); font-size: 10px; }
+.tx-category-bar { margin-top: 7px; height: 3px; border-radius: 2px; background: #ffffff0b; overflow: hidden; }
+.tx-category-bar > i { display: block; height: 100%; border-radius: inherit; }
 .tx-tools button {
   padding: 5px 7px;
   display: flex;
