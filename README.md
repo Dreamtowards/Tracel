@@ -1,15 +1,15 @@
 # Tracel
 
-Tracel contains two independent experiences: **Radar**, a simulated website visitor map/globe at `/`, and **Activity**, a personal computer activity/performance explorer. The website `/timeline` and Desktop Timeline use demo data. The Windows client also offers opt-in real CPU/RAM/network/disk/audio/media collection, Settings and power tools (including AC/DC Windows display timeouts).
+Tracel contains two independent experiences: **Radar**, a simulated website visitor map/globe at `/`, and **Activity**, a personal computer activity/performance explorer. The website `/timeline` and Desktop browser preview use demo data; native Desktop Timeline displays real observations persisted in SQLite. The Windows client also offers opt-in real CPU/RAM/network/disk/audio/media collection, Settings and power tools (including AC/DC Windows display timeouts).
 
 ## Layout
 
 - `apps/web`: Next.js static website, Radar, assets, web tests and Cloudflare Pages.
-- `apps/desktop`: Tauri 2 + Vite + React client with the shared Activity demo, native system metrics, Settings and diagnostics; no Radar.
+- `apps/desktop`: Tauri 2 + Vite + React client with the shared Activity Timeline, persistent native system metrics, Settings and diagnostics; no Radar.
 - `packages/timeline`: original Canvas Timeline, Explorer, display settings, models, analytics, isolated mock provider and Activity tests.
 - `crates/tracel-core`: OS-neutral observations and UTC timestamp conventions.
 - `crates/tracel-agent`: selective Windows system collectors and foreground snapshot library; optional one-shot CLI.
-- `crates/tracel-storage`: store interface and draft SQLite migration; no database backend.
+- `crates/tracel-storage`: SQLite archive, transactional migrations, atomic writes and bounded range queries.
 - `crates/tracel-query`: clipped time-weighted gauge aggregation; range/LOD transport deferred.
 
 ## Develop
@@ -62,6 +62,6 @@ From root, `npm run deploy` builds Web and runs Wrangler in `apps/web`, publishi
 - [Migration and verification record](docs/migration.md).
 - [Original migration specification](CODEX_CONTEXT.md); its pre-migration paths are historical.
 
-Desktop collection starts disabled on first launch. CPU, RAM, network, disk, audio and media have independent native queries; the master switch stops all. Additional sources default off on upgrade. Preferences persist locally; only the latest 1,800 measured observations stay in memory until exit. Real measurements have their own System metrics page and JSON export. GPU, browser URLs, persistent telemetry storage, per-process metrics and independent agent lifetime remain future work. The flat Radar map fetches external basemap tiles without sending visitor telemetry to that service.
+Desktop collection starts disabled on first launch. CPU, RAM, network, disk, audio and media have independent native queries; the master switch stops all. Additional sources default off on upgrade. Preferences and measured observations persist locally. SQLite history appears in the native Timeline with date navigation, live following, selection analytics and JSON range export; the latest 1,800 readings are restored to System metrics on restart. Settings shows the database path and committed row count. No automatic retention limit is applied yet. GPU, browser URLs, per-process metrics and independent agent lifetime remain future work. The flat Radar map fetches external basemap tiles without sending visitor telemetry to that service.
 
 Desktop 0.2.1 disables manual display-off after a wake-up reliability incident. Prevent automatic sleep now requests system activity only and allows normal display timeout. See [collector limitations](docs/collectors.md). Portable releases require WebView2; preferences still use the Windows user application-data directory.

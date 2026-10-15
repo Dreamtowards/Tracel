@@ -1,4 +1,6 @@
-//! Storage boundary only. No database is opened or persisted by this scaffold.
+//! Local SQLite persistence and bounded system-observation queries.
+mod sqlite;
+pub use sqlite::{ArchivePage, SqliteStore, StoredObservation};
 use tracel_core::{MetricSample, TimeRange};
 
 pub struct Migration {
@@ -6,11 +8,16 @@ pub struct Migration {
     pub sql: &'static str,
 }
 
-/// Draft schema for the first system-only collector; not applied automatically.
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    sql: include_str!("../migrations/0001_system_samples.sql"),
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        sql: include_str!("../migrations/0001_system_samples.sql"),
+    },
+    Migration {
+        version: 2,
+        sql: include_str!("../migrations/0002_observations.sql"),
+    },
+];
 
 /// Implementations must apply migrations and commit batches atomically.
 /// Range reads return overlapping observations, including missing samples.

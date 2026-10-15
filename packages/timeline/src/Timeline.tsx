@@ -1,5 +1,5 @@
 "use client";
-import { useI18n } from "./i18n";
+import { useI18n, useCaptureTime } from "./i18n";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
@@ -17,6 +17,9 @@ import {
   metricInfo,
   overlap,
   DAY,
+  sampleEnd,
+  metricAt,
+  getMetricInfo,
 } from "./model";
 
 type Track = {
@@ -62,7 +65,8 @@ export function Timeline({
   onSelect,
   onFocus,
 }: Props) {
-  const { t, duration, dateLabel } = useI18n();
+  const { t, duration } = useI18n();
+  const { clock, dateLabel } = useCaptureTime(data);
   const [labelWidth, setLabelWidth] = useState(defaultLabelWidth);
   const labelDrag = useRef<{ x: number; width: number; scale: number } | null>(null);
   const [hostWidth, setHostWidth] = useState(900);
@@ -154,7 +158,7 @@ export function Timeline({
         {
           id: "ram",
           name: "Memory",
-          subtitle: "0 – 32 GB",
+          subtitle: data.kind === "recorded" ? `0 – ${getMetricInfo(data,"ram").max.toFixed(1)} ${getMetricInfo(data,"ram").unit}` : "0 – 32 GB",
           height: 56,
           kind: "metric",
           keys: ["ram"],
@@ -170,7 +174,7 @@ export function Timeline({
         {
           id: "network",
           name: "Network",
-          subtitle: "Receive ━ / Send ┄ · MB/s",
+          subtitle: data.kind === "recorded" ? "Receive ━ / Send ┄ · MiB/s" : "Receive ━ / Send ┄ · MB/s",
           height: 62,
           kind: "metric",
           keys: ["download", "upload"],
@@ -178,7 +182,7 @@ export function Timeline({
         {
           id: "disk",
           name: "Disk",
-          subtitle: "Read ━ / Write ┄ · MB/s",
+          subtitle: data.kind === "recorded" ? "Read ━ / Write ┄ · MiB/s" : "Read ━ / Write ┄ · MB/s",
           height: 62,
           kind: "metric",
           keys: ["read", "write"],
@@ -209,8 +213,9 @@ export function Timeline({
           kind: "media",
         },
       );
+    const visible = data.kind === "recorded" ? all.filter((track) => !["activity", "foreground", "context", "background", "afk", "gpu"].includes(track.id) && !track.id.startsWith("bg-")) : all;
     let y = 32;
-    return all.map((track) => {
+    return visible.map((track) => {
       const height = heights[track.id] ?? track.height;
       const row = { ...track, baseHeight: track.height, height, y };
       y += height;
@@ -452,13 +457,8 @@ export function Timeline({
               `♫  ${event.title} · ${event.artist}`,
             );
         if (row.kind === "metric") {
-          const from = Math.max(0, Math.floor(view.start / data.samplePeriod)),
-            to = Math.min(
-              data.metrics.length - 1,
-              Math.ceil(view.end / data.samplePeriod),
-            );
           for (const [keyIndex, key] of row.keys!.entries()) {
-            const info = metricInfo[key];
+            const info = getMetricInfo(data,key);
             const top = y + Math.max(3, pad),
               bottom = y + height - Math.max(2, pad),
               h = bottom - top;
@@ -467,17 +467,17 @@ export function Timeline({
               number,
               { min: number; max: number; last: number }
             >();
-            for (let i = from; i <= to; i++) {
-              const sample = data.metrics[i];
-              if (!sample?.values) continue;
+            for (const sample of data.metrics) {
+              if (sample.time >= view.end) break;
+              const value = sample.values?.[key];
+              if (sampleEnd(sample,data.samplePeriod) <= view.start || value == null || !Number.isFinite(value)) continue;
               const left = Math.max(0, Math.floor(x(sample.time))),
                 right = Math.min(
                   width - 1,
-                  Math.floor(x(sample.time + data.samplePeriod)),
+                  Math.ceil(x(sampleEnd(sample,data.samplePeriod))) - 1,
                 );
               for (let px = left; px <= right; px++) {
-                const value = sample.values[key],
-                  old = buckets.get(px);
+                const old = buckets.get(px);
                 buckets.set(px, {
                   min: Math.min(old?.min ?? value, value),
                   max: Math.max(old?.max ?? value, value),
@@ -514,7 +514,7 @@ export function Timeline({
             ctx.stroke();
             ctx.setLineDash([]);
           }
-          const scale = metricInfo[row.keys![0]];
+          const scale = getMetricInfo(data, row.keys![0]);
           ctx.font = '9px "Segoe UI", "Microsoft YaHei UI", sans-serif';
           ctx.textAlign = "right";
           ctx.fillStyle = "#839198";
@@ -599,7 +599,6 @@ export function Timeline({
       cursor.current.dataset.time = `${dateLabel(time)} · ${clock(time, true)}`;
     }
     if (tip.current && !drag.current && row && row.kind !== "group") {
-      const sample = data.metrics[Math.floor(time / data.samplePeriod)];
       let lines = `${dateLabel(time)} · ${clock(time, true)}\n${row.appId ? row.name : t(row.name)}`;
       if ((row.kind === "app" || row.kind === "context") && event) {
         const app = data.apps.find((a) => a.id === event.appId)!;
@@ -614,7 +613,7 @@ export function Timeline({
           row.keys
             .map(
               (key) =>
-                `${t(metricInfo[key].name)}: ${sample?.values ? sample.values[key].toFixed(1) + " " + metricInfo[key].unit : t("No sample · asleep / capture gap")}`,
+                `${t(metricInfo[key].name)}: ${metricAt(data,time,key) != null ? metricAt(data,time,key)!.toFixed(1) + " " + getMetricInfo(data,key).unit : t("No sample · asleep / capture gap")}`,
             )
             .join("\n");
       else if (row.kind === "media") {

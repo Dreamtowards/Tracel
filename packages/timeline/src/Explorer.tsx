@@ -1,5 +1,5 @@
 "use client";
-import { useI18n } from "./i18n";
+import { useI18n, useCaptureTime } from "./i18n";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -44,7 +44,9 @@ import {
   dateLabel,
   duration,
   bytes,
-  metricInfo,
+  metricInfo as defaultMetricInfo,
+  getMetricInfo,
+  sampleEnd,
 } from "./model";
 import { Timeline, type TimelinePalette } from "./Timeline";
 import { OverviewViewport } from "./OverviewViewport";
@@ -70,6 +72,9 @@ export type RangeExport = {
   epoch: string;
   range: Range;
   analytics: ReturnType<typeof analyze>;
+  metrics?: Capture["metrics"];
+  media?: Capture["media"];
+  metricUnits?: Record<string, { value: string; integral: string }>;
 };
 
 export default function Explorer({
@@ -88,8 +93,14 @@ export default function Explorer({
   compact = false,
   renderDatePicker,
   palette,
+  capture,
+  calendar,
+  dataError,
 }: {
   provider: DataProvider;
+  capture?: Capture;
+  calendar?: { value: string; min: string; max: string; onChange: (value: string) => void };
+  dataError?: string;
   homeHref?: string;
   machineLabel?: ReactNode;
   headerActions?: ReactNode;
@@ -106,13 +117,16 @@ export default function Explorer({
   renderDatePicker?: (props: { value: string; min: string; max: string; onChange: (value: string) => void }) => ReactNode;
   palette?: TimelinePalette;
 }) {
-  const { t, duration, dateLabel, locale } = useI18n();
-  const [data, setData] = useState<Capture | null>(null);
+  const { t, duration, locale } = useI18n();
+  const [loadedData, setData] = useState<Capture | null>(null);
+  const data = capture ?? loadedData;
+  const { clock, dateLabel } = useCaptureTime(data);
+  const metricInfo = useMemo(() => Object.fromEntries(Object.keys(defaultMetricInfo).map((key) => [key, getMetricInfo(data,key as keyof typeof defaultMetricInfo)])) as typeof defaultMetricInfo,[data]);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
-  const [view, setView] = useState<Range>({
+  const [view, setView] = useState<Range>(capture?.initialView ?? {
     start: 6 * DAY + 6 * 3600,
     end: 7 * DAY,
   });
@@ -128,7 +142,9 @@ export default function Explorer({
   const [appearance, setAppearance] = useState(defaultAppearance);
   const [day, setDay] = useState(6);
   const [preset, setPreset] = useState("Day");
+  const [follow, setFollow] = useState(capture?.kind === "recorded");
   useEffect(() => {
+    if (capture) return;
     let active = true;
     setLoadError(false);
     Promise.resolve().then(() => provider.load()).then((result) => {
@@ -139,7 +155,15 @@ export default function Explorer({
     return () => {
       active = false;
     };
-  }, [provider, loadAttempt]);
+  }, [provider, loadAttempt, !!capture]);
+  useEffect(() => {
+    if (data?.kind !== "recorded") return;
+    setView(data.initialView ?? data.bounds); setSelection(null); setFocus(null); setTab("Performance"); setPreset("1 hour");
+    setFollow(calendar?.value === calendar?.max);
+  }, [data?.epoch, data?.kind, !!(data?.metrics.length || data?.media.length)]);
+  useEffect(() => {
+    if (follow && data?.kind === "recorded" && data.initialView && calendar?.value === calendar?.max) setView(data.initialView);
+  }, [data,follow,calendar?.value,calendar?.max]);
   useEffect(() => {
     if (!help) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -175,8 +199,24 @@ export default function Explorer({
       </main>
     );
   const selectedApp = stats.apps.find((a) => a.id === focus);
-  const coverage = stats.metrics.cpu.coverage;
+  const coverage = data.kind === "recorded" ? Math.max(...Object.values(stats.metrics).map((metric) => metric.coverage)) : stats.metrics.cpu.coverage;
+  const recorded = data.kind === "recorded";
+  const transferSize = (value: number) => recorded
+    ? value >= 1024 ? `${(value / 1024).toFixed(2)} GiB` : `${value.toFixed(1)} MiB`
+    : bytes(value);
+  const dateProps = calendar ?? { value: `2026-10-${String(day + 8).padStart(2, "0")}`, min: "2026-10-08", max: "2026-10-14", onChange: (value: string) => navigate(Number(value.slice(-2)) - 8,"Day") };
+  const shiftDate = (offset: number) => {
+    const date = new Date(`${dateProps.value}T12:00:00`); date.setDate(date.getDate() + offset);
+    dateProps.onChange(`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`);
+  };
   const navigate = (nextDay: number, nextPreset = preset) => {
+    if (recorded) {
+      setFollow(false);
+      setPreset(nextPreset); setSelection(null);
+      const center = Math.min(data.bounds.end - 1800, Math.max(1800, (view.start + view.end)/2));
+      setView(nextPreset === "1 hour" ? clampRange({start:center-1800,end:center+1800},data.bounds) : data.bounds);
+      return;
+    }
     const d = Math.max(0, Math.min(6, nextDay));
     setDay(d);
     setPreset(nextPreset);
@@ -189,6 +229,7 @@ export default function Explorer({
     );
   };
   const changeView = (next: Range) => {
+    setFollow(false);
     setView(next);
     setPreset("Custom");
     setDay(Math.min(6, Math.floor((next.start + next.end) / 2 / DAY)));
@@ -200,10 +241,15 @@ export default function Explorer({
   const exportSelection = async () => {
     if (exporting) return;
     const payload: RangeExport = {
-      source: "Tracel simulated capture",
+      source: data.source ?? "Tracel simulated capture",
       epoch: data.epoch,
       range,
       analytics: stats,
+      ...(recorded ? {
+        metrics: data.metrics.filter((s) => s.time < range.end && sampleEnd(s,data.samplePeriod) > range.start).map((s) => ({...s,time:Math.max(s.time,range.start),end:Math.min(sampleEnd(s,data.samplePeriod),range.end)})),
+        media: stats.media.map((m) => ({...m,start:Math.max(m.start,range.start),end:Math.min(m.end,range.end)})),
+        metricUnits: Object.fromEntries(Object.entries(metricInfo).map(([key, info]) => [key, { value: info.unit, integral: info.unit === "MiB/s" ? "MiB" : `${info.unit}·s` }])),
+      } : {}),
     };
     setExportError(false);
     if (onExport) {
@@ -347,46 +393,43 @@ export default function Explorer({
               <button
                 className="tx-icon-button"
                 aria-label={t("Previous day")}
-                disabled={day === 0}
-                onClick={() => navigate(day - 1, "Day")}
+                disabled={recorded ? dateProps.value <= dateProps.min : day === 0}
+                onClick={() => recorded ? shiftDate(-1) : navigate(day - 1, "Day")}
               >
                 <ChevronLeft size={15} />
               </button>
-              {renderDatePicker ? renderDatePicker({
-                value: `2026-10-${String(day + 8).padStart(2, "0")}`,
-                min: "2026-10-08", max: "2026-10-14",
-                onChange: (value) => navigate(Number(value.slice(-2)) - 8, "Day"),
-              }) : <label className="tx-date">
+              {renderDatePicker ? renderDatePicker(dateProps) : <label className="tx-date">
                 <CalendarDays size={14} />
                 <input
                   aria-label={t("Capture date")}
                   type="date"
-                  min="2026-10-08"
-                  max="2026-10-14"
-                  value={`2026-10-${String(day + 8).padStart(2, "0")}`}
+                  min={dateProps.min}
+                  max={dateProps.max}
+                  value={dateProps.value}
                   onChange={(e) => {
                     if (e.target.value)
-                      navigate(Number(e.target.value.slice(-2)) - 8, "Day");
+                      dateProps.onChange(e.target.value);
                   }}
                 />
               </label>}
               <button
                 className="tx-icon-button"
                 aria-label={t("Next day")}
-                disabled={day === 6}
-                onClick={() => navigate(day + 1, "Day")}
+                disabled={recorded ? dateProps.value >= dateProps.max : day === 6}
+                onClick={() => recorded ? shiftDate(1) : navigate(day + 1, "Day")}
               >
                 <ChevronRight size={15} />
               </button>
             </div>
             <button
               className="tx-text-button"
-              onClick={() => navigate(6, "Day")}
+              onClick={() => { if (recorded && calendar) { calendar.onChange(calendar.max); setFollow(true); setSelection(null); setView(data.initialView ?? data.bounds); } else navigate(6, "Day"); }}
             >
               {t("Today")}</button>
             <div className="tx-separator" />
+            {recorded && <button className="tx-text-button" aria-pressed={follow} onClick={() => { calendar?.onChange(calendar.max); setFollow(!follow); }}>{t("Live")}</button>}
             <div className="tx-segmented">
-              {["1 hour", "Day", "Week"].map((p) => (
+              {(recorded ? ["1 hour", "Day"] : ["1 hour", "Day", "Week"]).map((p) => (
                 <button
                   className={preset === p ? "active" : ""}
                   key={t(p)}
@@ -477,16 +520,18 @@ export default function Explorer({
             </button>
           </div>
           {compact && exportError && <p className="tx-export-error" role="alert">{t("Could not save the export. Please try again.")}</p>}
+          {dataError && <p role="alert" className="tx-export-error">{dataError}</p>}
+          {recorded && !data.metrics.length && !data.media.length && <p role="status" className="tx-note">{t("No recorded metrics for this day. Enable collection in Settings.")}</p>}
           <div className="tx-overview">
             <div className="tx-overview-heading">
               <span>
                 <Radio size={12} /> {compact ? captureLabel : "CAPTURE OVERVIEW"}
               </span>
               <span>
-                {t("OCT 08 – OCT 14, 2026")}{" "}<b>{t("7 days")}</b>
+                {recorded ? dateLabel(data.bounds.start) : t("OCT 08 – OCT 14, 2026")}{" "}<b>{recorded ? t("Recorded") : t("7 days")}</b>
               </span>
             </div>
-            <OverviewViewport bounds={data.bounds} view={view} onView={changeView}>
+            <OverviewViewport data={data} bounds={data.bounds} view={view} onView={changeView}>
               <svg
                 viewBox="0 0 1400 44"
                 preserveAspectRatio="none"
@@ -511,7 +556,7 @@ export default function Explorer({
                 />
               </svg>
             </OverviewViewport>
-            <div className="tx-overview-days">
+            {!recorded && <div className="tx-overview-days">
               {Array.from({ length: 7 }, (_, d) => (
                 <button
                   key={d}
@@ -522,7 +567,7 @@ export default function Explorer({
                   <span>{8 + d}</span>
                 </button>
               ))}
-            </div>
+            </div>}
           </div>
           <div className="tx-content">
             <section className="tx-timeline-panel">
@@ -537,12 +582,12 @@ export default function Explorer({
                   </small>
                 </span>
                 <span className="tx-timeline-hint">
-                  {t(view.end - view.start > DAY * 2
+                  {t(recorded ? "Measured system metrics" : view.end - view.start > DAY * 2
                     ? "Aggregated activity"
                     : view.end - view.start < 7200
                       ? "Context detail"
                       : "Application intervals")}{" "}
-                  <span>·</span> {" "}{t("30s samples")}</span>
+                  <span>·</span> {" "}{t(recorded ? "2s nominal samples" : "30s samples")}</span>
               </div>
               <Timeline
                 data={data}
@@ -553,7 +598,7 @@ export default function Explorer({
                 appearance={appearance}
                 palette={palette}
                 onView={changeView}
-                onSelect={setSelection}
+                onSelect={(range) => { setSelection(range); if (range) setFollow(false); }}
                 onFocus={setFocus}
               />
               <div className="tx-timeline-bottom">
@@ -614,7 +659,7 @@ export default function Explorer({
                   )}
                 </div>
                 <div className="tx-tabs">
-                  {(["Activity", "Performance", "Media"] as const).map((tabLabel) => (
+                  {(recorded ? ["Performance", "Media"] as const : ["Activity", "Performance", "Media"] as const).map((tabLabel) => (
                     <button
                       className={tab === tabLabel ? "active" : ""}
                       key={tabLabel}
@@ -755,7 +800,7 @@ export default function Explorer({
                       <div className="tx-section-heading">
                         {t("SYSTEM RESOURCES")}{" "}<span>{t("AVG / PEAK")}</span>
                       </div>
-                      {(["cpu", "ram", "gpu"] as const).map((key) => (
+                      {(["cpu", "ram", "gpu"] as const).filter((key) => !recorded || key !== "gpu").map((key) => (
                         <div className="tx-performance-stat" key={key}>
                           <label>
                             <i style={{ background: metricInfo[key].color }} />
@@ -796,12 +841,12 @@ export default function Explorer({
                               {t(metricInfo[key].name)}
                             </span>
                             <strong>
-                              {coverage ? bytes(stats.metrics[key].total) : "—"}
+                              {stats.metrics[key].coverage ? transferSize(stats.metrics[key].total) : "—"}
                             </strong>
                             <small>
                               {t("Avg")}{" "}
                               {stats.metrics[key].average?.toFixed(2) ?? "—"} {" "}{t("· Peak")}{" "}{stats.metrics[key].peak?.toFixed(2) ?? "—"}{" "}
-                              MB/s
+                              {metricInfo[key].unit}
                             </small>
                           </div>
                         ),
@@ -861,7 +906,7 @@ export default function Explorer({
                     (coverage / Math.max(0.001, range.end - range.start)) *
                     100
                   ).toFixed(1)}
-                  {t("% metric coverage")}{" "}<span>{t("System subject")}</span>
+                  {t(recorded ? "% best metric coverage" : "% metric coverage")}{" "}<span>{t("System subject")}</span>
                 </div>
               </aside>
             )}
@@ -900,10 +945,10 @@ export default function Explorer({
               <label>
                 {t("MEMORY AVERAGE")}<strong>
                   {stats.metrics.ram.average?.toFixed(1) ?? "—"}
-                  <small>GB</small>
+                  <small>{metricInfo.ram.unit}</small>
                 </strong>
               </label>
-              <span className="tx-summary-detail">{t("of 32 GB")}</span>
+              <span className="tx-summary-detail">{recorded ? `${metricInfo.ram.max.toFixed(1)} ${metricInfo.ram.unit}` : t("of 32 GB")}</span>
             </div>
             <div>
               <span
@@ -917,7 +962,7 @@ export default function Explorer({
               </span>
               <label>
                 {t("DOWNLOADED")}<strong>
-                  {coverage ? bytes(stats.metrics.download.total) : "—"}
+                  {stats.metrics.download.coverage ? transferSize(stats.metrics.download.total) : "—"}
                 </strong>
               </label>
             </div>
@@ -933,7 +978,7 @@ export default function Explorer({
               </span>
               <label>
                 {t("DISK WRITTEN")}<strong>
-                  {coverage ? bytes(stats.metrics.write.total) : "—"}
+                  {stats.metrics.write.coverage ? transferSize(stats.metrics.write.total) : "—"}
                 </strong>
               </label>
             </div>
@@ -941,9 +986,9 @@ export default function Explorer({
           <footer className="tx-status">
             <span>
               <span className="tx-live-dot" /> {localDataLabel}{" "}
-              <span>·</span> {" "}{t("Deterministic demo")}</span>
+              <span>·</span> {" "}{t(recorded ? "SQLite · saved locally" : "Deterministic demo")}</span>
             <span>
-              {data.metrics.length.toLocaleString(locale === "en" ? "en-US" : locale)} {" "}{t("samples")}{" "}
+              {data.metrics.length.toLocaleString(locale === "en" ? "en-US" : locale)} {" "}{t(recorded ? "metric intervals" : "samples")}{" "}
               <span>·</span> {data.activity.length} {" "}{t("intervals")}{" "}<span>·</span>{" "}
               {t(selection ? "Selection statistics" : "Visible range statistics")}
             </span>
@@ -988,7 +1033,7 @@ export default function Explorer({
               </div>
             ))}
             <p>
-              {t("Expand foreground activity to see files and URLs. Drag a track label’s lower edge to resize it. Blank metric regions indicate sleep or missing samples. Demo dates: October 8–14, 2026.")}</p>
+              {t(recorded ? "Drag track edges to resize. Blank regions indicate missing or disabled measurements. Media intervals are estimated from snapshots." : "Expand foreground activity to see files and URLs. Drag a track label’s lower edge to resize it. Blank metric regions indicate sleep or missing samples. Demo dates: October 8–14, 2026.")}</p>
           </section>
         </div>
       )}

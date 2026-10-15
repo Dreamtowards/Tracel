@@ -28,8 +28,10 @@ export type MetricKey =
   "cpu" | "ram" | "gpu" | "download" | "upload" | "read" | "write" | "audio";
 export type MetricSample = {
   time: number;
+  /** Explicit support interval for irregular native samples; legacy demo uses samplePeriod. */
+  end?: number;
   subject: Subject;
-  values: Record<MetricKey, number> | null;
+  values: Record<MetricKey, number | null> | null;
 };
 export type MediaInterval = Range & {
   appId: string;
@@ -42,6 +44,11 @@ export type TimelineEvent = Range & {
   title: string;
 };
 export type Capture = {
+  kind?: "recorded";
+  source?: string;
+  initialView?: Range;
+  maxSampleSpan?: number;
+  metricOverrides?: Partial<Record<MetricKey, { max?: number; unit?: string }>>;
   epoch: string;
   bounds: Range;
   apps: Application[];
@@ -53,6 +60,19 @@ export type Capture = {
   events: TimelineEvent[];
   samplePeriod: number;
 };
+export const sampleEnd = (sample: MetricSample, period: number) => sample.end ?? sample.time + period;
+/** Samples are sorted by time, but need not be dense or start at the epoch. */
+export function metricAt(data: Capture, time: number, key: MetricKey): number | null {
+  let low = 0, high = data.metrics.length;
+  while (low < high) { const mid = (low + high) >>> 1; if (data.metrics[mid].time <= time) low = mid + 1; else high = mid; }
+  for (let i = low - 1; i >= 0; i--) {
+    const sample = data.metrics[i];
+    if (sample.time < time - (data.maxSampleSpan ?? data.samplePeriod)) break;
+    const value = sample.values?.[key];
+    if (sampleEnd(sample,data.samplePeriod) > time && value != null && Number.isFinite(value)) return value;
+  }
+  return null;
+}
 export interface DataProvider {
   load(): Promise<Capture>;
 }
@@ -121,3 +141,6 @@ export const metricInfo: Record<
   write: { name: "Write", color: "#83bc68", max: 160, unit: "MB/s" },
   audio: { name: "Audio", color: "#ae9bdd", max: 100, unit: "%" },
 };
+export function getMetricInfo(data: Capture | null | undefined, key: MetricKey) {
+  return { ...metricInfo[key], ...data?.metricOverrides?.[key] };
+}

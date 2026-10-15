@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { dateLabel as formatDate, duration as formatDuration } from "./model";
+import { dateLabel as formatDate, duration as formatDuration, clock, type Capture } from "./model";
 import { timelineZh } from "./messages.zh";
 
 export type Locale = "en" | "zh-CN";
@@ -25,3 +25,12 @@ export function I18nProvider({ locale, messages = noMessages, children }: { loca
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export const useI18n = () => useContext(Context);
+
+/** Real captures use local wall-clock labels; demo formatting stays unchanged. */
+export function useCaptureTime(data: Capture | null | undefined) {
+  const { locale, dateLabel } = useI18n();
+  return useMemo(() => data?.kind === "recorded" ? {
+    dateLabel: (seconds: number) => new Date(Date.parse(data.epoch) + seconds * 1000).toLocaleDateString(locale, { month: "short", day: "numeric" }),
+    clock: (seconds: number, detailed = false) => new Date(Date.parse(data.epoch) + seconds * 1000).toLocaleTimeString(locale, { hour12: false, hour: "2-digit", minute: "2-digit", ...(detailed ? { second: "2-digit" as const } : {}) }),
+  } : {dateLabel,clock}, [data?.epoch,data?.kind,locale,dateLabel]);
+}

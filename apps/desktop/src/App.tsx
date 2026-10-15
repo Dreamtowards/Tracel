@@ -11,6 +11,7 @@ import { getAppInfo, nativeClient, saveRange, type AppInfo } from "./native";
 import Utilities from "./Utilities";
 import Settings from "./Settings";
 import SystemMetrics from "./SystemMetrics";
+import { useRecordedTimeline } from "./useRecordedTimeline";
 import { useCollection } from "./useCollection";
 import { useAppearance } from "./useAppearance";
 import Navigation, { type Page } from "./Navigation";
@@ -53,6 +54,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
   const ui = useRef<HTMLDivElement>(null);
   useEffect(() => { ui.current?.querySelector(".tx-main")?.scrollTo(0, 0); }, [page]);
   const collection = useCollection(page === "metrics");
+  const timeline = useRecordedTimeline(page === "timeline");
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [infoError, setInfoError] = useState(false);
   const [notice, setNotice] = useState("");
@@ -79,6 +81,9 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
       <div ref={ui} className="desktop-ui" style={{ "--ui-scale": appearance.zoom / 100 } as CSSProperties}>
       <Explorer
         provider={demoProvider}
+        capture={nativeClient ? timeline.capture : undefined}
+        calendar={nativeClient ? timeline.calendar : undefined}
+        dataError={nativeClient ? (timeline.error || (collection.status?.storageError ? `${t("Storage unavailable:")} ${collection.status.storageError}` : "")) : undefined}
         homeHref="/"
         localDataLabel={t("All data stays on this device")}
         machineLabel={info ? `${info.deviceName} / ${info.platform === "windows" ? "Windows" : info.platform}` : t(nativeClient ? "This device" : "Desktop preview")}
@@ -88,7 +93,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
         palette={palette}
         onExport={nativeClient ? exportRange : undefined}
         onShowTimeline={() => setPage("timeline")}
-        captureLabel={t(page === "timeline" ? "Demo capture" : "Local system metrics")}
+        captureLabel={t(nativeClient ? "Recorded metrics" : "Demo capture")}
         navigation={<Navigation page={page} expanded={appearance.expanded} width={appearance.navigationWidth} onWidth={appearance.setNavigationWidth} onToggle={appearance.toggleNavigation} onNavigate={setPage} onAbout={() => about.current?.showModal()} />}
         pageContent={page === "settings" ? <Settings status={collection.status} busy={collection.busy} error={collection.error} onSettings={collection.changeSettings} zoom={appearance.zoom} onZoom={appearance.setZoom} accent={appearance.accent} onAccent={appearance.setAccent} language={appearance.language} onLanguage={appearance.setLanguage} /> : page === "utilities" ? <Utilities status={collection.status} busy={collection.busy} error={collection.error} onAwake={collection.changeAwake} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => setPage("settings")} /> : undefined}
       />
@@ -98,7 +103,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
         <dl>
           <div><dt>{t("Client")}</dt><dd>{t(nativeClient ? "Windows desktop" : "Browser preview")}{info ? ` · ${info.version}` : ""}</dd></div>
           <div><dt>{t("Device")}</dt><dd>{info?.deviceName ?? t("This device")}</dd></div>
-          <div><dt>{t("Timeline")}</dt><dd>{t("Demo · October 8–14, 2026")}</dd></div>
+          <div><dt>{t("Timeline")}</dt><dd>{t(nativeClient ? "Local SQLite history" : "Demo · October 8–14, 2026")}</dd></div>
         </dl>
         <p className="desktop-about-detail">{t("Measurements stay on this device. Closing Tracel stops collection and releases sleep prevention.")}</p>
         {infoError && <p role="status">{t("Device information is unavailable. The demo remains available.")}</p>}

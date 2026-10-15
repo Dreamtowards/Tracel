@@ -51,7 +51,7 @@ test("partial metric samples use time weighting and integrate throughput", () =>
   const stats = analyze(data, { start, end: start + 10 });
   const sample = data.metrics[Math.floor(start / data.samplePeriod)];
   assert.ok(
-    Math.abs(stats.metrics.download.total - sample.values!.download * 10) <
+    Math.abs(stats.metrics.download.total - sample.values!.download! * 10) <
       1e-6,
   );
   assert.equal(stats.metrics.download.coverage, 10);

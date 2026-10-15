@@ -52,14 +52,7 @@ pub fn cpu_percent(previous: CpuTimes, current: CpuTimes) -> Option<f64> {
     Some(100.0 * (total - idle) as f64 / total as f64)
 }
 
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MediaObservation {
-    pub title: String,
-    pub artist: String,
-    pub application: String,
-    pub playback_status: String,
-}
+pub use tracel_core::{MediaObservation, SystemObservation};
 
 pub trait SystemReader {
     fn configure(&mut self, _settings: &CollectionSettings) {}
@@ -80,30 +73,16 @@ pub trait SystemReader {
     fn memory(&mut self) -> Result<(u64, u64), String>;
 }
 
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SystemObservation {
-    pub captured_at_ms: u64,
-    pub cpu_percent: Option<f64>,
-    pub memory_used_bytes: Option<u64>,
-    pub memory_total_bytes: Option<u64>,
-    pub network_receive_bytes_per_second: Option<f64>,
-    pub network_send_bytes_per_second: Option<f64>,
-    pub disk_read_bytes_per_second: Option<f64>,
-    pub disk_write_bytes_per_second: Option<f64>,
-    pub audio_peak_percent: Option<f64>,
-    pub media: Option<MediaObservation>,
-    pub errors: Vec<String>,
-}
-
 #[derive(Default)]
 pub struct Sampler {
     previous_cpu: Option<CpuTimes>,
+    previous_observation_ms: Option<u64>,
 }
 
 impl Sampler {
     pub fn reset(&mut self) {
         self.previous_cpu = None;
+        self.previous_observation_ms = None;
     }
     pub fn sample(
         &mut self,
@@ -113,6 +92,11 @@ impl Sampler {
     ) -> SystemObservation {
         let mut sample = SystemObservation {
             captured_at_ms,
+            interval_start_ms: self.previous_observation_ms.filter(|previous| {
+                captured_at_ms
+                    .checked_sub(*previous)
+                    .is_some_and(|delta| delta > 0 && delta <= 6000)
+            }),
             cpu_percent: None,
             memory_used_bytes: None,
             memory_total_bytes: None,
@@ -124,6 +108,7 @@ impl Sampler {
             media: None,
             errors: vec![],
         };
+        self.previous_observation_ms = settings.collecting().then_some(captured_at_ms);
         reader.configure(settings);
         if settings.enabled && settings.cpu {
             match reader.cpu_times() {

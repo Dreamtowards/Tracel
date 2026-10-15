@@ -12,12 +12,17 @@ export function getAppInfo(): Promise<AppInfo> {
 }
 
 export type CollectionSettings = { enabled: boolean; cpu: boolean; ram: boolean; network: boolean; disk: boolean; audio: boolean; media: boolean };
-export type SystemObservation = { capturedAtMs: number; cpuPercent: number | null; memoryUsedBytes: number | null; memoryTotalBytes: number | null; networkReceiveBytesPerSecond: number | null; networkSendBytesPerSecond: number | null; diskReadBytesPerSecond: number | null; diskWriteBytesPerSecond: number | null; audioPeakPercent: number | null; media: { title: string; artist: string; application: string; playbackStatus: string } | null; errors: string[] };
+export type SystemObservation = { capturedAtMs: number; intervalStartMs: number | null; cpuPercent: number | null; memoryUsedBytes: number | null; memoryTotalBytes: number | null; networkReceiveBytesPerSecond: number | null; networkSendBytesPerSecond: number | null; diskReadBytesPerSecond: number | null; diskWriteBytesPerSecond: number | null; audioPeakPercent: number | null; media: { title: string; artist: string; application: string; playbackStatus: string } | null; errors: string[] };
 export type CollectionStatus = {
   settings: CollectionSettings; supported: boolean; periodMs: number; sampleCount: number;
   latest: SystemObservation | null; keepAwakeRequested: boolean; keepAwakeActive: boolean;
   powerError: string | null; startupWarning: string | null;
+  storageError: string | null; persistedCount: number;
+  databasePath: string;
 };
+export type StoredObservation = { id: number; sample: SystemObservation };
+export type ArchivePage = { observations: StoredObservation[]; nextCursor: number; firstAtMs: number | null; lastAtMs: number | null };
+export const queryTimeline = (query: { startMs: number; endMs: number; afterId: number }) => invoke<ArchivePage>("timeline_observations", query);
 export type ForegroundInfo = { capturedAtMs: number; windowId: string; processId: number; title: string; executable: string | null; url: string | null; notes: string[] };
 export const getCollectionStatus = () => invoke<CollectionStatus>("collection_status");
 export const setCollectionSettings = (settings: CollectionSettings) => invoke<CollectionStatus>("set_collection_settings", { settings });

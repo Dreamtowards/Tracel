@@ -1,17 +1,18 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { clampRange, clock, type Range } from "./model";
-import { useI18n } from "./i18n";
+import { clampRange, clock, type Range, type Capture } from "./model";
+import { useI18n, useCaptureTime } from "./i18n";
 
 type Edge = "start" | "end";
 const minimumSpan = 2;
 
 /** One coordinate system for moving the viewport and resizing either endpoint. */
-export function OverviewViewport({ bounds, view, onView, children }: {
-  bounds: Range; view: Range; onView: (view: Range) => void; children: ReactNode;
+export function OverviewViewport({ bounds, view, onView, children, data }: {
+  data?: Capture; bounds: Range; view: Range; onView: (view: Range) => void; children: ReactNode;
 }) {
-  const { t, dateLabel } = useI18n();
+  const { t } = useI18n();
+  const { clock, dateLabel } = useCaptureTime(data);
   const drag = useRef<{ edge: Edge | null; time: number; view: Range } | null>(null);
   const total = bounds.end - bounds.start;
   const percent = (time: number) => `${(time - bounds.start) / total * 100}%`;

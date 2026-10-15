@@ -79,7 +79,8 @@ export default function SystemMetrics({ status, history, error, onSettings }: { 
         <p className="settings-footnote">{t("Media details are available only for apps that share them with Windows.")}</p>
       </section>
     </div>
-    <div className="metrics-updated">{t("Last updated")}{" "}{latest ? new Date(latest.capturedAtMs).toLocaleTimeString(locale) : "—"} {" "}{t("· History clears on exit")}</div>
+    <div className="metrics-updated">{t("Last updated")}{" "}{latest ? new Date(latest.capturedAtMs).toLocaleTimeString(locale) : "—"} {" "}{t("· Recent history · saved in SQLite")}</div>
+    {status?.storageError && <p className="settings-error" role="alert">{t("Storage unavailable:")} {status.storageError}</p>}
     {latest?.errors.map((message) => <p className="settings-error" role="alert" key={message}>{message}</p>)}
     <p role="status">{t(exportStatus, { count: exportCount })}</p>
   </div>;

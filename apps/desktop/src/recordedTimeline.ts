@@ -1,0 +1,63 @@
+import type { Capture, MetricKey, MetricSample, MediaInterval } from "@tracel/timeline/model";
+import type { StoredObservation } from "./native";
+
+export function localDate(date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+export function dayRange(value: string) {
+  const start = new Date(`${value}T00:00:00`);
+  const end = new Date(start); end.setDate(end.getDate() + 1);
+  return { startMs: start.getTime(), endMs: end.getTime() };
+}
+const emptyValues = (): Record<MetricKey, number | null> => ({ cpu: null, ram: null, gpu: null, download: null, upload: null, read: null, write: null, audio: null });
+
+/** Native-to-UI boundary: UTC milliseconds to epoch-relative seconds; no simulated activity. */
+export function recordedCapture(day: string, rows: StoredObservation[], now = Date.now()): Capture {
+  const { startMs, endMs } = dayRange(day);
+  const bounds = { start: 0, end: (endMs - startMs) / 1000 };
+  const samples = [...rows].sort((a, b) => a.sample.capturedAtMs - b.sample.capturedAtMs || a.id - b.id);
+  const metrics: MetricSample[] = [], media: MediaInterval[] = [], apps: Capture["apps"] = [];
+  const appIds = new Set<string>();
+  const seconds = (ms: number) => (ms - startMs) / 1000;
+  const add = (start: number, end: number, values: MetricSample["values"]) => {
+    start = Math.max(bounds.start, start); end = Math.min(bounds.end, end);
+    if (start < end && values && Object.values(values).some((value) => value != null)) metrics.push({ time: start, end, subject: { kind: "system", id: "system" }, values });
+  };
+  for (let i = 0; i < samples.length; i++) {
+    const sample = samples[i].sample, next = samples[i + 1]?.sample;
+    const time = seconds(sample.capturedAtMs);
+    const interval = sample.intervalStartMs;
+    // CPU and throughput readings summarize the preceding measured interval.
+    if (interval != null && interval < sample.capturedAtMs && sample.capturedAtMs - interval <= 6000) {
+      add(seconds(interval), time, { ...emptyValues(), cpu: sample.cpuPercent,
+        download: sample.networkReceiveBytesPerSecond == null ? null : sample.networkReceiveBytesPerSecond / 1024 ** 2,
+        upload: sample.networkSendBytesPerSecond == null ? null : sample.networkSendBytesPerSecond / 1024 ** 2,
+        read: sample.diskReadBytesPerSecond == null ? null : sample.diskReadBytesPerSecond / 1024 ** 2,
+        write: sample.diskWriteBytesPerSecond == null ? null : sample.diskWriteBytesPerSecond / 1024 ** 2 });
+    }
+    // Gauges/media are sample-and-hold estimates, capped at 2s when continuity is unknown.
+    const continuous = next?.intervalStartMs === sample.capturedAtMs && next.capturedAtMs - sample.capturedAtMs <= 6000;
+    const end = Math.min(bounds.end, seconds(continuous ? next.capturedAtMs : sample.capturedAtMs + 2000), next ? seconds(next.capturedAtMs) : Infinity, seconds(now));
+    add(time, end, { ...emptyValues(), ram: sample.memoryUsedBytes == null ? null : sample.memoryUsedBytes / 1024 ** 3, audio: sample.audioPeakPercent });
+    const m = sample.media;
+    if (m && (m.playbackStatus === "Playing" || m.playbackStatus === "Paused") && time < bounds.end && end > Math.max(0,time)) {
+      if (!appIds.has(m.application)) {
+        appIds.add(m.application); apps.push({ id: m.application, name: m.application, exe: "", color: "#9b9db2", glyph: "♫" });
+      }
+      const previous = media.at(-1);
+      const state = m.playbackStatus === "Playing" ? "playing" : "paused";
+      const start = Math.max(0,time);
+      if (previous && Math.abs(previous.end - start) < 0.001 && previous.appId === m.application && previous.title === m.title && previous.artist === m.artist && previous.state === state) previous.end = end;
+      else media.push({ start, end, appId: m.application, title: m.title, artist: m.artist, state });
+    }
+  }
+  metrics.sort((a,b) => a.time - b.time);
+  const memoryMax = samples.reduce((maximum,{sample}) => Math.max(maximum,(sample.memoryTotalBytes ?? 0) / 1024 ** 3),1);
+  const maxRate = (keys: MetricKey[], baseline: number) => metrics.reduce((maximum,sample) => keys.reduce((max,key) => Math.max(max,sample.values?.[key] ?? 0),maximum),baseline);
+  const rateMax = maxRate(["download", "upload"],32), diskMax = maxRate(["read", "write"],160);
+  const latest = Math.min(bounds.end, Math.max(3600, seconds(samples.at(-1)?.sample.capturedAtMs ?? Math.min(endMs, now)) + 120));
+  return { kind: "recorded", source: "Tracel recorded system metrics", epoch: new Date(startMs).toISOString(), bounds,
+    initialView: { start: Math.max(0, latest - 3600), end: latest }, samplePeriod: 2, maxSampleSpan: 6,
+    metricOverrides: { ram: { max: memoryMax, unit: "GiB" }, download: { max: rateMax, unit: "MiB/s" }, upload: { max: rateMax, unit: "MiB/s" }, read: { max: diskMax, unit: "MiB/s" }, write: { max: diskMax, unit: "MiB/s" } },
+    apps, activity: [], background: [], afk: [], metrics, media, events: [] };
+}

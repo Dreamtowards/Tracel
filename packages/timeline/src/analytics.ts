@@ -1,6 +1,6 @@
-import { Capture, MetricKey, Range, overlap } from "./model";
+import { Capture, MetricKey, Range, overlap, sampleEnd } from "./model";
 
-/** Half-open intervals; sample values are held for exactly samplePeriod seconds. */
+/** Half-open support intervals; missing values are excluded independently per metric. */
 export function analyze(data: Capture, range: Range) {
   const activeTime = (interval: Range) => {
     const clipped = {
@@ -42,22 +42,18 @@ export function analyze(data: Capture, range: Range) {
       let integral = 0,
         peak = 0,
         coverage = 0;
-      const first = Math.max(0, Math.floor(range.start / data.samplePeriod));
-      const last = Math.min(
-        data.metrics.length,
-        Math.ceil(range.end / data.samplePeriod),
-      );
-      for (let i = first; i < last; i++) {
-        const sample = data.metrics[i];
-        if (!sample.values) continue;
+      for (const sample of data.metrics) {
+        if (sample.time >= range.end) break;
+        const value = sample.values?.[key];
+        if (value == null || !Number.isFinite(value)) continue;
         const weight = overlap(
-          { start: sample.time, end: sample.time + data.samplePeriod },
+          { start: sample.time, end: sampleEnd(sample, data.samplePeriod) },
           range,
         );
         if (!weight) continue;
         coverage += weight;
-        integral += sample.values[key] * weight;
-        peak = Math.max(peak, sample.values[key]);
+        integral += value * weight;
+        peak = Math.max(peak, value);
       }
       return [
         key,

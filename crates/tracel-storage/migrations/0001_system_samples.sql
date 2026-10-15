@@ -1,4 +1,4 @@
--- Proposed SQLite schema; runner, WAL setup and production storage are deferred.
+-- Reserved interval schema. Current collection writes the observations table in migration 2.
 CREATE TABLE system_samples (
     start_ms INTEGER NOT NULL,
     end_ms INTEGER NOT NULL CHECK (end_ms > start_ms),

@@ -75,3 +75,32 @@ mod tests {
         assert_eq!(TimeRange::new(2, 1), None);
     }
 }
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaObservation {
+    pub title: String,
+    pub artist: String,
+    pub application: String,
+    pub playback_status: String,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemObservation {
+    pub captured_at_ms: u64,
+    /// Previous sampling cycle, absent after reset/disable/gap. Rates cover this interval.
+    pub interval_start_ms: Option<u64>,
+    pub cpu_percent: Option<f64>,
+    pub memory_used_bytes: Option<u64>,
+    pub memory_total_bytes: Option<u64>,
+    pub network_receive_bytes_per_second: Option<f64>,
+    pub network_send_bytes_per_second: Option<f64>,
+    pub disk_read_bytes_per_second: Option<f64>,
+    pub disk_write_bytes_per_second: Option<f64>,
+    pub audio_peak_percent: Option<f64>,
+    pub media: Option<MediaObservation>,
+    pub errors: Vec<String>,
+}

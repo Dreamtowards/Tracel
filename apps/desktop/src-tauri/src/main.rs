@@ -43,6 +43,20 @@ fn system_history(
     state.history()
 }
 #[tauri::command]
+async fn timeline_observations(
+    start_ms: u64,
+    end_ms: u64,
+    after_id: u64,
+    state: tauri::State<'_, telemetry::Telemetry>,
+) -> Result<tracel_storage::ArchivePage, String> {
+    let path = state.database_path();
+    tauri::async_runtime::spawn_blocking(move || {
+        tracel_storage::SqliteStore::query(&path, start_ms, end_ms, after_id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+#[tauri::command]
 fn set_keep_awake(
     enabled: bool,
     state: tauri::State<'_, telemetry::Telemetry>,
@@ -106,7 +120,8 @@ fn main() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
             let path = app.path().app_config_dir()?.join("collection.json");
-            app.manage(telemetry::Telemetry::new(path)?);
+            let database_path = app.path().app_local_data_dir()?.join("activity.sqlite3");
+            app.manage(telemetry::Telemetry::with_database(path, database_path)?);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -114,6 +129,7 @@ fn main() {
             collection_status,
             set_collection_settings,
             system_history,
+            timeline_observations,
             set_keep_awake,
             inspect_foreground,
             inspect_file_usage,

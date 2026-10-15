@@ -30,6 +30,7 @@ export default function Settings({ status, busy, error, onSettings, zoom, onZoom
     <header className="desktop-page-heading"><h1>{t("Settings")}</h1></header>
     {unavailable && <p className="settings-banner">{t(nativeClient && !status ? "Connecting to the native collector…" : "Preview: native features require the Windows client.")}</p>}
     {error && <p role="alert" className="settings-error">{t(error)}</p>}
+    {status?.storageError && <p role="alert" className="settings-error">{t("Storage unavailable:")} {status.storageError}</p>}
     {status?.startupWarning && <p role="alert" className="settings-error">{status.startupWarning}</p>}
     <SettingsGroup title={t("Appearance")}>
       <div className="settings-action"><label htmlFor="interface-language"><strong>{t("Language")}</strong></label><Select id="interface-language" label={t("Language")} value={language} onValueChange={(value) => onLanguage(value as Locale)} options={[{ value: "en", label: "English" }, { value: "zh-CN", label: "中文" }]} /></div>
@@ -49,7 +50,12 @@ export default function Settings({ status, busy, error, onSettings, zoom, onZoom
       <Toggle label="RAM usage" description="" checked={settings.ram} disabled={unavailable} pending={busy} onChange={(ram) => { void onSettings({ ...settings, ram }); }} />
       {([['network', 'Network traffic', 'Physical adapters · receive and send'], ['disk', 'Disk activity', 'Physical disks · read and write'], ['audio', 'Audio output level', 'Output peak only · no audio recording'], ['media', 'Now playing', 'Title and artist from supported media apps']] as const).map(([key, label, description]) => <Toggle key={key} label={label} description={description} checked={settings[key] ?? false} disabled={unavailable} pending={busy} onChange={(value) => { void onSettings({ ...settings, [key]: value }); }} />)}
       <Toggle label="GPU usage" description="Coming later" checked={false} disabled onChange={() => {}} />
-      <p className="settings-footnote">{t("Measurements stay in memory until exit. Timeline uses demo data.")}</p>
+      <p className="settings-footnote">{t("Measurements are saved locally in SQLite and shown on the Timeline.")}</p>
+    </SettingsGroup>
+    <SettingsGroup title={t("Storage")}>
+      <div className="settings-action"><div><strong>SQLite</strong><small>{t("Saved observations")}: {status?.persistedCount?.toLocaleString(locale) ?? "—"}</small></div></div>
+      {status?.databasePath && <p className="settings-storage-path">{status.databasePath}</p>}
+      <p className="settings-footnote">{t("History survives restart. Close Tracel before copying the database for backup.")}</p>
     </SettingsGroup>
     <SettingsGroup title={t("Diagnostics")}><p>{t("Capture a window title and executable. Switch windows within 3 seconds.")}</p>
       <Button className="tx-button" disabled={unavailable || debugging} onClick={() => { void inspect(); }}>{t(debugging ? "Switch windows — capturing…" : "Inspect foreground in 3 seconds")}</Button>
