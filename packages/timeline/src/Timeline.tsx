@@ -119,7 +119,7 @@ export function Timeline({
         });
       all.push({
         id: "background",
-        name: "App presence",
+        name: "Apps",
         subtitle: data.kind === "recorded" ? "Apps with desktop windows" : "Running applications",
         height: 20 + appearance.padding * 2,
         kind: "background",

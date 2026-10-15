@@ -29,7 +29,14 @@ export type CollectionStatus = {
   databaseSizeBytes?: number | null;
 };
 export type StoredObservation = { id: number; sample: SystemObservation };
-export type ArchivePage = { observations: StoredObservation[]; nextCursor: number; firstAtMs: number | null; lastAtMs: number | null };
+export type StateInterval<T> = { id: number; startMs: number; endMs: number; value: T };
+export type StateIntervals = {
+  apps: StateInterval<ObservedProcess>[];
+  foreground: StateInterval<NonNullable<ObservedActivity["foreground"]>>[];
+  media: StateInterval<NonNullable<SystemObservation["media"]>>[];
+  idle: StateInterval<null>[];
+};
+export type ArchivePage = { observations: StoredObservation[]; nextCursor: number; firstAtMs: number | null; lastAtMs: number | null; intervals?: StateIntervals };
 export const queryTimeline = (query: { startMs: number; endMs: number; afterId: number }) => invoke<ArchivePage>("timeline_observations", query);
 export type ForegroundInfo = { capturedAtMs: number; windowId: string; processId: number; title: string; executable: string | null; url: string | null; notes: string[] };
 export const getCollectionStatus = () => invoke<CollectionStatus>("collection_status");

@@ -7,6 +7,34 @@ import { overviewPath } from "../../../packages/timeline/src/overview";
 import type { StoredObservation, SystemObservation } from "../src/native";
 
 const day = "2026-10-15", epoch = dayRange(day).startMs;
+test("normalized state intervals clip at midnight, union process presence, and retain title/media boundaries", () => {
+  const process = { instanceId: "42:1234", processId: 42, name: "Editor.exe", executable: "C:\\Editor.exe" };
+  const intervals = {
+    apps: [
+      { id: 1, startMs: epoch-1000, endMs: epoch+4000, value: process },
+      { id: 2, startMs: epoch+2000, endMs: epoch+6000, value: { ...process, instanceId: "43:2345", processId: 43 } },
+      { id: 3, startMs: epoch+10000, endMs: epoch+12000, value: process },
+    ],
+    foreground: [
+      { id: 1, startMs: epoch-1000, endMs: epoch+2000, value: { process, windowId: "100", title: "项目 A" } },
+      { id: 2, startMs: epoch+2000, endMs: epoch+6000, value: { process, windowId: "100", title: "项目 B" } },
+    ],
+    media: [
+      { id: 1, startMs: epoch-1000, endMs: epoch+4000, value: { application: "player", title: "Song", artist: "Artist", playbackStatus: "Playing" } },
+      { id: 2, startMs: epoch+4000, endMs: epoch+6000, value: { application: "player", title: "Song", artist: "Artist", playbackStatus: "Paused" } },
+    ],
+    idle: [{ id: 1, startMs: epoch+1000, endMs: epoch+6000, value: null }],
+  };
+  const capture = recordedCapture(day, [row(1,2,{intervalStartMs:epoch,cpuPercent:0})], epoch+11000, intervals);
+  assert.deepEqual(capture.background.map(({start,end})=>({start,end})),[{start:0,end:6},{start:10,end:11}]);
+  assert.deepEqual(capture.activity.map(({start,end,windowTitle})=>({start,end,windowTitle})),[{start:0,end:2,windowTitle:"项目 A"},{start:2,end:6,windowTitle:"项目 B"}]);
+  assert.deepEqual(capture.media.map(({start,end,state})=>({start,end,state})),[{start:0,end:4,state:"playing"},{start:4,end:6,state:"paused"}]);
+  assert.equal(capture.metrics[0].values?.cpu,0);
+  assert.equal(capture.apps.filter((app)=>app.name==="Editor.exe").length,1);
+  assert.equal(capture.activity[0].processInstanceId,process.instanceId);
+  assert.deepEqual(capture.afk,[{start:1,end:6,reason:"No input for 5 minutes"}]);
+  const stats=analyze(capture,{start:0,end:5});assert.equal(stats.media[0].start,0);assert.equal(stats.media[0].end,4);
+});
 test("real app activity merges contiguous snapshots, preserves window changes and gaps, and thresholds idle", () => {
   const process = { instanceId:"42:1234", processId:42, name:"Editor.exe", executable:"C:\\Editor.exe" };
   const activity = { foreground:{process,windowId:"100",title:"Document"}, background:[process, {...process, instanceId:"43:2345",processId:43}],idleMs:300000 };

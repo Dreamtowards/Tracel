@@ -1,5 +1,7 @@
 //! Local SQLite persistence and bounded system-observation queries.
+mod intervals;
 mod sqlite;
+pub use intervals::{Interval, StateIntervals};
 pub use sqlite::{ArchivePage, SqliteStore, StoredObservation};
 use tracel_core::{MetricSample, TimeRange};
 
@@ -20,6 +22,10 @@ pub const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 3,
         sql: include_str!("../migrations/0003_activity.sql"),
+    },
+    Migration {
+        version: 4,
+        sql: include_str!("../migrations/0004_intervals.sql"),
     },
 ];
 

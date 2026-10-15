@@ -1,5 +1,5 @@
 import type { Capture, MetricKey, MetricSample, MediaInterval } from "@tracel/timeline/model";
-import type { StoredObservation, ObservedProcess } from "./native";
+import type { StoredObservation, ObservedProcess, StateIntervals } from "./native";
 
 export function localDate(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -12,7 +12,7 @@ export function dayRange(value: string) {
 const emptyValues = (): Record<MetricKey, number | null> => ({ cpu: null, ram: null, gpu: null, download: null, upload: null, read: null, write: null, audio: null });
 
 /** Native-to-UI boundary: UTC milliseconds to epoch-relative seconds; no simulated activity. */
-export function recordedCapture(day: string, rows: StoredObservation[], now = Date.now()): Capture {
+export function recordedCapture(day: string, rows: StoredObservation[], now = Date.now(), intervals?: StateIntervals): Capture {
   const { startMs, endMs } = dayRange(day);
   const bounds = { start: 0, end: (endMs - startMs) / 1000 };
   const samples = [...rows].sort((a, b) => a.sample.capturedAtMs - b.sample.capturedAtMs || a.id - b.id);
@@ -83,6 +83,33 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
       if (previous && Math.abs(previous.end - start) < 0.001 && previous.appId === m.application && previous.title === m.title && previous.artist === m.artist && previous.state === state) previous.end = end;
       else media.push({ start, end, appId: m.application, title: m.title, artist: m.artist, state });
     }
+  }
+  if (intervals) {
+    // Numeric samples and compact state intervals have independent query paths.
+    // Keep the snapshot adapter for preview fixtures and the small in-memory history only.
+    activity.length = 0; background.length = 0; media.length = 0; afk.length = 0;
+    const clip = (interval: { startMs: number; endMs: number }) => ({ start: Math.max(0, seconds(interval.startMs)), end: Math.min(bounds.end, seconds(interval.endMs), seconds(now)) });
+    for (const interval of intervals.foreground) {
+      const range = clip(interval); if (range.start >= range.end) continue;
+      const window = interval.value, appId = application(window.process);
+      activity.push({ ...range, id: `interval-${interval.id}`, appId, windowTitle: window.title, windowId: window.windowId, processInstanceId: window.process.instanceId,
+        contexts: window.title ? [{ ...range, kind: "window", title: window.title, value: window.title }] : [] });
+    }
+    // Union overlapping process-instance ranges for the same application, without bridging gaps.
+    const presence = intervals.apps.map((interval) => ({ ...clip(interval), appId: application(interval.value) }))
+      .filter((interval) => interval.start < interval.end).sort((a,b) => a.appId.localeCompare(b.appId) || a.start-b.start);
+    for (const interval of presence) {
+      const previous = background.at(-1);
+      if (previous?.appId === interval.appId && interval.start <= previous.end) previous.end = Math.max(previous.end, interval.end);
+      else background.push(interval);
+    }
+    for (const interval of intervals.media) {
+      const range = clip(interval), item = interval.value;
+      if (range.start >= range.end || !["Playing", "Paused"].includes(item.playbackStatus)) continue;
+      if (!appIds.has(item.application)) { appIds.add(item.application); apps.push({ id: item.application, name: item.application, exe: "", color: "#9b9db2", glyph: "♫" }); }
+      media.push({ ...range, appId: item.application, title: item.title, artist: item.artist, state: item.playbackStatus === "Playing" ? "playing" : "paused" });
+    }
+    for (const interval of intervals.idle) { const range = clip(interval); if (range.start < range.end) afk.push({ ...range, reason: "No input for 5 minutes" }); }
   }
   metrics.sort((a,b) => a.time - b.time);
   const memoryMax = samples.reduce((maximum,{sample}) => Math.max(maximum,(sample.memoryTotalBytes ?? 0) / 1024 ** 3),1);

@@ -6,6 +6,7 @@ use tracel_core::SystemObservation;
 
 pub struct SqliteStore {
     connection: Connection,
+    continuation: bool,
 }
 #[derive(Debug, Serialize)]
 pub struct StoredObservation {
@@ -19,6 +20,7 @@ pub struct ArchivePage {
     pub next_cursor: u64,
     pub first_at_ms: Option<u64>,
     pub last_at_ms: Option<u64>,
+    pub intervals: super::intervals::StateIntervals,
 }
 impl SqliteStore {
     pub fn open(path: &Path) -> Result<Self, String> {
@@ -41,74 +43,49 @@ impl SqliteStore {
         connection
             .pragma_update(None, "synchronous", "FULL")
             .map_err(|e| e.to_string())?;
+        connection
+            .pragma_update(None, "foreign_keys", "ON")
+            .map_err(|e| e.to_string())?;
         let transaction = connection.transaction().map_err(|e| e.to_string())?;
         for migration in MIGRATIONS.iter().filter(|m| m.version > version) {
+            if migration.version == 4 {
+                let count: i64 = transaction
+                    .query_row("SELECT COUNT(*) FROM system_samples", [], |r| r.get(0))
+                    .map_err(|e| e.to_string())?;
+                if count != 0 {
+                    return Err("Reserved system_samples table contains unexpected data; migration cancelled".into());
+                }
+            }
             transaction
                 .execute_batch(migration.sql)
                 .map_err(|e| e.to_string())?;
+            if migration.version == 4 {
+                super::intervals::migrate(&transaction)?;
+            }
             transaction
                 .pragma_update(None, "user_version", migration.version)
                 .map_err(|e| e.to_string())?;
         }
         transaction.commit().map_err(|e| e.to_string())?;
-        Ok(Self { connection })
+        Ok(Self {
+            connection,
+            continuation: false,
+        })
     }
     pub fn append(&mut self, samples: &[SystemObservation]) -> Result<(), String> {
         let transaction = self.connection.transaction().map_err(|e| e.to_string())?;
-        {
-            let mut insert = transaction.prepare_cached("INSERT INTO observations(captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,media_json,errors_json,foreground_id,background_id,idle_ms) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)").map_err(|e| e.to_string())?;
-            for s in samples {
-                let media = s
-                    .media
-                    .as_ref()
-                    .map(serde_json::to_string)
-                    .transpose()
-                    .map_err(|e| e.to_string())?;
-                let foreground = s
-                    .activity
-                    .as_ref()
-                    .and_then(|a| a.foreground.as_ref())
-                    .map(|v| intern(&transaction, v))
-                    .transpose()?;
-                let background = s
-                    .activity
-                    .as_ref()
-                    .and_then(|a| a.background.as_ref())
-                    .map(|v| intern(&transaction, v))
-                    .transpose()?;
-                let idle = s
-                    .activity
-                    .as_ref()
-                    .and_then(|a| a.idle_ms)
-                    .map(integer)
-                    .transpose()?;
-                let errors = serde_json::to_string(&s.errors).map_err(|e| e.to_string())?;
-                insert
-                    .execute(params![
-                        integer(s.captured_at_ms)?,
-                        s.interval_start_ms.map(integer).transpose()?,
-                        s.cpu_percent,
-                        s.memory_used_bytes.map(integer).transpose()?,
-                        s.memory_total_bytes.map(integer).transpose()?,
-                        s.network_receive_bytes_per_second,
-                        s.network_send_bytes_per_second,
-                        s.disk_read_bytes_per_second,
-                        s.disk_write_bytes_per_second,
-                        s.audio_peak_percent,
-                        media,
-                        errors,
-                        foreground,
-                        background,
-                        idle
-                    ])
-                    .map_err(|e| e.to_string())?;
-            }
+        let mut continuation = self.continuation;
+        for sample in samples {
+            super::intervals::write(&transaction, sample, None, continuation)?;
+            continuation = true;
         }
-        transaction.commit().map_err(|e| e.to_string())
+        transaction.commit().map_err(|e| e.to_string())?;
+        self.continuation = continuation;
+        Ok(())
     }
     pub fn count(&self) -> Result<u64, String> {
         self.connection
-            .query_row("SELECT COUNT(*) FROM observations", [], |r| {
+            .query_row("SELECT COUNT(*) FROM system_samples", [], |r| {
                 r.get::<_, i64>(0)
             })
             .map(|v| v as u64)
@@ -135,7 +112,10 @@ impl SqliteStore {
         connection
             .busy_timeout(Duration::from_secs(2))
             .map_err(|e| e.to_string())?;
-        let mut statement = connection.prepare("SELECT * FROM archived_observations WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
+        let connection = connection
+            .unchecked_transaction()
+            .map_err(|e| e.to_string())?;
+        let mut statement = connection.prepare("SELECT id,captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,NULL,errors_json,NULL,NULL,NULL,0 FROM system_samples WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
         let observations: Vec<_> = statement
             .query_map(
                 params![
@@ -152,13 +132,13 @@ impl SqliteStore {
             return Err("Too many observations for this day. A finer query is required.".into());
         }
         let first_at_ms = connection
-            .query_row("SELECT MIN(captured_at_ms) FROM observations", [], |r| {
+            .query_row("SELECT MIN(captured_at_ms) FROM system_samples", [], |r| {
                 r.get::<_, Option<i64>>(0)
             })
             .map_err(|e| e.to_string())?
             .map(|v| v as u64);
         let last_at_ms = connection
-            .query_row("SELECT MAX(captured_at_ms) FROM observations", [], |r| {
+            .query_row("SELECT MAX(captured_at_ms) FROM system_samples", [], |r| {
                 r.get::<_, Option<i64>>(0)
             })
             .map_err(|e| e.to_string())?
@@ -169,10 +149,11 @@ impl SqliteStore {
             next_cursor,
             first_at_ms,
             last_at_ms,
+            intervals: super::intervals::query(&connection, start, end)?,
         })
     }
 }
-fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredObservation> {
+pub(crate) fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredObservation> {
     fn json<T: serde::de::DeserializeOwned>(text: &str, column: usize) -> rusqlite::Result<T> {
         serde_json::from_str(text).map_err(|e| {
             rusqlite::Error::FromSqlConversionFailure(
@@ -203,7 +184,7 @@ fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredObservation> {
                 let foreground: Option<String> = row.get(13)?;
                 let background: Option<String> = row.get(14)?;
                 let idle: Option<i64> = row.get(15)?;
-                if foreground.is_none() && background.is_none() && idle.is_none() {
+                if !row.get::<_, bool>(16)? {
                     None
                 } else {
                     Some(tracel_core::ActivityObservation {
@@ -247,7 +228,7 @@ mod tests {
                 .connection
                 .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
                 .unwrap(),
-            3
+            4
         );
         drop(migrated);
         std::fs::remove_file(path).unwrap();
@@ -306,7 +287,13 @@ mod tests {
         let reopened = SqliteStore::open(&path).unwrap();
         assert_eq!(reopened.recent().unwrap(), vec![sample.clone()]);
         let page = SqliteStore::query(&path, 9000, 11000, 0).unwrap();
-        assert_eq!(page.observations[0].sample, sample);
+        assert!(page.observations[0].sample.media.is_none());
+        assert!(page.observations[0].sample.activity.is_none());
+        assert_eq!(page.intervals.media[0].value, sample.media.clone().unwrap());
+        assert_eq!(
+            page.intervals.foreground[0].value,
+            sample.activity.clone().unwrap().foreground.unwrap()
+        );
         assert!(SqliteStore::query(&path, 9000, 11000, page.next_cursor)
             .unwrap()
             .observations
@@ -325,11 +312,11 @@ mod tests {
         assert_eq!(
             writer
                 .connection
-                .query_row("SELECT COUNT(*) FROM activity_values", [], |r| r
+                .query_row("SELECT COUNT(*) FROM process_instances", [], |r| r
                     .get::<_, i64>(0))
                 .unwrap(),
-            2,
-            "repeated activity payloads must be deduplicated"
+            1,
+            "process metadata must be deduplicated"
         );
         assert!(SqliteStore::query(&path, 0, 26 * 3600 * 1000, 0).is_err());
         drop(writer);
@@ -347,7 +334,7 @@ mod tests {
         );
         assert_eq!(
             future
-                .query_row("SELECT COUNT(*) FROM observations", [], |r| r
+                .query_row("SELECT COUNT(*) FROM system_samples", [], |r| r
                     .get::<_, i64>(0))
                 .unwrap(),
             2
@@ -357,9 +344,6 @@ mod tests {
     }
 }
 
-fn integer(value: u64) -> Result<i64, String> {
-    i64::try_from(value).map_err(|_| "Value exceeds SQLite signed integer range".into())
-}
 fn unsigned(row: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<u64> {
     let value: i64 = row.get(index)?;
     u64::try_from(value).map_err(|e| {
@@ -371,19 +355,6 @@ fn unsigned(row: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<u64> {
     })
 }
 
-fn intern<T: serde::Serialize>(connection: &Connection, value: &T) -> Result<i64, String> {
-    let payload = serde_json::to_string(value).map_err(|e| e.to_string())?;
-    connection
-        .execute(
-            "INSERT INTO activity_values(payload) VALUES (?1) ON CONFLICT(payload) DO NOTHING",
-            [&payload],
-        )
-        .map_err(|e| e.to_string())?;
-    connection
-        .query_row(
-            "SELECT id FROM activity_values WHERE payload=?1",
-            [&payload],
-            |r| r.get(0),
-        )
-        .map_err(|e| e.to_string())
-}
+#[cfg(test)]
+#[path = "interval_tests.rs"]
+mod interval_tests;

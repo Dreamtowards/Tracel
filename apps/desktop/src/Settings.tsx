@@ -65,7 +65,7 @@ export default function Settings({ status, busy, error, onSettings, zoom, onZoom
     <SettingsGroup title={t("Application activity")}>
       {([
         ['foreground','Foreground apps and window titles','Window titles only · no URLs or file contents'],
-        ['background','App presence','Apps with desktop windows, including minimized windows'],
+        ['background','Apps','Apps with desktop windows, including minimized windows'],
         ['idle','Idle / AFK detection','Idle after 5 minutes without keyboard or mouse input'],
       ] as const).map(([key,label,description]) => <Toggle key={key} label={label} description={description} checked={settings[key] ?? false} disabled={unavailable} pending={busy} onChange={(value) => { void onSettings({...settings,[key]:value}); }} />)}
       <p className="settings-footnote">{t("Uses the collection master switch. New activity is saved locally; earlier activity cannot be recovered.")}</p>

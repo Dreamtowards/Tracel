@@ -1,6 +1,6 @@
 # Data model
 
-The UI labels `Capture.background` as App presence. It represents observed desktop application presence regardless of foreground focus; foreground intervals never subtract from these lifetimes. Expanded rows use compact 16px defaults and thin continuous bars. Hover resolves only the application's containing presence interval, including duration and start/end times, and stays empty across unobserved gaps. Existing archive/JSON field names remain unchanged. Presence still does not imply exact process start/exit or background CPU work.
+The UI labels `Capture.background` as Apps (应用). It represents observed desktop application presence regardless of foreground focus; foreground intervals never subtract from these lifetimes. Expanded rows use compact 16px defaults and thin continuous bars. Hover resolves only the application's containing presence interval, including duration and start/end times, and stays empty across unobserved gaps. Existing archive/JSON field names remain unchanged. Presence still does not imply exact process start/exit or background CPU work.
 
 ## Current UI/demo
 
@@ -12,7 +12,7 @@ Ranges are half-open [start,end); analytics clip to selection. AFK can overlap f
 
 tracel-core uses UTC Unix milliseconds, System/Process/Application/Device subjects, typed metrics, source and quality. The generic interval model supports memory bytes and byte totals. The current collector DTO instead stores network/disk rates in bytes per second. The Desktop adapter converts (native_timestamp_ms - epoch_ms) / 1000 and binary units (GiB and MiB/s), retaining intervals, gaps and per-metric coverage. These are compatible semantics, not a serialized copy of UI Capture.
 
-tracel-query currently aggregates gauges from non-overlapping observations per subject/metric. It clips weights and excludes missing/non-finite values; zero remains valid. Byte totals and LOD are deferred. Migration 1 reserves a generic system_samples interval table; the current collector uses the typed observations table in migration 2. SQLite user_version applies migrations transactionally. Newer unknown schema versions are rejected without overwriting their data.
+tracel-query currently aggregates gauges from non-overlapping observations per subject/metric. It clips weights and excludes missing/non-finite values; zero remains valid. Byte totals and LOD are deferred. Migration 4 replaces the unused migration-1 reservation with typed system_samples and normalized state interval tables. SQLite user_version applies migrations transactionally. Newer unknown schema versions are rejected without overwriting their data.
 
 ## Desktop measured observations
 
@@ -20,14 +20,38 @@ Desktop 0.2 serializes `SystemObservation` from `tracel-core` (re-exported by `t
 
 System metrics renders and exports the latest 1,800 observations. Native Timeline queries persisted days and constructs an epoch-relative Capture with explicit end times, nullable values per metric, and real date labels; Web/browser preview retain the demo Capture. Charts break across missing readings and gaps over six seconds; they do not interpolate interrupted collection. No GPU or simulated foreground intervals are inserted into real measurements. CPU/network/disk apply to [intervalStartMs,capturedAtMs). RAM/audio/media are sample-and-hold estimates, ending at the next continuous sample or at most two seconds after the last isolated sample. Missing periods are never bridged. Media intervals merge only adjacent identical title/artist/application/status snapshots, so displayed playback duration is an estimate, not a player-reported listening log. Weighted analytics and throughput integrals use each metric's covered time; zero and missing remain distinct.
 
-## Future entities
+## Identity and future work
 
 Application, process instance and window instance IDs must be distinct and durable; PID/HWND are reusable. Foreground, context, AFK, lifetime and playback remain separate intervals. Discrete switches, sleep/wake, interruptions and rollups should retain source/quality, min/max, time-weighted means, coverage and byte totals. Per-process metrics are deferred and may use separate tables. System is not an application. Process I/O is not physical disk throughput; CPU utilization is not power draw.
 
-Native observations additionally carry nullable `networkReceiveBytesPerSecond` / `networkSendBytesPerSecond` and `diskReadBytesPerSecond` / `diskWriteBytesPerSecond` (bytes per second), nullable `audioPeakPercent` (0–100 sampled output peak amplitude), and nullable `media` (`title`, `artist`, `application`, `playbackStatus`). Network rates use actual monotonic spacing and physical-interface byte deltas; PDH provides physical-disk rates. These are rates, not accumulated byte totals. Warm-up/disabled/failed measurements remain null; a genuine zero remains zero. Audio is a momentary endpoint-meter reading, not a period average. SMTC metadata is a snapshot, not a durable playback interval; absence and failures are distinguished using errors. JSON exports retain units, raw metadata and missing values.
+Native observations additionally carry nullable `networkReceiveBytesPerSecond` / `networkSendBytesPerSecond` and `diskReadBytesPerSecond` / `diskWriteBytesPerSecond` (bytes per second), nullable `audioPeakPercent` (0–100 sampled output peak amplitude), and nullable `media` (`title`, `artist`, `application`, `playbackStatus`). Network rates use actual monotonic spacing and physical-interface byte deltas; PDH provides physical-disk rates. These are rates, not accumulated byte totals. Warm-up/disabled/failed measurements remain null; a genuine zero remains zero. Audio is a momentary endpoint-meter reading, not a period average. SMTC metadata is an observed snapshot converted into estimated intervals; absence and failures are distinguished using errors. JSON exports retain units, raw metadata and missing values.
 
-## SQLite archive
+## SQLite archive, schema 4
 
-`activity.sqlite3` lives in Tauri app_local_data_dir, separate from collection preferences. Each accepted observation is committed in one transaction. Typed nullable columns store system values, timestamps and interval starts; media/errors use JSON. The captured timestamp has an index. WAL allows range readers while the collector owns its writer. Range IPC reads one local day plus six-second boundary context and uses row-ID cursors for incremental updates; timestamps remain UTC milliseconds. No automatic pruning is enabled. Failed writes are reported and those observations remain only in the bounded memory ring; they are not retrospectively retried. SQLite is the source for Timeline, including after a restart. The CLI one-shot sampler does not write this archive.
+`activity.sqlite3` remains in Tauri app_local_data_dir. WAL, FULL synchronization and foreign keys are enabled. One append batch atomically commits metrics, normalized metadata and interval changes. No server or new dependency is introduced. Timeline queries run on separate read-only connections in a single consistent read transaction.
 
-Migration 3 preserves existing observations and adds optional foreground/background references and idle milliseconds. An activity_values table interns repeated serialized window and application-set snapshots rather than repeating all paths/titles every two seconds. The archived_observations view resolves these references for bounded queries. Old rows retain null activity. Foreground intervals merge only adjacent matching application, process instance, window handle and title; context records contain the actual window title (kind window), never guessed URLs/files. Desktop application presence merges by executable; AFK marks only observed support intervals after five minutes without input. Native range exports include applications, clipped activity/context, presence and AFK alongside metrics/media. Stable HWND lifetime tracking, exact switches and per-process metrics remain deferred.
+| Table | Purpose |
+| --- | --- |
+| system_samples | UTC observation/interval timestamps, nullable numeric metrics, errors, idle milliseconds and observed-source flags |
+| applications | Executable identity/path; pathless observations use process identity |
+| process_instances | Application reference, collector process-creation identity, PID and name |
+| windows | Process instance and observed HWND |
+| strings | Unique title, artist and media-source text |
+| media_items | Title/artist/source references, shared across playback visits |
+| app_presence_intervals | Each observed process instance's desktop-app presence |
+| foreground_intervals | Focused window intervals, independent of title changes |
+| window_title_intervals | Observed foreground title changes; unchanged text is reused |
+| media_intervals | Media-item reference and playback status over time |
+| idle_intervals | Observed AFK support after five minutes without input |
+
+All state ranges use half-open UTC milliseconds `[start_ms,end_ms)`, an estimated quality marker and first/last sample IDs. An unchanged state extends its existing end rather than repeating its metadata per sample. A change creates an interval; recurring titles and media reuse entity IDs. Continuous support requires the collector's interval start to match the preceding sample, positive spacing of at most six seconds and the same writer session. Gaps, missing states and writer restarts break continuity. An isolated or final observation supports at most two seconds. Boundaries remain sampling estimates, not exact process-launch, focus or playback events.
+
+Process instances are collected identities, not separate UI tracks. Apps combines overlapping/adjacent instances of the same executable for display, including time spent in the foreground. It measures observed desktop windows, not all running processes. PID reuse is distinguished by creation identity. HWND reuse within a process is not yet tracked as a distinct window lifetime. Only existing foreground titles are collected; this schema does not add background-window title collection.
+
+Numeric CPU/RAM/network/disk/audio samples retain their measured cadence, including zero; missing values remain null. No delta threshold or lossy compression is applied. Errors still use JSON, but media/window/application snapshots no longer repeat in numeric rows. Rollups, retention, exact lifecycle events and per-process metrics remain deferred.
+
+Queries return incremental numeric rows using row-ID cursors and a complete bounded interval set for the requested local day on every poll. Returning the interval set independently of the numeric cursor ensures that extending an existing tail is visible. Timestamp/overlap and interval-tail indexes support reads and writes. Queries reject more than 50,000 numeric observations or 50,000 state intervals instead of silently truncating. The Desktop adapter clips ranges to the day and selection. Cross-day LOD is deferred; no universal performance improvement is claimed.
+
+Migration 4 streams legacy observations in ID order inside one transaction, preserving numeric values, Unicode metadata and row IDs while constructing intervals. Legacy observations/activity_values tables are removed only if conversion succeeds; failure rolls back the migration. Existing history is not discarded. Large archives can take longer on first startup. The database file may retain reusable free pages after migration; no automatic VACUUM or deletion is performed. Older application versions cannot read schema 4.
+
+`archived_observations` is a reconstruction view, used only to restore the latest 1,800 full observations into the metrics memory ring at startup. It is not another copy of the stored data, and Timeline does not read reconstructed per-sample JSON. Failed writes are reported and remain only in the bounded memory ring; there is no retrospective retry. The CLI one-shot sampler does not persist this archive. Browser/Web previews continue to use demo data.
