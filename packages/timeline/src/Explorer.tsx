@@ -4,6 +4,10 @@ import { useI18n, useCaptureTime } from "./i18n";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
+  Cpu,
+  MemoryStick,
+  HardDrive,
+  Download,
   ArrowDown,
   ArrowUp,
   AudioLines,
@@ -13,7 +17,6 @@ import {
   ChevronRight,
   Code2,
   Command,
-  Download,
   Figma,
   Focus,
   Globe,
@@ -936,7 +939,7 @@ export default function Explorer({
                   background: metricInfo.cpu.color + "18",
                 }}
               >
-                <Activity size={17} />
+                <Cpu size={17} />
               </span>
               <label>
                 {t("CPU AVERAGE")}<strong>
@@ -956,7 +959,7 @@ export default function Explorer({
                   background: metricInfo.ram.color + "18",
                 }}
               >
-                <Monitor size={17} />
+                <MemoryStick size={17} />
               </span>
               <label>
                 {t("MEMORY AVERAGE")}<strong>
@@ -974,7 +977,7 @@ export default function Explorer({
                   background: metricInfo.download.color + "18",
                 }}
               >
-                <ArrowDown size={18} />
+                <Download size={18} />
               </span>
               <label>
                 {t("DOWNLOADED")}<strong>
@@ -990,7 +993,7 @@ export default function Explorer({
                   background: metricInfo.write.color + "18",
                 }}
               >
-                <Box size={17} />
+                <HardDrive size={17} />
               </span>
               <label>
                 {t("DISK WRITTEN")}<strong>

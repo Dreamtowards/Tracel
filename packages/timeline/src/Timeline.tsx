@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
 import type { TimelineAppearance } from "./DisplaySettings";
 import { CurrentTimeLine } from "./CurrentTimeLine";
+import { foregroundAppIntervals } from "./foreground";
 import {
   Capture,
   Range,
@@ -93,6 +94,7 @@ export function Timeline({
   } | null>(null);
   const presenceApps = useMemo(() => data.apps.filter((app) =>
     data.background.some((interval) => interval.appId === app.id)), [data]);
+  const foregroundApps = useMemo(() => foregroundAppIntervals(data.activity, data.apps), [data.activity, data.apps]);
   const tracks = useMemo(() => {
     const all: Track[] = [
       {
@@ -364,6 +366,7 @@ export function Timeline({
         }
         if (row.kind === "app" || row.kind === "context") {
           const intervals = data.activity.filter((a) => overlap(a, view) > 0);
+          const appIntervals = foregroundApps.filter((a) => overlap(a, view) > 0);
           // At week scale, pixel buckets merge tiny switches into a dominant app.
           if (span > DAY * 2 && row.kind === "app") {
             for (let px = 0; px < width; px += 4) {
@@ -371,8 +374,8 @@ export function Timeline({
                 start: view.start + (px / width) * span,
                 end: view.start + ((px + 4) / width) * span,
               };
-              const event = intervals.reduce<
-                (typeof intervals)[number] | undefined
+              const event = appIntervals.reduce<
+                (typeof appIntervals)[number] | undefined
               >(
                 (best, a) =>
                   overlap(a, bucket) > (best ? overlap(best, bucket) : 0)
@@ -387,31 +390,35 @@ export function Timeline({
                 ctx.fillRect(px, y + pad, 4, height - pad * 2);
               }
             }
-          } else
+          } else if (row.kind === "app") {
+            for (const event of appIntervals) {
+              const app = data.apps.find((a) => a.id === event.appId)!;
+              ctx.globalAlpha = focus && focus !== app.id ? 0.22 : 1;
+              const label =
+                appearance.durationLabels &&
+                x(event.end) - x(event.start) > 130
+                  ? `${app.name} · ${duration(event.end - event.start)}`
+                  : app.name;
+              rect(event, y + pad, height - pad * 2, app.color + "99", label);
+              ctx.fillStyle = app.color;
+              ctx.fillRect(
+                Math.max(0, x(event.start)),
+                y + pad,
+                Math.max(
+                  1,
+                  Math.min(width, x(event.end)) -
+                    Math.max(0, x(event.start)) -
+                    1,
+                ),
+                2,
+              );
+              ctx.globalAlpha = 1;
+            }
+          } else {
             for (const event of intervals) {
               const app = data.apps.find((a) => a.id === event.appId)!;
               ctx.globalAlpha = focus && focus !== app.id ? 0.22 : 1;
-              if (row.kind === "app") {
-                const label =
-                  appearance.durationLabels &&
-                  x(event.end) - x(event.start) > 130
-                    ? `${app.name} · ${duration(event.end - event.start)}`
-                    : app.name;
-                rect(event, y + pad, height - pad * 2, app.color + "99", label);
-                ctx.fillStyle = app.color;
-                ctx.fillRect(
-                  Math.max(0, x(event.start)),
-                  y + pad,
-                  Math.max(
-                    1,
-                    Math.min(width, x(event.end)) -
-                      Math.max(0, x(event.start)) -
-                      1,
-                  ),
-                  2,
-                );
-              } else
-                for (const context of event.contexts)
+              for (const context of event.contexts)
                   rect(
                     context,
                     y + pad,
@@ -424,6 +431,7 @@ export function Timeline({
                   );
               ctx.globalAlpha = 1;
             }
+          }
         }
         if (row.kind === "background") {
           const barHeight = Math.max(1, Math.min(5, height - pad * 2));
@@ -570,7 +578,7 @@ export function Timeline({
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", draw);
     };
-  }, [data, view, selection, tracks, width, totalHeight, focus, appearance, palette, duration, dateLabel, presenceApps]);
+  }, [data, view, selection, tracks, width, totalHeight, focus, appearance, palette, duration, dateLabel, presenceApps, foregroundApps]);
 
   useEffect(() => {
     const element = canvas.current!;
@@ -637,7 +645,8 @@ export function Timeline({
         const context = event.contexts.find(
           (c) => c.start <= time && c.end > time,
         );
-        const interval = row.kind === "context" && context ? context : event;
+        const interval = row.kind === "context" ? context ?? event
+          : foregroundApps.find((a) => a.start <= time && a.end > time) ?? event;
         title = app.name;
         executable = app.exe;
         timing = intervalTiming(interval);
