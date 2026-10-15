@@ -1,4 +1,4 @@
-import { Capture, MetricKey, Range, overlap, sampleEnd } from "./model";
+import { Capture, MetricKey, Range, overlap, sampleEnd, metricInfo } from "./model";
 
 /** Half-open support intervals; missing values are excluded independently per metric. */
 export function analyze(data: Capture, range: Range) {
@@ -27,18 +27,7 @@ export function analyze(data: Capture, range: Range) {
     })
     .sort((a, b) => b.active - a.active);
   const metrics = Object.fromEntries(
-    (
-      [
-        "cpu",
-        "ram",
-        "gpu",
-        "download",
-        "upload",
-        "read",
-        "write",
-        "audio",
-      ] as MetricKey[]
-    ).map((key) => {
+    ([...new Set([...Object.keys(metricInfo), ...Object.keys(data.metricOverrides ?? {})])] as MetricKey[]).map((key) => {
       let integral = 0,
         peak = 0,
         coverage = 0;

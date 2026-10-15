@@ -16,7 +16,7 @@ export default function Settings({ status, busy, error, onSettings, zoom, onZoom
   zoom: number; onZoom: (zoom: number) => void; accent: string; onAccent: (accent: string) => void;
 }) {
   const { t, locale } = useI18n();
-  const settings = status?.settings ?? { enabled: false, cpu: true, ram: true, network: false, disk: false, audio: false, media: false };
+  const settings: CollectionSettings = status?.settings ?? { enabled: false, cpu: true, ram: true, network: false, disk: false, audio: false, media: false };
   const unavailable = !nativeClient || !status?.supported;
   const [debug, setDebug] = useState<ForegroundInfo | null>(null);
   const [debugging, setDebugging] = useState(false);
@@ -59,7 +59,7 @@ export default function Settings({ status, busy, error, onSettings, zoom, onZoom
       <Toggle label="CPU usage" description="" checked={settings.cpu} disabled={unavailable} pending={busy} onChange={(cpu) => { void onSettings({ ...settings, cpu }); }} />
       <Toggle label="RAM usage" description="" checked={settings.ram} disabled={unavailable} pending={busy} onChange={(ram) => { void onSettings({ ...settings, ram }); }} />
       {([['network', 'Network traffic', 'Physical adapters · receive and send'], ['disk', 'Disk activity', 'Physical disks · read and write'], ['audio', 'Audio output level', 'Output peak only · no audio recording'], ['media', 'Now playing', 'Title and artist from supported media apps']] as const).map(([key, label, description]) => <Toggle key={key} label={label} description={description} checked={settings[key] ?? false} disabled={unavailable} pending={busy} onChange={(value) => { void onSettings({ ...settings, [key]: value }); }} />)}
-      <Toggle label="GPU usage" description="Coming later" checked={false} disabled onChange={() => {}} />
+      {([['gpu', 'GPU usage and memory', 'Per GPU · engines, dedicated and shared memory'], ['battery', 'Battery and power', 'Battery percentage · plugged in and charging'], ['cpuFrequency', 'CPU frequency', 'Windows-reported frequency · separate GHz track']] as const).map(([key,label,description]) => <Toggle key={key} label={label} description={description} checked={settings[key] ?? false} disabled={unavailable} pending={busy} onChange={(value) => { void onSettings({ ...settings, [key]: value }); }} />)}
       <p className="settings-footnote">{t("Measurements are saved locally in SQLite and shown on the Timeline.")}</p>
     </SettingsGroup>
     <SettingsGroup title={t("Application activity")}>

@@ -27,13 +27,13 @@ export type ActivityInterval = Range & {
 export type AfkInterval = Range & { reason: string };
 export type BackgroundLifetime = Range & { appId: string };
 export type MetricKey =
-  "cpu" | "ram" | "gpu" | "download" | "upload" | "read" | "write" | "audio";
+  "cpu" | "ram" | "gpu" | "download" | "upload" | "read" | "write" | "audio" | "cpuFrequency" | "battery" | "pluggedIn" | "charging" | `gpu:${string}`;
 export type MetricSample = {
   time: number;
   /** Explicit support interval for irregular native samples; legacy demo uses samplePeriod. */
   end?: number;
   subject: Subject;
-  values: Record<MetricKey, number | null> | null;
+  values: Partial<Record<MetricKey, number | null>> | null;
 };
 export type MediaInterval = Range & {
   appId: string;
@@ -50,7 +50,9 @@ export type Capture = {
   source?: string;
   initialView?: Range;
   maxSampleSpan?: number;
-  metricOverrides?: Partial<Record<MetricKey, { max?: number; unit?: string }>>;
+  metricOverrides?: Partial<Record<MetricKey, Partial<MetricInfo>>>;
+  /** Host-provided hardware tracks; absent in the Web demo. */
+  metricTracks?: { id: string; name: string; keys: MetricKey[]; details?: MetricKey[]; subtitle?: string; after?: string }[];
   epoch: string;
   bounds: Range;
   apps: Application[];
@@ -134,12 +136,14 @@ export function dateLabel(time: number) {
 export function bytes(mb: number) {
   return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(1)} MB`;
 }
-export const metricInfo: Record<
-  MetricKey,
-  { name: string; color: string; max: number; unit: string }
-> = {
+export type MetricInfo = { name: string; color: string; max: number; unit: string; boolean?: boolean };
+export const metricInfo: Record<Exclude<MetricKey, `gpu:${string}`>, MetricInfo> = {
   cpu: { name: "CPU", color: "#54bdd6", max: 100, unit: "%" },
   ram: { name: "Memory", color: "#5485df", max: 32, unit: "GB" },
+  cpuFrequency: { name: "CPU frequency", color: "#9dacce", max: 6, unit: "GHz" },
+  battery: { name: "Battery", color: "#83bc68", max: 100, unit: "%" },
+  pluggedIn: { name: "Plugged in", color: "#d4ab72", max: 1, unit: "", boolean: true },
+  charging: { name: "Charging", color: "#83bc68", max: 1, unit: "", boolean: true },
   gpu: { name: "GPU", color: "#d4ab72", max: 100, unit: "%" },
   download: { name: "Receive", color: "#d783c3", max: 32, unit: "MB/s" },
   upload: { name: "Send", color: "#d783c3", max: 32, unit: "MB/s" },
@@ -148,5 +152,5 @@ export const metricInfo: Record<
   audio: { name: "Audio", color: "#ae9bdd", max: 100, unit: "%" },
 };
 export function getMetricInfo(data: Capture | null | undefined, key: MetricKey) {
-  return { ...metricInfo[key], ...data?.metricOverrides?.[key] };
+  return { ...(metricInfo[key as keyof typeof metricInfo] ?? { name: key, color: "#d4ab72", max: 100, unit: "%" }), ...data?.metricOverrides?.[key] };
 }

@@ -286,3 +286,9 @@ a { color: inherit; text-decoration: none; }
 .environment-entry code { display: block; margin-top: 5px; overflow-wrap: anywhere; font-family: inherit; font-size: 12px; color: #92929d; user-select: text; }
 .system-shortcuts { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 12px 0; }
 .system-shortcuts button { gap: 7px; }
+
+.metrics-engine-list { display: grid; gap: 6px; font-size: 12px; }
+.metrics-engine-list > div { display: flex; justify-content: space-between; gap: 12px; }
+.metrics-engine-list dt { display: flex; align-items: center; gap: 6px; }
+.metrics-engine-list dt i { width: 8px; height: 8px; border-radius: 50%; }
+.metrics-engine-list dd { margin: 0; font-variant-numeric: tabular-nums; }

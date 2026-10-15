@@ -115,7 +115,7 @@ impl SqliteStore {
         let connection = connection
             .unchecked_transaction()
             .map_err(|e| e.to_string())?;
-        let mut statement = connection.prepare("SELECT id,captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,NULL,errors_json,NULL,NULL,NULL,0 FROM system_samples WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
+        let mut statement = connection.prepare("SELECT id,captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,NULL,errors_json,NULL,NULL,NULL,0,cpu_frequency_mhz,gpus_json,battery_json FROM system_samples WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
         let observations: Vec<_> = statement
             .query_map(
                 params![
@@ -171,6 +171,25 @@ pub(crate) fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredObservat
             captured_at_ms: unsigned(row, 1)?,
             interval_start_ms: row.get::<_, Option<i64>>(2)?.map(|v| v as u64),
             cpu_percent: row.get(3)?,
+            cpu_frequency_mhz: if row.as_ref().column_count() > 17 {
+                row.get(17)?
+            } else {
+                None
+            },
+            gpus: if row.as_ref().column_count() > 18 {
+                row.get::<_, Option<String>>(18)?
+                    .map(|s| json(&s, 18))
+                    .transpose()?
+            } else {
+                None
+            },
+            battery: if row.as_ref().column_count() > 19 {
+                row.get::<_, Option<String>>(19)?
+                    .map(|s| json(&s, 19))
+                    .transpose()?
+            } else {
+                None
+            },
             memory_used_bytes: row.get::<_, Option<i64>>(4)?.map(|v| v as u64),
             memory_total_bytes: row.get::<_, Option<i64>>(5)?.map(|v| v as u64),
             network_receive_bytes_per_second: row.get(6)?,
@@ -202,6 +221,69 @@ pub(crate) fn decode(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredObservat
 mod tests {
     use super::*;
     #[test]
+    fn schema_four_hardware_migration_preserves_history_and_round_trips_new_fields() {
+        let path = std::env::temp_dir().join(format!(
+            "tracel-hardware-{}-{}.sqlite3",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let old = Connection::open(&path).unwrap();
+        for migration in MIGRATIONS.iter().take(4) {
+            old.execute_batch(migration.sql).unwrap();
+        }
+        old.pragma_update(None, "user_version", 4).unwrap();
+        old.execute("INSERT INTO system_samples(captured_at_ms,cpu_percent,errors_json,activity_present,background_observed) VALUES(10000,12,'[]',0,0)",[]).unwrap();
+        drop(old);
+        let mut store = SqliteStore::open(&path).unwrap();
+        let prior = store.recent().unwrap();
+        assert_eq!(prior[0].cpu_percent, Some(12.0));
+        assert!(
+            prior[0].gpus.is_none()
+                && prior[0].battery.is_none()
+                && prior[0].cpu_frequency_mhz.is_none()
+        );
+        let sample = SystemObservation {
+            captured_at_ms: 12000,
+            interval_start_ms: Some(10000),
+            cpu_frequency_mhz: Some(3200.0),
+            battery: Some(tracel_core::BatteryObservation {
+                present: Some(true),
+                percent: Some(0),
+                plugged_in: Some(true),
+                charging: Some(false),
+            }),
+            gpus: Some(vec![tracel_core::GpuObservation {
+                id: "adapter-1".into(),
+                name: "显卡".into(),
+                utilization_percent: Some(0.0),
+                dedicated_used_bytes: Some(0),
+                shared_used_bytes: None,
+                engines: vec![tracel_core::GpuEngineObservation {
+                    id: "0".into(),
+                    name: "3D".into(),
+                    utilization_percent: 0.0,
+                }],
+            }]),
+            ..Default::default()
+        };
+        store.append(&[sample.clone()]).unwrap();
+        drop(store);
+        let reopened = SqliteStore::open(&path).unwrap();
+        assert_eq!(reopened.recent().unwrap()[1], sample);
+        assert_eq!(
+            SqliteStore::query(&path, 11000, 13000, 1)
+                .unwrap()
+                .observations[0]
+                .sample,
+            sample
+        );
+        drop(reopened);
+        std::fs::remove_file(path).unwrap();
+    }
+    #[test]
     fn version_two_history_is_preserved_when_activity_columns_are_added() {
         let path = std::env::temp_dir().join(format!(
             "tracel-v2-{}-{}.sqlite3",
@@ -228,7 +310,7 @@ mod tests {
                 .connection
                 .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
                 .unwrap(),
-            4
+            5
         );
         drop(migrated);
         std::fs::remove_file(path).unwrap();

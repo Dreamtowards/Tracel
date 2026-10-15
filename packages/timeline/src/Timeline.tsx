@@ -15,7 +15,6 @@ import {
   clock,
   dateLabel,
   duration as compactDuration,
-  metricInfo,
   overlap,
   DAY,
   sampleEnd,
@@ -31,6 +30,7 @@ type Track = {
   baseHeight?: number;
   kind: "group" | "app" | "context" | "background" | "afk" | "metric" | "media";
   keys?: MetricKey[];
+  details?: MetricKey[];
   appId?: string;
   group?: string;
 };
@@ -217,6 +217,17 @@ export function Timeline({
           kind: "media",
         },
       );
+    if (!closed.includes("performance")) {
+      for (const track of data.metricTracks ?? []) {
+        const row: Track = { ...track, kind: "metric", height: 56 };
+        const index = track.after ? all.findIndex((r) => r.id === track.after) + 1 : all.findIndex((r) => r.id === "sound");
+        all.splice(index > 0 ? index : all.length, 0, row);
+        if (track.details?.length && expanded.includes(track.id)) {
+          const parent = all.indexOf(row);
+          all.splice(parent + 1, 0, ...track.details.map((key): Track => ({ id: `${track.id}:${key}`, name: getMetricInfo(data,key).name, keys: [key], kind: "metric", height: 44, subtitle: "0 – 100%" })));
+        }
+      }
+    }
     const visible = data.kind === "recorded" ? all.filter((track) => track.id !== "gpu") : all;
     let y = 32;
     return visible.map((track) => {
@@ -493,7 +504,7 @@ export function Timeline({
             ctx.globalAlpha = 0.35;
             ctx.stroke();
             ctx.globalAlpha = 1;
-            ctx.setLineDash(key === "write" || key === "upload" ? [5, 4] : []);
+            ctx.setLineDash(key === "write" || key === "upload" || key.endsWith(":shared") || key === "charging" ? [5, 4] : []);
             // The fill and outline share one path. The faint min/max whiskers
             // above retain sub-pixel spikes without changing the filled curve.
             const outline = new Path2D(), area = new Path2D();
@@ -529,7 +540,7 @@ export function Timeline({
           ctx.font = '9px "Segoe UI", "Microsoft YaHei UI", sans-serif';
           ctx.textAlign = "right";
           ctx.fillStyle = palette.muted ?? "#839198";
-          ctx.fillText(`${Number(scale.max.toFixed(2))} ${scale.unit}`, width - 7, y + 13);
+          ctx.fillText(scale.boolean ? t("Yes / No") : `${Number(scale.max.toFixed(2))} ${scale.unit}`, width - 7, y + 13);
           ctx.textAlign = "left";
         }
       }
@@ -637,7 +648,7 @@ export function Timeline({
           row.keys
             .map(
               (key) =>
-                `${t(metricInfo[key].name)}: ${metricAt(data,time,key) != null ? metricAt(data,time,key)!.toFixed(1) + " " + getMetricInfo(data,key).unit : t("No sample · asleep / capture gap")}`,
+                `${t(getMetricInfo(data,key).name)}: ${metricAt(data,time,key) != null ? (getMetricInfo(data,key).boolean ? t(metricAt(data,time,key) ? "Yes" : "No") : metricAt(data,time,key)!.toFixed(2) + " " + getMetricInfo(data,key).unit) : t("No sample · asleep / capture gap")}`,
             )
             .join("\n");
       else if (row.kind === "media") {
@@ -709,7 +720,7 @@ export function Timeline({
               onClick={() =>
                 row.kind === "group" ||
                 row.id === "foreground" ||
-                row.id === "background"
+                row.id === "background" || !!row.details?.length
                   ? toggle(row.id, row.kind === "group")
                   : setHeights((h) => {
                       const next = { ...h };
@@ -730,7 +741,7 @@ export function Timeline({
                 ) : (
                   <ChevronDown size={12} />
                 )
-              ) : row.id === "foreground" || row.id === "background" ? (
+              ) : row.id === "foreground" || row.id === "background" || !!row.details?.length ? (
                 expanded.includes(row.id) ? (
                   <ChevronDown size={12} />
                 ) : (
@@ -740,7 +751,7 @@ export function Timeline({
                 <i
                   style={{
                     background: row.keys
-                      ? metricInfo[row.keys[0]].color
+                      ? getMetricInfo(data,row.keys[0]).color
                       : (data.apps.find((app) => app.id === row.appId)?.color ??
                         "#78868c"),
                   }}

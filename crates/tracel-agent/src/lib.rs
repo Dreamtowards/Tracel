@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(windows)]
 mod extended;
 #[cfg(windows)]
+mod hardware;
+#[cfg(windows)]
 mod windows;
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -11,6 +13,9 @@ mod windows;
 pub struct CollectionSettings {
     pub enabled: bool,
     pub cpu: bool,
+    pub cpu_frequency: bool,
+    pub gpu: bool,
+    pub battery: bool,
     pub ram: bool,
     pub network: bool,
     pub disk: bool,
@@ -33,6 +38,9 @@ impl CollectionSettings {
     pub fn collecting(&self) -> bool {
         self.enabled
             && (self.cpu
+                || self.cpu_frequency
+                || self.gpu
+                || self.battery
                 || self.ram
                 || self.network
                 || self.disk
@@ -84,6 +92,15 @@ pub fn media_sessions() -> Result<MediaSessions, String> {
 }
 
 pub trait SystemReader {
+    fn cpu_frequency(&mut self) -> Result<f64, String> {
+        Err("Unavailable".into())
+    }
+    fn gpu(&mut self) -> Result<Option<Vec<tracel_core::GpuObservation>>, String> {
+        Err("Unavailable".into())
+    }
+    fn battery(&mut self) -> Result<tracel_core::BatteryObservation, String> {
+        Err("Unavailable".into())
+    }
     fn activity(
         &mut self,
         _settings: &CollectionSettings,
@@ -137,6 +154,9 @@ impl Sampler {
                     .is_some_and(|delta| delta > 0 && delta <= 6000)
             }),
             cpu_percent: None,
+            cpu_frequency_mhz: None,
+            gpus: None,
+            battery: None,
             memory_used_bytes: None,
             memory_total_bytes: None,
             network_receive_bytes_per_second: None,
@@ -150,6 +170,28 @@ impl Sampler {
         };
         self.previous_observation_ms = settings.collecting().then_some(captured_at_ms);
         reader.configure(settings);
+        if sample.interval_start_ms.is_none() {
+            self.previous_cpu = None;
+            reader.reset();
+        }
+        if settings.enabled && settings.cpu_frequency {
+            match reader.cpu_frequency() {
+                Ok(value) => sample.cpu_frequency_mhz = Some(value),
+                Err(e) => sample.errors.push(format!("CPU frequency: {e}")),
+            }
+        }
+        if settings.enabled && settings.gpu {
+            match reader.gpu() {
+                Ok(value) => sample.gpus = value,
+                Err(e) => sample.errors.push(format!("GPU: {e}")),
+            }
+        }
+        if settings.enabled && settings.battery {
+            match reader.battery() {
+                Ok(value) => sample.battery = Some(value),
+                Err(e) => sample.errors.push(format!("Battery: {e}")),
+            }
+        }
         if settings.enabled && settings.cpu {
             match reader.cpu_times() {
                 Ok(current) => {
@@ -219,10 +261,28 @@ impl Sampler {
 #[derive(Default)]
 pub struct NativeReader {
     #[cfg(windows)]
+    gpu: Option<hardware::GpuReader>,
+    #[cfg(windows)]
     extended: extended::Reader,
 }
 #[cfg(windows)]
 impl SystemReader for NativeReader {
+    fn cpu_frequency(&mut self) -> Result<f64, String> {
+        hardware::cpu_frequency()
+    }
+    fn battery(&mut self) -> Result<tracel_core::BatteryObservation, String> {
+        hardware::battery()
+    }
+    fn gpu(&mut self) -> Result<Option<Vec<tracel_core::GpuObservation>>, String> {
+        if self.gpu.is_none() {
+            self.gpu = Some(hardware::GpuReader::new()?);
+        }
+        let result = self.gpu.as_mut().unwrap().read();
+        if result.is_err() {
+            self.gpu = None;
+        }
+        result
+    }
     fn activity(
         &mut self,
         settings: &CollectionSettings,
@@ -231,9 +291,13 @@ impl SystemReader for NativeReader {
         windows::activity(settings, timestamp)
     }
     fn configure(&mut self, settings: &CollectionSettings) {
+        if !settings.enabled || !settings.gpu {
+            self.gpu = None;
+        }
         self.extended.configure(settings);
     }
     fn reset(&mut self) {
+        self.gpu = None;
         self.extended.reset();
     }
     fn network(&mut self) -> Result<Option<(f64, f64)>, String> {
@@ -292,6 +356,83 @@ pub fn foreground_info(captured_at_ms: u64) -> Result<ForegroundInfo, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn hardware_is_selective_and_preserves_unavailable_zero_and_reset_semantics() {
+        #[derive(Default)]
+        struct Hardware {
+            calls: [u32; 3],
+            resets: u32,
+        }
+        impl SystemReader for Hardware {
+            fn cpu_times(&mut self) -> Result<CpuTimes, String> {
+                panic!("CPU disabled")
+            }
+            fn memory(&mut self) -> Result<(u64, u64), String> {
+                panic!("RAM disabled")
+            }
+            fn reset(&mut self) {
+                self.resets += 1;
+            }
+            fn gpu(&mut self) -> Result<Option<Vec<tracel_core::GpuObservation>>, String> {
+                self.calls[0] += 1;
+                Ok(Some(vec![tracel_core::GpuObservation {
+                    utilization_percent: Some(0.0),
+                    ..Default::default()
+                }]))
+            }
+            fn battery(&mut self) -> Result<tracel_core::BatteryObservation, String> {
+                self.calls[1] += 1;
+                Ok(tracel_core::BatteryObservation {
+                    present: Some(false),
+                    plugged_in: Some(true),
+                    ..Default::default()
+                })
+            }
+            fn cpu_frequency(&mut self) -> Result<f64, String> {
+                self.calls[2] += 1;
+                Err("not reported".into())
+            }
+        }
+        let old: CollectionSettings =
+            serde_json::from_str(r#"{"enabled":true,"cpu":true,"ram":true}"#).unwrap();
+        assert!(!old.gpu && !old.battery && !old.cpu_frequency);
+        let mut reader = Hardware::default();
+        let mut sampler = Sampler::default();
+        let mut settings = CollectionSettings {
+            gpu: true,
+            battery: true,
+            cpu_frequency: true,
+            ..Default::default()
+        };
+        let disabled = sampler.sample(&settings, &mut reader, 10000);
+        assert_eq!(reader.calls, [0; 3]);
+        assert!(disabled.gpus.is_none() && disabled.battery.is_none());
+        settings.enabled = true;
+        assert!(settings.collecting());
+        let sample = sampler.sample(&settings, &mut reader, 12000);
+        assert_eq!(sample.gpus.unwrap()[0].utilization_percent, Some(0.0));
+        assert_eq!(sample.battery.unwrap().present, Some(false));
+        assert!(sample.cpu_frequency_mhz.is_none());
+        assert_eq!(sample.errors, vec!["CPU frequency: not reported"]);
+        let previous_resets = reader.resets;
+        assert_eq!(
+            sampler
+                .sample(&settings, &mut reader, 14000)
+                .interval_start_ms,
+            Some(12000)
+        );
+        assert_eq!(reader.resets, previous_resets);
+        assert!(sampler
+            .sample(&settings, &mut reader, 30000)
+            .interval_start_ms
+            .is_none());
+        assert_eq!(reader.resets, previous_resets + 1);
+        settings.gpu = false;
+        settings.cpu_frequency = false;
+        let sample = sampler.sample(&settings, &mut reader, 32000);
+        assert!(sample.gpus.is_none() && sample.cpu_frequency_mhz.is_none());
+        assert_eq!(reader.calls, [3, 4, 3]);
+    }
     #[derive(Default)]
     struct Reader {
         cpu_calls: u32,

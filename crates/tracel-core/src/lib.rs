@@ -94,6 +94,10 @@ pub struct SystemObservation {
     /// Previous sampling cycle, absent after reset/disable/gap. Rates cover this interval.
     pub interval_start_ms: Option<u64>,
     pub cpu_percent: Option<f64>,
+    /// Mean Windows-reported current MHz, not effective per-core clock telemetry.
+    pub cpu_frequency_mhz: Option<f64>,
+    pub gpus: Option<Vec<GpuObservation>>,
+    pub battery: Option<BatteryObservation>,
     pub memory_used_bytes: Option<u64>,
     pub memory_total_bytes: Option<u64>,
     pub network_receive_bytes_per_second: Option<f64>,
@@ -104,6 +108,35 @@ pub struct SystemObservation {
     pub media: Option<MediaObservation>,
     pub activity: Option<ActivityObservation>,
     pub errors: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GpuObservation {
+    /// Windows adapter LUID + physical adapter index; do not merge different adapters.
+    pub id: String,
+    pub name: String,
+    pub utilization_percent: Option<f64>,
+    pub engines: Vec<GpuEngineObservation>,
+    pub dedicated_used_bytes: Option<u64>,
+    pub shared_used_bytes: Option<u64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GpuEngineObservation {
+    pub id: String,
+    pub name: String,
+    pub utilization_percent: f64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatteryObservation {
+    pub present: Option<bool>,
+    pub percent: Option<u8>,
+    pub plugged_in: Option<bool>,
+    pub charging: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

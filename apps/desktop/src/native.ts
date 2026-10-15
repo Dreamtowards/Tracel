@@ -16,10 +16,12 @@ export function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("app_info");
 }
 
-export type CollectionSettings = { enabled: boolean; cpu: boolean; ram: boolean; network: boolean; disk: boolean; audio: boolean; media: boolean; foreground?: boolean; background?: boolean; idle?: boolean };
+export type CollectionSettings = { enabled: boolean; cpuFrequency?: boolean; gpu?: boolean; battery?: boolean; cpu: boolean; ram: boolean; network: boolean; disk: boolean; audio: boolean; media: boolean; foreground?: boolean; background?: boolean; idle?: boolean };
 export type ObservedProcess = { instanceId: string; processId: number; name: string; executable: string | null };
 export type ObservedActivity = { foreground: { process: ObservedProcess; windowId: string; title: string } | null; background: ObservedProcess[] | null; idleMs: number | null };
-export type SystemObservation = { capturedAtMs: number; intervalStartMs: number | null; cpuPercent: number | null; memoryUsedBytes: number | null; memoryTotalBytes: number | null; networkReceiveBytesPerSecond: number | null; networkSendBytesPerSecond: number | null; diskReadBytesPerSecond: number | null; diskWriteBytesPerSecond: number | null; audioPeakPercent: number | null; media: { title: string; artist: string; application: string; playbackStatus: string } | null; activity?: ObservedActivity | null; errors: string[] };
+export type GpuObservation = { id: string; name: string; utilizationPercent: number | null; engines: { id: string; name: string; utilizationPercent: number }[]; dedicatedUsedBytes: number | null; sharedUsedBytes: number | null };
+export type BatteryObservation = { present: boolean | null; percent: number | null; pluggedIn: boolean | null; charging: boolean | null };
+export type SystemObservation = { capturedAtMs: number; intervalStartMs: number | null; cpuPercent: number | null; cpuFrequencyMhz?: number | null; gpus?: GpuObservation[] | null; battery?: BatteryObservation | null; memoryUsedBytes: number | null; memoryTotalBytes: number | null; networkReceiveBytesPerSecond: number | null; networkSendBytesPerSecond: number | null; diskReadBytesPerSecond: number | null; diskWriteBytesPerSecond: number | null; audioPeakPercent: number | null; media: { title: string; artist: string; application: string; playbackStatus: string } | null; activity?: ObservedActivity | null; errors: string[] };
 export type CollectionStatus = {
   settings: CollectionSettings; supported: boolean; periodMs: number; sampleCount: number;
   latest: SystemObservation | null; keepAwakeRequested: boolean; keepAwakeActive: boolean;

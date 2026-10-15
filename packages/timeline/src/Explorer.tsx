@@ -127,7 +127,7 @@ export default function Explorer({
   const [loadedData, setData] = useState<Capture | null>(null);
   const data = capture ?? loadedData;
   const { clock, dateLabel } = useCaptureTime(data);
-  const metricInfo = useMemo(() => Object.fromEntries(Object.keys(defaultMetricInfo).map((key) => [key, getMetricInfo(data,key as keyof typeof defaultMetricInfo)])) as typeof defaultMetricInfo,[data]);
+  const metricInfo = useMemo(() => Object.fromEntries([...new Set([...Object.keys(defaultMetricInfo), ...Object.keys(data?.metricOverrides ?? {})])].map((key) => [key, getMetricInfo(data,key as keyof typeof defaultMetricInfo)])) as typeof defaultMetricInfo,[data]);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [exporting, setExporting] = useState(false);
@@ -816,7 +816,7 @@ export default function Explorer({
                       <div className="tx-section-heading">
                         {t("SYSTEM RESOURCES")}{" "}<span>{t("AVG / PEAK")}</span>
                       </div>
-                      {(["cpu", "ram", "gpu"] as const).filter((key) => !recorded || key !== "gpu").map((key) => (
+                      {(["cpu", "ram", "gpu"] as const).filter((key) => !recorded || key !== "gpu" || data.metrics.some((sample) => sample.values?.gpu != null)).map((key) => (
                         <div className="tx-performance-stat" key={key}>
                           <label>
                             <i style={{ background: metricInfo[key].color }} />

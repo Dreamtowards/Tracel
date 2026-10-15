@@ -7,6 +7,38 @@ import { overviewPath } from "../../../packages/timeline/src/overview";
 import type { StoredObservation, SystemObservation } from "../src/native";
 
 const day = "2026-10-15", epoch = dayRange(day).startMs;
+test("hardware tracks keep adapters, measured engines, gauge support and missing power states distinct", () => {
+  const gpu = { id:"a",name:"GPU A",utilizationPercent:80,engines:[{id:"0",name:"3D #0",utilizationPercent:80},{id:"1",name:"Compute #1",utilizationPercent:0}],dedicatedUsedBytes:2*1024**3,sharedUsedBytes:0 };
+  const capture = recordedCapture(day,[row(1,10,{cpuFrequencyMhz:3200,battery:{present:true,percent:50,pluggedIn:true,charging:false}}),
+    row(2,12,{intervalStartMs:epoch+10000,gpus:[gpu,{...gpu,id:"b",name:"GPU B",utilizationPercent:20}],cpuFrequencyMhz:4000,battery:{present:true,percent:51,pluggedIn:null,charging:null}}),
+    row(3,30,{gpus:[{...gpu,utilizationPercent:null,engines:[],sharedUsedBytes:null}]})],epoch+100000);
+  assert.equal(metricAt(capture,11,"gpu:a:total"),80);
+  assert.equal(metricAt(capture,11,"gpu:b:total"),20);
+  assert.equal(metricAt(capture,11,"gpu"),80,"overall GPU percentages must not sum adapters");
+  assert.equal(metricAt(capture,11,"gpu:a:engine:1"),0);
+  assert.equal(metricAt(capture,12,"gpu:a:total"),null,"utilization covers the preceding interval");
+  assert.equal(metricAt(capture,13,"gpu:a:dedicated"),2);
+  assert.equal(metricAt(capture,13,"gpu:a:shared"),0);
+  assert.equal(metricAt(capture,20,"gpu:a:dedicated"),null);
+  assert.equal(metricAt(capture,31,"gpu:a:total"),null,"no counter interval must not invent utilization");
+  assert.equal(metricAt(capture,31,"gpu:a:shared"),null);
+  assert.equal(metricAt(capture,11,"cpuFrequency"),3.2);
+  assert.equal(metricAt(capture,11,"pluggedIn"),1);
+  assert.equal(metricAt(capture,11,"charging"),0,"plugged in does not imply charging");
+  assert.equal(metricAt(capture,13,"pluggedIn"),null);
+  assert.equal(metricAt(capture,13,"battery"),51);
+  assert.equal(capture.metricTracks?.filter((track)=>track.details).length,2);
+  assert.equal(capture.metricTracks?.find((track)=>track.id==="cpuFrequency")?.after,"cpu");
+  const stats = analyze(capture,{start:10,end:30});
+  assert.equal(stats.metrics["gpu:a:engine:0"].average,80);
+  assert.equal(stats.metrics["gpu:a:engine:0"].coverage,2);
+});
+test("old history has no invented hardware tracks and a desktop power source has no battery lane", () => {
+  assert.deepEqual(recordedCapture(day,[row(1,10)],epoch+100000).metricTracks,[]);
+  const capture = recordedCapture(day,[row(1,10,{battery:{present:false,percent:null,pluggedIn:true,charging:null}})],epoch+100000);
+  assert.deepEqual(capture.metricTracks?.map((track)=>track.id),["power"]);
+  assert.equal(metricAt(capture,11,"battery"),null);
+});
 test("normalized state intervals clip at midnight, union process presence, and retain title/media boundaries", () => {
   const process = { instanceId: "42:1234", processId: 42, name: "Editor.exe", executable: "C:\\Editor.exe" };
   const intervals = {

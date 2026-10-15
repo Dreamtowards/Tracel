@@ -9,13 +9,43 @@ export function dayRange(value: string) {
   const end = new Date(start); end.setDate(end.getDate() + 1);
   return { startMs: start.getTime(), endMs: end.getTime() };
 }
-const emptyValues = (): Record<MetricKey, number | null> => ({ cpu: null, ram: null, gpu: null, download: null, upload: null, read: null, write: null, audio: null });
+const emptyValues = (): Partial<Record<MetricKey, number | null>> => ({ cpu: null, ram: null, gpu: null, download: null, upload: null, read: null, write: null, audio: null });
 
 /** Native-to-UI boundary: UTC milliseconds to epoch-relative seconds; no simulated activity. */
 export function recordedCapture(day: string, rows: StoredObservation[], now = Date.now(), intervals?: StateIntervals): Capture {
   const { startMs, endMs } = dayRange(day);
   const bounds = { start: 0, end: (endMs - startMs) / 1000 };
   const samples = [...rows].sort((a, b) => a.sample.capturedAtMs - b.sample.capturedAtMs || a.id - b.id);
+  const metricOverrides: NonNullable<Capture["metricOverrides"]> = {};
+  const metricTracks: NonNullable<Capture["metricTracks"]> = [];
+  const gpus = new Map<string, { name: string; engines: Map<string,string> }>();
+  for (const { sample } of samples) for (const gpu of sample.gpus ?? []) {
+    const device = gpus.get(gpu.id) ?? { name: gpu.name, engines: new Map<string,string>() };
+    for (const engine of gpu.engines) device.engines.set(engine.id,engine.name);
+    gpus.set(gpu.id,device);
+  }
+  const gpuKey = (id: string, field: string): MetricKey => `gpu:${id}:${field}`;
+  const engineColors = ["#54bdd6", "#ae9bdd", "#83bc68", "#d783c3", "#5485df", "#d4ab72"];
+  const hasFrequency = samples.some(({sample}) => sample.cpuFrequencyMhz != null);
+  const hasBattery = samples.some(({sample}) => sample.battery?.present === true);
+  const hasPower = samples.some(({sample}) => sample.battery?.pluggedIn != null);
+  if (hasFrequency) metricTracks.push({ id: "cpuFrequency", name: "CPU frequency", keys: ["cpuFrequency"], subtitle: "Windows-reported · GHz", after: "cpu" });
+  for (const [id, device] of gpus) {
+    const total = gpuKey(id,"total"), dedicated = gpuKey(id,"dedicated"), shared = gpuKey(id,"shared");
+    const engines = [...device.engines].sort(([a],[b]) => a.localeCompare(b,undefined,{numeric:true}));
+    metricOverrides[total] = { name: "GPU utilization", color: "#d4ab72", max: 100, unit: "%" };
+    const details = engines.map(([engine,name],index) => {
+      const key = gpuKey(id,`engine:${engine}`);
+      metricOverrides[key] = { name, color: engineColors[index % engineColors.length], max: 100, unit: "%" };
+      return key;
+    });
+    metricOverrides[dedicated] = { name: "Dedicated GPU memory", color: "#5485df", unit: "GiB", max: 1 };
+    metricOverrides[shared] = { name: "Shared GPU memory", color: "#ae9bdd", unit: "GiB", max: 1 };
+    metricTracks.push({ id: `adapter:${id}`, name: device.name, keys: [total], details, subtitle: "GPU · expand for engines" },
+      { id: `memory:${id}`, name: "GPU memory", keys: [dedicated,shared], subtitle: `${device.name} · GiB` });
+  }
+  if (hasBattery) metricTracks.push({ id: "battery", name: "Battery", keys: ["battery"], subtitle: "0 – 100%" });
+  if (hasPower) metricTracks.push({ id: "power", name: "Power status", keys: hasBattery ? ["pluggedIn","charging"] : ["pluggedIn"], subtitle: "Plugged in / charging" });
   const metrics: MetricSample[] = [], media: MediaInterval[] = [], apps: Capture["apps"] = [];
   const appIds = new Set<string>();
   const activity: Capture["activity"] = [], background: Capture["background"] = [], afk: Capture["afk"] = [];
@@ -41,7 +71,14 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
     const interval = sample.intervalStartMs;
     // CPU and throughput readings summarize the preceding measured interval.
     if (interval != null && interval < sample.capturedAtMs && sample.capturedAtMs - interval <= 6000) {
-      add(seconds(interval), time, { ...emptyValues(), cpu: sample.cpuPercent,
+      const gpuValues: Partial<Record<MetricKey, number | null>> = {};
+      for (const gpu of sample.gpus ?? []) {
+        gpuValues[gpuKey(gpu.id,"total")] = gpu.utilizationPercent;
+        for (const engine of gpu.engines) gpuValues[gpuKey(gpu.id,`engine:${engine.id}`)] = engine.utilizationPercent;
+      }
+      // Overall summary uses the busiest observed adapter, never a sum of percentages.
+      const totals = (sample.gpus ?? []).map((gpu) => gpu.utilizationPercent).filter((value): value is number => value != null);
+      add(seconds(interval), time, { ...emptyValues(), ...gpuValues, gpu: totals.length ? Math.max(...totals) : null, cpu: sample.cpuPercent,
         download: sample.networkReceiveBytesPerSecond == null ? null : sample.networkReceiveBytesPerSecond / 1024 ** 2,
         upload: sample.networkSendBytesPerSecond == null ? null : sample.networkSendBytesPerSecond / 1024 ** 2,
         read: sample.diskReadBytesPerSecond == null ? null : sample.diskReadBytesPerSecond / 1024 ** 2,
@@ -50,7 +87,17 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
     // Gauges/media are sample-and-hold estimates, capped at 2s when continuity is unknown.
     const continuous = next?.intervalStartMs === sample.capturedAtMs && next.capturedAtMs - sample.capturedAtMs <= 6000;
     const end = Math.min(bounds.end, seconds(continuous ? next.capturedAtMs : sample.capturedAtMs + 2000), next ? seconds(next.capturedAtMs) : Infinity, seconds(now));
-    add(time, end, { ...emptyValues(), ram: sample.memoryUsedBytes == null ? null : sample.memoryUsedBytes / 1024 ** 3, audio: sample.audioPeakPercent });
+    const hardwareValues: Partial<Record<MetricKey, number | null>> = {
+      cpuFrequency: sample.cpuFrequencyMhz == null ? null : sample.cpuFrequencyMhz / 1000,
+      battery: sample.battery?.percent ?? null,
+      pluggedIn: sample.battery?.pluggedIn == null ? null : Number(sample.battery.pluggedIn),
+      charging: sample.battery?.charging == null ? null : Number(sample.battery.charging),
+    };
+    for (const gpu of sample.gpus ?? []) {
+      hardwareValues[gpuKey(gpu.id,"dedicated")] = gpu.dedicatedUsedBytes == null ? null : gpu.dedicatedUsedBytes / 1024 ** 3;
+      hardwareValues[gpuKey(gpu.id,"shared")] = gpu.sharedUsedBytes == null ? null : gpu.sharedUsedBytes / 1024 ** 3;
+    }
+    add(time, end, { ...emptyValues(), ...hardwareValues, ram: sample.memoryUsedBytes == null ? null : sample.memoryUsedBytes / 1024 ** 3, audio: sample.audioPeakPercent });
     const start = Math.max(0, time), observed = sample.activity;
     if (observed && start < end) {
       const window = observed.foreground;
@@ -115,9 +162,15 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
   const memoryMax = samples.reduce((maximum,{sample}) => Math.max(maximum,(sample.memoryTotalBytes ?? 0) / 1024 ** 3),1);
   const maxRate = (keys: MetricKey[], baseline: number) => metrics.reduce((maximum,sample) => keys.reduce((max,key) => Math.max(max,sample.values?.[key] ?? 0),maximum),baseline);
   const rateMax = maxRate(["download", "upload"],32), diskMax = maxRate(["read", "write"],160);
+  for (const [id] of gpus) {
+    const keys = [gpuKey(id,"dedicated"),gpuKey(id,"shared")];
+    const max = maxRate(keys,1);
+    keys.forEach((key) => { metricOverrides[key] = { ...metricOverrides[key], max }; });
+  }
+  if (hasFrequency) metricOverrides.cpuFrequency = { max: maxRate(["cpuFrequency"],6) };
   const latest = Math.min(bounds.end, Math.max(3600, seconds(samples.at(-1)?.sample.capturedAtMs ?? Math.min(endMs, now)) + 120));
   return { kind: "recorded", source: "Tracel recorded system metrics", epoch: new Date(startMs).toISOString(), bounds,
     initialView: { start: Math.max(0, latest - 3600), end: latest }, samplePeriod: 2, maxSampleSpan: 6,
-    metricOverrides: { ram: { max: memoryMax, unit: "GiB" }, download: { max: rateMax, unit: "MiB/s" }, upload: { max: rateMax, unit: "MiB/s" }, read: { max: diskMax, unit: "MiB/s" }, write: { max: diskMax, unit: "MiB/s" } },
+    metricTracks, metricOverrides: { ...metricOverrides, ram: { max: memoryMax, unit: "GiB" }, download: { max: rateMax, unit: "MiB/s" }, upload: { max: rateMax, unit: "MiB/s" }, read: { max: diskMax, unit: "MiB/s" }, write: { max: diskMax, unit: "MiB/s" } },
     apps, activity, background, afk, metrics, media, events: [] };
 }
