@@ -10,7 +10,7 @@ Online collection switches only simulate checkbox state and never start monitori
 
 Shared pages depend on a small `PlatformServices` interface and plain DTOs in `desktop/platformTypes.ts`. Its browser default has `nativeClient: false` and rejects every native operation if called, in addition to disabling controls. `apps/desktop/src/platform.ts` explicitly supplies only the required Tauri operations, including dialogs and metrics export. Collector/audio/media hooks and polling lifetimes remain Desktop-owned and pass controlled state into pages. This introduces an explicit UI-to-capability dependency while removing direct page-to-Tauri imports and duplicate page layouts. Tests enforce that shared presentation imports neither Tauri nor either host app.
 
-`assets/branding/tracel.svg` is the source for the website favicon and native icons. `npm run icons:generate` uses the existing Tauri CLI to generate sizes/ICO/ICNS and copies only configured native files. No icon library or image-generation runtime ships with the app. Desktop 0.2.11 embeds this icon; previous versioned EXEs are preserved.
+`assets/branding/tracel.svg` is the source for the website favicon and native icons. `npm run icons:generate` uses the existing Tauri CLI to generate sizes/ICO/ICNS and copies only configured native files. No icon library or image-generation runtime ships with the app. Desktop 0.2.12 uses a neutral gray mark without the former green tint; previous versioned EXEs are preserved.
 
 ## Application icons
 
@@ -30,7 +30,7 @@ Classification is derived at display/query time, not written into SQLite observa
 
 ## Implemented
 
-Web `/` is a Chinese static product page with locally hosted, versioned Desktop downloads and real Desktop screenshots using fabricated example data. `src/release.json` owns public release metadata; Web tests verify the EXE size, SHA-256, checksum file and PE signature. `/radar` preserves the original Radar experience and `/timeline` preserves the interactive Activity demo. MapLibre and legacy live/industrial styles are imported by the demo route layouts instead of the root layout; the landing page uses a scoped CSS module and no product-specific client state. Desktop and the reusable Timeline package are unaffected by website routing.
+Web `/` is a Chinese static product page with versioned GitHub Release download links and real Desktop screenshots using fabricated example data. `src/release.json` owns public release metadata; Web tests validate versioned asset URLs, hashes and the absence of bundled release binaries. EXE integrity and uploaded asset checks happen during release preparation. Releases currently require authorized access to the private GitHub repository. `/radar` preserves the original Radar experience and `/timeline` preserves the interactive Activity demo. MapLibre and legacy live/industrial styles are imported by the demo route layouts instead of the root layout; the landing page uses a scoped CSS module and no product-specific client state. Desktop and the reusable Timeline package are unaffected by website routing.
 
 The root is an npm and Cargo workspace. `apps/web` owns Next.js routes, Radar, MapLibre/Three.js, Tailwind and static Cloudflare export. `apps/desktop` owns a lean Vite/React entry point and Tauri 2 lifecycle; it imports neither Radar nor Next.js.
 

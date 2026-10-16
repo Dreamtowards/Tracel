@@ -11,6 +11,10 @@ next-env.d.ts
 **/public/maplibre/
 dist/
 target/
+# Release binaries belong in GitHub Releases, never in the website source.
+apps/web/public/downloads/*.exe
+apps/web/public/downloads/*.zip
+apps/web/public/downloads/*.msi
 **/src-tauri/gen/
 *.db
 *.db-*

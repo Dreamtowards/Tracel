@@ -1,21 +1,25 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
-test("advertised download is a complete Windows EXE with a matching checksum", () => {
+test("website downloads reference a versioned GitHub Release asset", () => {
   const release = JSON.parse(readFileSync(new URL("../src/release.json", import.meta.url), "utf8"));
   assert.match(release.version, /^\d+\.\d+\.\d+$/);
-  assert.equal(release.url, `/downloads/Tracel-${release.version}-windows-x64.exe`);
-  const file = new URL(`../public${release.url}`, import.meta.url);
-  const exe = readFileSync(file);
-  assert.equal(exe.length, release.bytes);
-  assert.equal(exe.toString("ascii", 0, 2), "MZ");
-  const peOffset = exe.readUInt32LE(0x3c);
-  assert.equal(exe.readUInt32LE(peOffset), 0x4550);
-  assert.equal(exe.readUInt16LE(peOffset + 4), 0x8664);
-  const hash = createHash("sha256").update(exe).digest("hex");
-  assert.equal(hash, release.sha256);
-  const checksum = readFileSync(new URL(file.href.replace(/\.exe$/, ".sha256")), "utf8");
-  assert.equal(checksum.trim(), `${hash}  Tracel-${release.version}-windows-x64.exe`);
+  assert.match(release.date, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(release.platform, "Windows x64");
+  assert.ok(Number.isSafeInteger(release.bytes) && release.bytes > 1_000_000);
+  assert.match(release.sha256, /^[a-f0-9]{64}$/);
+  const url = new URL(release.url);
+  assert.equal(url.origin, "https://github.com");
+  assert.equal(url.search, "");
+  assert.equal(url.hash, "");
+  const parts = url.pathname.split("/");
+  assert.equal(parts.length, 7);
+  assert.ok(parts[1] && parts[2]);
+  assert.deepEqual(parts.slice(3), ["releases", "download", `v${release.version}`, `Tracel-${release.version}-windows-x64.exe`]);
+});
+
+test("public website assets do not bundle release binaries", () => {
+  const files = readdirSync(new URL("../public/", import.meta.url), { recursive: true });
+  assert.deepEqual(files.filter((file) => /\.(exe|msi|zip)$/i.test(String(file))), []);
 });

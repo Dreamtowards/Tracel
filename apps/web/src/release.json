@@ -1,8 +1,9 @@
 {
-  "version": "0.2.11",
+  "version": "0.2.12",
   "date": "2026-10-17",
   "platform": "Windows x64",
+  "visibility": "private",
   "bytes": 14373376,
-  "url": "/downloads/Tracel-0.2.11-windows-x64.exe",
-  "sha256": "263a89bec55b14267c5684830fa912f4e4cf1539828fe58827fb425a371613e2"
+  "url": "https://github.com/Dreamtowards/Tracel/releases/download/v0.2.12/Tracel-0.2.12-windows-x64.exe",
+  "sha256": "2f3b2ebfa0bb73bee8fafef02e593374aefb5c1d0c894bb6bbe120a67cc9fbc4"
 }

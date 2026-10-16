@@ -13,7 +13,7 @@ function Mark() {
   return <svg width="27" height="27" viewBox="0 0 27 27" fill="none" aria-hidden="true"><rect x="1" y="1" width="25" height="25" rx="7" stroke="currentColor" strokeOpacity=".4" /><path d="M7 9H17M10 13.5H20M7 18H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M18 6V21" stroke="currentColor" strokeOpacity=".4" /></svg>;
 }
 function Download() {
-  return <a className={s.downloadButton} href={release.url} download><ArrowDownToLine size={17} />下载 Windows 版<ArrowRight size={16} /></a>;
+  return <a className={s.downloadButton} href={release.url}><ArrowDownToLine size={17} />下载 Windows 版<ArrowRight size={16} /></a>;
 }
 const sources = [
   { icon: Layers3, name: "应用与窗口", details: "前台应用 · 窗口标题 · 桌面应用存在状态 · 空闲时段", color: "#b8a2dc" },
@@ -82,7 +82,7 @@ export default function Home() {
 
       <section className={`${s.section} ${s.container} ${s.faq}`} aria-labelledby="faq-title"><div><p className={s.eyebrow}>GOOD TO KNOW</p><h2 id="faq-title">开始之前。</h2><p>目前是持续开发中的 Windows 桌面应用。</p></div><div className={s.questions}>{faqs.map(([question,answer])=><details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</div></section>
 
-      <section id="download" className={`${s.download} ${s.container}`} aria-labelledby="download-title"><div><p className={s.eyebrow}>START WITH TODAY</p><h2 id="download-title">让今天，留下清晰的轨迹。</h2><p>从打开第一条轨道开始。</p></div><div className={s.downloadActions}><Download /><p>v{release.version} · Windows x64 · {(release.bytes / 1000000).toFixed(1)} MB</p><div><a href={github}><Github size={14} />查看源码</a><a href={release.url.replace(/\.exe$/, ".sha256")}>SHA-256</a></div><small>开发中版本 · 发布于 {release.date}</small></div></section>
+      <section id="download" className={`${s.download} ${s.container}`} aria-labelledby="download-title"><div><p className={s.eyebrow}>START WITH TODAY</p><h2 id="download-title">让今天，留下清晰的轨迹。</h2><p>从打开第一条轨道开始。</p></div><div className={s.downloadActions}><Download /><p>v{release.version} · Windows x64 · {(release.bytes / 1000000).toFixed(1)} MB</p><div><a href={github}><Github size={14} />查看源码</a><a href={release.url.replace(/\.exe$/, ".sha256")}>SHA-256</a></div><small>开发中版本 · 发布于 {release.date}{release.visibility === "private" && " · 下载需要 GitHub 仓库访问权限"}</small></div></section>
     </main>
     <footer className={`${s.footer} ${s.container}`}><a className={s.brand} href="/"><Mark /><span>Tracel</span></a><span>你的一天，值得回看。</span><nav aria-label="页脚导航"><a href={github}>GitHub</a><a href="/timeline">时间轴演示</a><a href="/radar">Radar 实验</a></nav></footer>
   </div>;

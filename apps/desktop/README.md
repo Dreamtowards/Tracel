@@ -1,6 +1,6 @@
-# Tracel Activity desktop 0.2.11
+# Tracel Activity desktop 0.2.12
 
-0.2.11 uses the website timeline mark as its native EXE/window icon and shares all five page presentations with the online demo. Browser-unsupported controls are disabled; native collection, diagnostics and tools remain host-owned through an explicit platform adapter. The new EXE is saved under `target/portable/Tracel-0.2.11-windows-x64/Tracel.exe`; earlier versioned files are kept. Branding source: `assets/branding/tracel.svg`; regenerate favicon/native assets with `npm run icons:generate`.
+0.2.12 uses a neutral gray timeline mark as its native EXE/window icon. Website downloads are hosted in GitHub Releases rather than committed binaries. All five page presentations remain shared with the online demo. Browser-unsupported controls are disabled; native collection, diagnostics and tools remain host-owned through an explicit platform adapter. The new EXE is saved under `target/portable/Tracel-0.2.12-windows-x64/Tracel.exe`; earlier versioned files are kept. Branding source: `assets/branding/tracel.svg`; regenerate favicon/native assets with `npm run icons:generate`.
 
 0.2.9 adds editable hierarchical categories (`categories.json`, snake_case keys), 169 default executable rules, category share bars and cached native application icons. Configuration details: [categories](../../docs/categories.md). Icon PNGs live beside the SQLite archive in `icon-cache`; no installation or bundled icon pack is required.
 
@@ -23,8 +23,8 @@ cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 
 Native prerequisites: Rust MSVC, C++ Build Tools/Windows SDK and WebView2. Outputs:
 
-- target/release/tracel-desktop.exe: current build output; WebView2 required. Versioned release copy: target/portable/Tracel-0.2.11-windows-x64/Tracel.exe.
-- Optional build:desktop:portable output, target/portable/Tracel-0.2.11-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
+- target/release/tracel-desktop.exe: current build output; WebView2 required. Versioned release copy: target/portable/Tracel-0.2.12-windows-x64/Tracel.exe.
+- Optional build:desktop:portable output, target/portable/Tracel-0.2.12-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
 - Existing 0.2.0 NSIS installer artifacts and installer configuration are retained, but that version contains the reported display-off problem and should not be used. Default builds do not invoke NSIS.
 
 ## Collection and Settings
