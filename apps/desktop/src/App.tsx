@@ -1,12 +1,11 @@
+import { DesktopExplorer, useDesktopTheme } from "@tracel/timeline/desktop";
 import CollectionMenu from "./CollectionMenu";
 import { X } from "lucide-react";
 import { I18nProvider, useI18n } from "@tracel/timeline";
 import { desktopZh } from "./messages.zh";
 import { Button } from "./components/ui/Button";
-import DatePicker from "./DatePicker";
-import { accentForeground } from "./theme";
-import { Component, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Explorer, type RangeExport } from "@tracel/timeline";
+import { Component, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { type RangeExport } from "@tracel/timeline";
 import { demoProvider } from "@tracel/timeline/mock";
 import { getAppInfo, nativeClient, saveRange, type AppInfo } from "./native";
 import Utilities from "./Utilities";
@@ -48,15 +47,7 @@ export default function App() {
 function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearance> }) {
   const { t, locale } = useI18n();
   const [page, setPage] = useState<Page>("timeline");
-  const palette = useMemo(() => ({ background: "#111113", grid: "#232326", divider: "#29292d", group: "#19191c", focus: `${appearance.accent}12`, selection: appearance.accent, text: "#ececef", muted: "#a1a1aa" }), [appearance.accent]);
-  useLayoutEffect(() => {
-    // Body portals inherit the same theme; their dimensions scale without a zoomed positioning ancestor.
-    document.documentElement.lang = locale;
-    const root = document.documentElement.style;
-    root.setProperty("--primary", appearance.accent);
-    root.setProperty("--primary-foreground", accentForeground(appearance.accent));
-    root.setProperty("--ui-scale", String(appearance.zoom / 100));
-  }, [appearance.accent, appearance.zoom, locale]);
+  useDesktopTheme(appearance.accent, appearance.zoom, locale);
   const ui = useRef<HTMLDivElement>(null);
   useEffect(() => { ui.current?.querySelector(".tx-main")?.scrollTo(0, 0); }, [page]);
   const collection = useCollection(page === "metrics");
@@ -88,7 +79,8 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
   return (
     <ClientBoundary>
       <div ref={ui} className="desktop-ui" style={{ "--ui-scale": appearance.zoom / 100 } as CSSProperties}>
-      <Explorer
+      <DesktopExplorer
+        accent={appearance.accent}
         provider={demoProvider}
         categories={categories.config}
         renderTrackHeaders={nativeClient ? (headers) => <CollectionMenu simplifyGpuNames={appearance.simplifyGpuNames} showSoftwareGpus={appearance.showSoftwareGpus} onSimplifyGpuNames={appearance.setSimplifyGpuNames} onShowSoftwareGpus={appearance.setShowSoftwareGpus} status={collection.status} busy={collection.busy} onSettings={collection.changeSettings}>{headers}</CollectionMenu> : undefined}
@@ -99,10 +91,6 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
         homeHref="/"
         localDataLabel={t("All data stays on this device")}
         machineLabel={info ? `${info.deviceName} / ${info.platform === "windows" ? "Windows" : info.platform}` : t(nativeClient ? "This device" : "Desktop preview")}
-        headerVariant="hidden"
-        compact
-        renderDatePicker={(props) => <DatePicker {...props} />}
-        palette={palette}
         onExport={nativeClient ? exportRange : undefined}
         onShowTimeline={() => setPage("timeline")}
         captureLabel={t(nativeClient ? "Recorded metrics" : "Demo capture")}

@@ -8,7 +8,27 @@
     "./model": "./src/model.ts",
     "./analytics": "./src/analytics.ts",
     "./mock": "./src/data.ts",
-    "./styles.css": "./src/explorer.css"
+    "./styles.css": "./src/explorer.css",
+    "./desktop": "./src/desktop/index.ts",
+    "./desktop.css": "./src/desktop/styles.css",
+    "./desktop-demo": "./src/desktopDemo.ts",
+    "./desktop/AppearanceSettings": "./src/desktop/AppearanceSettings.tsx",
+    "./desktop/CollectionMenu": "./src/desktop/CollectionMenu.tsx",
+    "./desktop/DatePicker": "./src/desktop/DatePicker.tsx",
+    "./desktop/DesktopExplorer": "./src/desktop/DesktopExplorer.tsx",
+    "./desktop/index": "./src/desktop/index.ts",
+    "./desktop/messages.zh": "./src/desktop/messages.zh.ts",
+    "./desktop/Navigation": "./src/desktop/Navigation.tsx",
+    "./desktop/theme": "./src/desktop/theme.ts",
+    "./desktop/useAppearance": "./src/desktop/useAppearance.ts",
+    "./desktop/components/SettingsGroup": "./src/desktop/components/SettingsGroup.tsx",
+    "./desktop/components/ui/Button": "./src/desktop/components/ui/Button.tsx",
+    "./desktop/components/ui/Calendar": "./src/desktop/components/ui/Calendar.tsx",
+    "./desktop/components/ui/Card": "./src/desktop/components/ui/Card.tsx",
+    "./desktop/components/ui/ContextMenu": "./src/desktop/components/ui/ContextMenu.tsx",
+    "./desktop/components/ui/Popover": "./src/desktop/components/ui/Popover.tsx",
+    "./desktop/components/ui/Select": "./src/desktop/components/ui/Select.tsx",
+    "./desktop/components/ui/Switch": "./src/desktop/components/ui/Switch.tsx"
   },
   "sideEffects": [
     "**/*.css"
@@ -22,7 +42,12 @@
     "react-dom": "^19.2.0"
   },
   "dependencies": {
-    "lucide-react": "^0.468.0"
+    "lucide-react": "^0.468.0",
+    "@radix-ui/react-context-menu": "^2.4.1",
+    "@radix-ui/react-popover": "^1.3.1",
+    "@radix-ui/react-select": "^2.4.1",
+    "@radix-ui/react-switch": "^1.4.1",
+    "react-day-picker": "^10.0.2"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

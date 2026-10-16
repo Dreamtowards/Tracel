@@ -12,6 +12,9 @@ Explorer also accepts optional framework-neutral `railExtra`, `pageContent`, `on
 
 ## Structure
 
+- `desktop/`: the current Desktop timeline composition, navigation, date picker, neutral theme, appearance settings and collection-menu presentation, shared with Web `/timeline`. This optional entry has no Tauri imports; native capabilities remain in the Desktop host.
+- `desktopDemo.ts`: additional fabricated hardware, power and microphone samples for the online demo, exported separately from all native data adapters.
+
 - `model.ts`: interval types, subject abstraction, relative-second time coordinates and viewport math.
 - `data.ts`: asynchronous `DataProvider` with a deterministic in-memory capture, October 8–14, 2026 (UTC+08:00). Replace `demoProvider` with a backend adapter later.
 - `analytics.ts`: clipped foreground/AFK/media durations, app transitions, time-weighted metrics and throughput integrals. Metric samples use a 30-second sample-and-hold model; null means missing, zero means observed zero.
@@ -25,6 +28,20 @@ Scroll zooms around the pointer. Shift-scroll, Alt-drag, middle-button drag or t
 Foreground context is expanded by default. Expand Background apps for compact individual running lifetimes excluding foreground slices; the collapsed view shows one colored stripe per application. Display settings control lane padding, background row height, context brightness and duration labels for the current session. Drag the vertical boundary between the track labels and Canvas to resize the label column (128–360 logical pixels, capped to preserve Canvas space). Its focused separator supports Left/Right and Home/End; double-click restores 192 pixels. Track groups collapse; drag the bottom edge of a label to resize a track (or focus its separator and use Up/Down). The overview strip supports click-to-center, dragging its selected window without changing the grab offset, and independent start/end handles. Focus a handle and use Left/Right to resize, or Home/End to reach the capture/minimum-span limits; the minimum viewport is two seconds. Arrow keys on the window pan it. Hover tooltips sit beside the pointer, slightly above its vertical position, and use their measured size to stay inside the viewport. App rankings focus the same application's timeline intervals.
 
 ## Validation and limits
+
+The website demo uses `DesktopExplorer` with an injected `DataProvider`, rather than a copy of the Desktop page. Its source is `apps/web/src/app/timeline/DemoApp.tsx`. To use another dataset, pass a provider whose `load()` returns a `Capture`:
+
+```tsx
+const provider: DataProvider = {
+  async load() {
+    // Load a trusted fixture or construct a Capture with the normal model.
+    return exampleCapture;
+  },
+};
+<DemoApp provider={provider} />
+```
+
+Include `metricTracks` and `metricOverrides` alongside `metrics` to define hardware tracks, engine names, colors and units. Times are seconds relative to `epoch`; null measurements mean unavailable. Example data is explicitly labelled in the page and exported source. Native collection controls are represented only as simulated checkbox state; they do not collect browser/device information or hide existing history. The website's native-only Tools, Audio diagnostics and System metrics pages are omitted.
 
 Run `npm run typecheck`, `npm test`, `npm run build`. `tests/tracel.test.ts` covers overlap clipping, AFK, weighted integration, missing-vs-zero samples, media and anchored viewport math.
 

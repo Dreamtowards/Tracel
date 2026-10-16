@@ -1,0 +1,37 @@
+"use client";
+
+import { useState, type CSSProperties } from "react";
+import { I18nProvider, useI18n, defaultCategories, parseCategories, type DataProvider } from "@tracel/timeline";
+import { DesktopExplorer, Navigation, CollectionMenu, AppearanceSettings, useAppearance, useDesktopTheme, desktopZh, type Page, type CollectionSettings } from "@tracel/timeline/desktop";
+import { desktopDemoProvider } from "@tracel/timeline/desktop-demo";
+import { Button } from "@tracel/timeline/desktop/components/ui/Button";
+import "./demo.css";
+
+const demoSettings: CollectionSettings = { enabled: true, foreground: true, background: true, idle: true, cpu: true, cpuFrequency: true, ram: true, gpu: true, network: true, disk: true, battery: true, audioInput: true, audio: true, media: true };
+const categories = parseCategories(defaultCategories);
+
+/** Supply a different provider to inject another example dataset into the same UI. */
+export default function DemoApp({ provider = desktopDemoProvider }: { provider?: DataProvider }) {
+  const appearance = useAppearance({ key: "tracel.web.demo.appearance", language: "zh-CN", zoom: 100 });
+  return <I18nProvider locale={appearance.language} messages={desktopZh}><DemoExperience provider={provider} appearance={appearance} /></I18nProvider>;
+}
+
+function DemoExperience({ provider, appearance }: { provider: DataProvider; appearance: ReturnType<typeof useAppearance> }) {
+  const { t, locale } = useI18n();
+  useDesktopTheme(appearance.accent, appearance.zoom, locale);
+  const [page, setPage] = useState<Page>("timeline");
+  const [settings, setSettings] = useState(demoSettings);
+  return <div className="web-demo">
+    <div className="demo-banner"><a href="/">← Tracel</a><span>{t("Online demo · All data is fabricated. No device monitoring.")}</span></div>
+    <div className="desktop-ui" style={{ "--ui-scale": appearance.zoom / 100 } as CSSProperties}>
+      <DesktopExplorer accent={appearance.accent} provider={provider} categories={categories}
+        homeHref="/" localDataLabel={t("Example data only · No device monitoring")} machineLabel={t("Online demo")}
+        captureLabel={t("Online demo · Example data")}
+        navigation={<Navigation aboutLabel="Back to website" aboutText="Back to website" page={page} availablePages={["timeline", "settings"]} expanded={appearance.expanded} width={appearance.navigationWidth} onWidth={appearance.setNavigationWidth} onToggle={appearance.toggleNavigation} onNavigate={setPage} onAbout={() => { window.location.href = "/"; }} />}
+        renderTrackHeaders={headers => <CollectionMenu demo status={{ supported: true, settings }} busy={false} onSettings={async next => setSettings(next)} simplifyGpuNames={appearance.simplifyGpuNames} showSoftwareGpus={appearance.showSoftwareGpus} onSimplifyGpuNames={appearance.setSimplifyGpuNames} onShowSoftwareGpus={appearance.setShowSoftwareGpus}>{headers}</CollectionMenu>}
+        onShowTimeline={() => setPage("timeline")}
+        pageContent={page === "settings" ? <div className="desktop-page"><header className="desktop-page-heading"><h1>{t("Settings")}</h1></header><p className="settings-banner">{t("Demo settings affect this browser only. Native tools are available in the Windows app.")}</p><AppearanceSettings language={appearance.language} onLanguage={appearance.setLanguage} zoom={appearance.zoom} onZoom={appearance.setZoom} accent={appearance.accent} onAccent={appearance.setAccent} /><Button onClick={() => setPage("timeline")}>{t("Open Timeline")}</Button></div> : undefined}
+      />
+    </div>
+  </div>;
+}

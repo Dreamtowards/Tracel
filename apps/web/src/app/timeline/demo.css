@@ -1,0 +1,5 @@
+.web-demo { height:100dvh; overflow:hidden; background:#111113; color:#ececef; font-family:"Segoe UI","Microsoft YaHei UI",sans-serif; }
+.demo-banner { height:36px; padding:0 16px; display:flex; align-items:center; gap:24px; background:#202023; border-bottom:1px solid #343438; font-size:11px; }
+.demo-banner a { color:#d3dfcb; white-space:nowrap; }
+.demo-banner span { color:#b4b4bd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.web-demo .desktop-ui { height:calc((100dvh - 36px) / var(--ui-scale)); }

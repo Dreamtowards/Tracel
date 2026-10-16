@@ -1,5 +1,13 @@
 # Architecture
 
+## Shared Desktop presentation and online demo
+
+`packages/timeline/src/desktop` owns the browser-safe Desktop composition (`DesktopExplorer`), neutral theme/styles, date picker, navigation, appearance preferences/settings, Chinese catalog and Radix track-header menu. The native host and Web `/timeline` consume this same implementation. Desktop's old presentation paths re-export the shared modules; its collectors, Tauri commands, archive adapters, diagnostics and application-icon reads stay in `apps/desktop`. The main Timeline entry remains independent of these optional Desktop widgets; consumers opt into `@tracel/timeline/desktop` and its CSS. The existing Radix/DayPicker dependencies are declared by the shared package without introducing new versions.
+
+Web `DemoApp` injects a `DataProvider`; the default `@tracel/timeline/desktop-demo` generates deterministic, explicitly fabricated CPU-frequency, GPU/engine/VRAM, battery/power and microphone samples on the original seven-day activity capture. Missing readings remain missing, and zero readings remain zero. The data source never enters native collector queries or real persisted history. Timeline shows input audio when present and replaces the legacy aggregate GPU lane when adapter tracks are supplied. Provider-supplied initial ranges are honored after asynchronous loading.
+
+Online collection switches only simulate checkbox state and never start monitoring or remove historical examples. The menu explains this distinction. Web enables Timeline and appearance Settings navigation; native diagnostics/tools are omitted. Web appearance uses a separate localStorage key and mounts on the client to avoid saved-language/zoom hydration mismatches. Demo host viewport styles are gated by `.desktop-ui`; the theme effect restores document variables/language on unmount. The product page and Radar retain their independent layout and scrolling. Earlier descriptions of Web retaining legacy styling refer to the pre-website-demo implementation.
+
 ## Application icons
 
 Desktop's Range Overview application list supplies an optional icon-renderer slot to the shared Explorer; Web keeps its existing fallbacks. The native Capture adapter retains `Application.executablePath` independently of the tooltip's short `exe` name. Exact-path category rules also use this full source path. No database schema change is needed.

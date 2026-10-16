@@ -175,7 +175,10 @@ export default function Explorer({
     let active = true;
     setLoadError(false);
     Promise.resolve().then(() => provider.load()).then((result) => {
-      if (active) setData(result);
+      if (active) {
+        setData(result);
+        if (result.initialView) setView(clampRange(result.initialView, result.bounds));
+      }
     }).catch(() => {
       if (active) setLoadError(true);
     });

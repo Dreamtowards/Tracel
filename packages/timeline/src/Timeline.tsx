@@ -199,13 +199,13 @@ export function Timeline({
     all.push({
       id: "sound",
       name: "AUDIO & MEDIA",
-      subtitle: data.kind === "recorded" ? "3 tracks" : "2 tracks",
+      subtitle: data.kind === "recorded" || data.metrics.some(sample => sample.values?.audioInput != null) ? "3 tracks" : "2 tracks",
       height: 32,
       kind: "group",
     });
     if (!closed.includes("sound"))
       all.push(
-        ...(data.kind === "recorded" ? [{ id: "audioInput", name: "Audio input", subtitle: "Microphone level · %", height: 44, kind: "metric" as const, keys: ["audioInput" as MetricKey] }] : []),
+        ...(data.kind === "recorded" || data.metrics.some(sample => sample.values?.audioInput != null) ? [{ id: "audioInput", name: "Audio input", subtitle: "Microphone level · %", height: 44, kind: "metric" as const, keys: ["audioInput" as MetricKey] }] : []),
         {
           id: "audio",
           name: "Audio output",
@@ -233,7 +233,8 @@ export function Timeline({
         }
       }
     }
-    const visible = data.kind === "recorded" ? all.filter((track) => track.id !== "gpu") : all;
+    const hasAdapterTracks = data.metricTracks?.some(track => track.keys.some(key => key.startsWith("gpu:")));
+    const visible = data.kind === "recorded" || hasAdapterTracks ? all.filter((track) => track.id !== "gpu") : all;
     let y = 32;
     return visible.map((track) => {
       const height = heights[track.id] ?? track.height;

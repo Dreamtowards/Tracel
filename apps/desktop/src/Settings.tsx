@@ -1,14 +1,12 @@
+import { AppearanceSettings } from "@tracel/timeline/desktop";
 import { useI18n, type Locale, type CategoryConfig } from "@tracel/timeline";
 import { Button } from "./components/ui/Button";
 import { SettingsGroup } from "./components/SettingsGroup";
-import { Select } from "./components/ui/Select";
-import { accentPresets, defaultAccent } from "./theme";
 import { useState } from "react";
 import { FolderOpen } from "lucide-react";
 import { InfoTip } from "./components/ui/InfoTip";
 import { openCategoryFolder } from "./native";
 import { inspectForeground, openDatabaseFolder, nativeClient, type CollectionStatus, type ForegroundInfo } from "./native";
-import { zoomLevels } from "./useAppearance";
 
 export default function Settings({ categories, status, error, onTimeline, zoom, onZoom, accent, onAccent, language, onLanguage }: {
   categories: { config: CategoryConfig; path: string; error: string };
@@ -44,18 +42,7 @@ export default function Settings({ categories, status, error, onTimeline, zoom, 
     {error && <p role="alert" className="settings-error">{t(error)}</p>}
     {status?.storageError && <p role="alert" className="settings-error">{t("Storage unavailable:")} {status.storageError}</p>}
     {status?.startupWarning && <p role="alert" className="settings-error">{status.startupWarning}</p>}
-    <SettingsGroup title={t("Appearance")}>
-      <div className="settings-action"><label htmlFor="interface-language"><strong>{t("Language")}</strong></label><Select id="interface-language" label={t("Language")} value={language} onValueChange={(value) => onLanguage(value as Locale)} options={[{ value: "en", label: "English" }, { value: "zh-CN", label: "中文" }]} /></div>
-      <div className="settings-action settings-zoom"><label htmlFor="interface-zoom"><strong>{t("Interface zoom")}</strong><small>{t("Ctrl + / - to adjust; Ctrl 0 to reset")}</small></label>
-        <Select id="interface-zoom" label={t("Interface zoom")} value={String(zoom)} onValueChange={(value) => onZoom(Number(value))} options={zoomLevels.map((level) => ({ value: String(level), label: `${level}%` }))} />
-      </div>
-      <div className="settings-action settings-accent"><div><strong>{t("Accent color")}</strong></div>
-        <div className="accent-options">{accentPresets.map(({ name, color }) => <button key={name} className="accent-swatch" style={{ background: color }} aria-label={t("{name} accent", { name: t(name) })} aria-pressed={accent === color} title={t(name)} onClick={() => onAccent(color)} />)}
-          <label className="accent-custom" title={t("Custom accent color")}><span>{t("Custom")}</span><input type="color" aria-label={t("Custom accent color")} value={accent} onChange={(event) => onAccent(event.target.value)} /></label>
-          {accent !== defaultAccent && <Button className="tx-text-button" onClick={() => onAccent(defaultAccent)}>{t("Reset")}</Button>}
-        </div>
-      </div>
-    </SettingsGroup>
+    <AppearanceSettings language={language} onLanguage={onLanguage} zoom={zoom} onZoom={onZoom} accent={accent} onAccent={onAccent} />
     <SettingsGroup title={t("Categories")}>
       <div className="settings-action"><div><strong>categories.json</strong><small>{t("Edit this file, then return to Tracel to reload categories.")}</small><small style={{ overflowWrap: "anywhere" }}>{categories.path || t("Browser preview uses the default categories.")}</small></div></div>
       {categories.error && <p role="alert" className="settings-error">{categories.error}</p>}
