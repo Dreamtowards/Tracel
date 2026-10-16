@@ -1,4 +1,8 @@
 export const desktopZh: Readonly<Record<string, string>> = {
+  "GPU display": "GPU 显示",
+  "Simplify GPU names": "简化 GPU 名称",
+  "Show software rendering adapters": "显示软件渲染适配器",
+
   "Collection is paused. Right-click track headers to start.": "采集已暂停，可右键点击轨道表头开启。",
   "Track collection · right-click to configure": "轨道采集 · 右键配置",
   "Right-click track headers to configure collection": "右键点击左侧轨道表头，可开启或关闭采集",

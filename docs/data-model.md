@@ -71,3 +71,7 @@ GPU utilization and engines cover the preceding confirmed sample interval. GPU m
 ## GPU display identity normalization
 
 Desktop's view adapter compares GPU IDs case-insensitively and uses the canonical lowercase ID for metric keys. Existing archive JSON and raw exports remain unchanged. Resolved names replace historical fallback labels for the same identity within the loaded data; no schema migration or cross-session identity merging is performed. Missing names use short GPU-number display labels.
+
+## GPU display preferences
+
+Desktop defaults to simplified GPU names (remove GeForce and a trailing Graphics/GPU, preserving manufacturer/model/Laptop) and hides adapters named Microsoft Basic Render Driver. Both preferences persist with appearance settings and are accessible under GPU display in the track-header context menu. They never change collection switches, archived names/measurements or raw exports. Filtering uses resolved full names per canonical identity across the loaded range, including older fallback-only rows, and applies to Timeline tracks, range analytics and System metrics cards. The overall displayed GPU summary excludes hidden adapters; enabling the software-adapter option restores them. Unresolved and other adapter names are retained rather than assuming they are software. Memory subtitles contain only the selected display name; axes/hover/export still carry GiB. Web/demo and native collector APIs are unchanged.

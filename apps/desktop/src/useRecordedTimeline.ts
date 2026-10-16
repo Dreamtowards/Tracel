@@ -1,8 +1,9 @@
+import type { GpuDisplayOptions } from "./gpuNames";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { nativeClient, queryTimeline, type StoredObservation, type StateIntervals } from "./native";
 import { dayRange, localDate, recordedCapture } from "./recordedTimeline";
 
-export function useRecordedTimeline(visible: boolean) {
+export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSoftwareGpus }: GpuDisplayOptions = {}) {
   const [day, setDay] = useState(localDate);
   const [earliest, setEarliest] = useState(localDate);
   const [rows, setRows] = useState<StoredObservation[]>([]);
@@ -36,6 +37,6 @@ export function useRecordedTimeline(visible: boolean) {
     void poll();
     return () => { active = false; window.clearTimeout(timer); };
   }, [day, visible]);
-  const capture = useMemo(() => recordedCapture(day, loadedDay === day ? rows : [], Date.now(), loadedDay === day ? intervals : undefined), [day,loadedDay,rows,intervals]);
+  const capture = useMemo(() => recordedCapture(day, loadedDay === day ? rows : [], Date.now(), loadedDay === day ? intervals : undefined, { simplifyGpuNames, showSoftwareGpus }), [day,loadedDay,rows,intervals,simplifyGpuNames,showSoftwareGpus]);
   return { capture, error, loading, calendar: { value: day, min: earliest, max: localDate(), onChange: setDay } };
 }

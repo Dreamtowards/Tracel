@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 export const zoomLevels = [75, 90, 100, 110, 125, 150, 175] as const;
 const defaultZoom = 110;
 const storageKey = "tracel.desktop.appearance";
-type Appearance = { language: Locale; zoom: number; expanded: boolean; navigationWidth: number; accent: string };
+type Appearance = { simplifyGpuNames: boolean; showSoftwareGpus: boolean; language: Locale; zoom: number; expanded: boolean; navigationWidth: number; accent: string };
 export const navigationMin = 160;
 export const navigationMax = 280;
 export const navigationDefault = 192;
@@ -14,13 +14,15 @@ function loadAppearance(): Appearance {
   try {
     const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null");
     return {
+      simplifyGpuNames: typeof saved?.simplifyGpuNames === "boolean" ? saved.simplifyGpuNames : true,
+      showSoftwareGpus: saved?.showSoftwareGpus === true,
       language: saved?.language === "zh-CN" ? "zh-CN" : "en",
       zoom: zoomLevels.includes(saved?.zoom) ? saved.zoom : defaultZoom,
       expanded: typeof saved?.expanded === "boolean" ? saved.expanded : false,
       accent: validAccent(saved?.accent) ? saved.accent.toLowerCase() : defaultAccent,
       navigationWidth: Number.isFinite(saved?.navigationWidth) ? Math.max(navigationMin, Math.min(navigationMax, saved.navigationWidth)) : navigationDefault,
     };
-  } catch { return { language: "en", zoom: defaultZoom, expanded: false, navigationWidth: navigationDefault, accent: defaultAccent }; }
+  } catch { return { simplifyGpuNames: true, showSoftwareGpus: false, language: "en", zoom: defaultZoom, expanded: false, navigationWidth: navigationDefault, accent: defaultAccent }; }
 }
 
 export function useAppearance() {
@@ -47,6 +49,8 @@ export function useAppearance() {
   }, []);
   return {
     ...appearance,
+    setSimplifyGpuNames: (simplifyGpuNames: boolean) => setAppearance(current => ({ ...current, simplifyGpuNames })),
+    setShowSoftwareGpus: (showSoftwareGpus: boolean) => setAppearance(current => ({ ...current, showSoftwareGpus })),
     setLanguage: (language: Locale) => setAppearance((current) => ({ ...current, language })),
     setAccent: (accent: string) => {
       if (validAccent(accent)) setAppearance((current) => ({ ...current, accent: accent.toLowerCase() }));

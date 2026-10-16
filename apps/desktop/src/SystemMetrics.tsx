@@ -1,4 +1,4 @@
-import { gpuDisplayNames, gpuIdentity } from "./gpuNames";
+import { gpuDisplayNames, gpuIdentity, type GpuDisplayOptions } from "./gpuNames";
 import { useI18n, type Locale } from "@tracel/timeline";
 import { Button } from "./components/ui/Button";
 import { useState } from "react";
@@ -40,19 +40,19 @@ function rate(value: number | null | undefined): string {
   return `${(value / 1024).toFixed(1)} KiB/s`;
 }
 
-export default function SystemMetrics({ status, history, error, onSettings }: { status: CollectionStatus | null; history: SystemObservation[]; error: string; onSettings: () => void }) {
+export default function SystemMetrics({ status, history, error, onSettings, gpuOptions }: { status: CollectionStatus | null; history: SystemObservation[]; error: string; onSettings: () => void; gpuOptions?: GpuDisplayOptions }) {
   const { t, locale } = useI18n();
   const [exportCount, setExportCount] = useState(0);
   const [exporting, setExporting] = useState(false); const [exportStatus, setExportStatus] = useState("");
   const settings = status?.settings;
   const active = !!(status?.supported && settings?.enabled && (settings.cpu || settings.ram || settings.network || settings.disk || settings.audio || settings.audioInput || settings.media || settings.gpu || settings.battery || settings.cpuFrequency));
   const latest = status?.latest;
-  const gpuNames = gpuDisplayNames([...history, ...(latest ? [latest] : [])]);
+  const gpuNames = gpuDisplayNames([...history, ...(latest ? [latest] : [])], gpuOptions);
   const memoryCapacity = latest?.memoryTotalBytes ?? [...history].reverse().find((sample) => sample.memoryTotalBytes != null)?.memoryTotalBytes ?? 1;
   const cpu = settings?.enabled && settings.cpu ? latest?.cpuPercent : null;
   const gpuDevices = new Map<string, NonNullable<SystemObservation["gpus"]>[number]>();
-  for (const point of history) for (const gpu of point.gpus ?? []) gpuDevices.set(gpuIdentity(gpu.id),{...gpu,id:gpuIdentity(gpu.id)});
-  for (const gpu of latest?.gpus ?? []) gpuDevices.set(gpuIdentity(gpu.id),{...gpu,id:gpuIdentity(gpu.id)});
+  for (const point of history) for (const gpu of point.gpus ?? []) if (gpuNames.has(gpuIdentity(gpu.id))) gpuDevices.set(gpuIdentity(gpu.id),{...gpu,id:gpuIdentity(gpu.id)});
+  for (const gpu of latest?.gpus ?? []) if (gpuNames.has(gpuIdentity(gpu.id))) gpuDevices.set(gpuIdentity(gpu.id),{...gpu,id:gpuIdentity(gpu.id)});
   const hardwareHistory = latest && history.at(-1)?.capturedAtMs !== latest.capturedAtMs ? [...history,latest] : history;
   const battery = settings?.enabled && settings.battery ? latest?.battery : null;
   const ram = settings?.enabled && settings.ram ? latest?.memoryUsedBytes : null;

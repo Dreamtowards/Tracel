@@ -9,7 +9,9 @@ const groups = [
   ["AUDIO & MEDIA", [["audioInput", "Audio input level"], ["audio", "Audio output level"], ["media", "Now playing"]]],
 ] as const;
 
-export default function CollectionMenu({ children, status, busy, onSettings }: {
+export default function CollectionMenu({ children, status, busy, onSettings, simplifyGpuNames, showSoftwareGpus, onSimplifyGpuNames, onShowSoftwareGpus }: {
+  simplifyGpuNames: boolean; showSoftwareGpus: boolean;
+  onSimplifyGpuNames: (value: boolean) => void; onShowSoftwareGpus: (value: boolean) => void;
   children: ReactElement; status: CollectionStatus | null; busy: boolean;
   onSettings: (settings: CollectionSettings) => Promise<void>;
 }) {
@@ -31,6 +33,10 @@ export default function CollectionMenu({ children, status, busy, onSettings }: {
       <ContextMenuLabel className="ui-context-label">{t(label)}</ContextMenuLabel>
       {fields.map(([key, name]) => item(key, name))}
     </div>)}
+    <ContextMenuSeparator className="ui-context-separator" />
+    <ContextMenuLabel className="ui-context-label">{t("GPU display")}</ContextMenuLabel>
+    <ContextMenuCheckboxItem checked={simplifyGpuNames} onCheckedChange={value => onSimplifyGpuNames(value === true)}>{t("Simplify GPU names")}</ContextMenuCheckboxItem>
+    <ContextMenuCheckboxItem checked={showSoftwareGpus} onCheckedChange={value => onShowSoftwareGpus(value === true)}>{t("Show software rendering adapters")}</ContextMenuCheckboxItem>
     <ContextMenuSeparator className="ui-context-separator" />
     <p className="ui-context-hint">{t("Changes affect new measurements. Saved history is kept.")}</p>
   </ContextMenuContent></ContextMenu>;

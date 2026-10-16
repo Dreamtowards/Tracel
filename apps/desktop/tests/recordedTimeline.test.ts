@@ -146,13 +146,34 @@ test("GPU labels recover real names across casing changes without merging other 
   const named = row(2, 12, { intervalStartMs: epoch + 10000, gpus: [{ ...gpu, id: lower, name: "AMD Radeon 780M Graphics" }] });
   const missing = row(3, 14, { intervalStartMs: epoch + 12000, gpus: [{ ...gpu, name: "GPU 1" }, { ...gpu, id: "previous-boot", name: "GPU luid_old" }] });
   const names = gpuDisplayNames([old.sample, named.sample, missing.sample]);
-  assert.equal(names.get(lower), "AMD Radeon 780M Graphics");
+  assert.equal(names.get(lower), "AMD Radeon 780M");
   assert.equal(names.get("previous-boot"), "GPU 2");
   const capture = recordedCapture(day, [old, named, missing], epoch + 100000);
   const adapters = capture.metricTracks!.filter(track => track.id.startsWith("adapter:"));
-  assert.deepEqual(adapters.map(track => track.name), ["AMD Radeon 780M Graphics", "GPU 2"]);
+  assert.deepEqual(adapters.map(track => track.name), ["AMD Radeon 780M", "GPU 2"]);
   assert.equal(metricAt(capture, 11, `gpu:${lower}:total`), 45);
   assert.equal(metricAt(capture, 13, `gpu:${lower}:total`), 45);
   assert.equal(metricAt(capture, 11, `gpu:${lower}:dedicated`), 1);
   assert.equal(old.sample.gpus![0].name, `GPU ${upper}`, "raw archive data is preserved");
+});
+
+test("GPU display defaults hide software adapters, shorten names and keep memory units out of subtitles", () => {
+  const gpu = (id: string, name: string, utilizationPercent: number) => ({ id, name, utilizationPercent, engines: [], dedicatedUsedBytes: 1024 ** 3, sharedUsedBytes: 0 });
+  const rows = [row(1, 10, { intervalStartMs: epoch + 8000, gpus: [
+    gpu("software", "Microsoft Basic Render Driver", 99),
+    gpu("nvidia", "NVIDIA GeForce RTX 4070 Laptop GPU", 45),
+    gpu("amd", "AMD Radeon 780M Graphics", 15),
+  ] })];
+  const capture = recordedCapture(day, rows, epoch + 100000);
+  assert.deepEqual(capture.metricTracks!.filter(t => t.id.startsWith("adapter:")).map(t => t.name), ["NVIDIA RTX 4070 Laptop", "AMD Radeon 780M"]);
+  assert.deepEqual(capture.metricTracks!.filter(t => t.id.startsWith("memory:")).map(t => t.subtitle), ["NVIDIA RTX 4070 Laptop", "AMD Radeon 780M"]);
+  assert.equal(capture.metricOverrides!["gpu:nvidia:dedicated"]!.unit, "GiB");
+  assert.equal(metricAt(capture, 9, "gpu"), 45, "software utilization must not inflate hardware summary");
+  assert.equal(metricAt(capture, 9, "gpu:software:total"), null);
+  const full = recordedCapture(day, rows, epoch + 100000, undefined, { simplifyGpuNames: false, showSoftwareGpus: true });
+  assert.deepEqual(full.metricTracks!.filter(t => t.id.startsWith("adapter:")).map(t => t.name), ["Microsoft Basic Render Driver", "NVIDIA GeForce RTX 4070 Laptop GPU", "AMD Radeon 780M Graphics"]);
+  assert.equal(metricAt(full, 9, "gpu"), 99);
+  assert.equal(rows[0].sample.gpus![1].name, "NVIDIA GeForce RTX 4070 Laptop GPU");
+  const old = row(2, 12, { gpus: [gpu("SOFTWARE", "GPU luid_unknown", 100)] });
+  assert.equal(gpuDisplayNames([rows[0].sample, old.sample]).has("software"), false, "late fallback must not forget a resolved software identity");
 });

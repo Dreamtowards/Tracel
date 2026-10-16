@@ -63,7 +63,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
   const audio = useAudioMonitor(page === "audio");
   const media = useMediaSessions(page === "audio" && !!audio.status?.monitoring);
   const categories = useCategories();
-  const timeline = useRecordedTimeline(page === "timeline");
+  const timeline = useRecordedTimeline(page === "timeline", appearance);
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [infoError, setInfoError] = useState(false);
   const [notice, setNotice] = useState("");
@@ -91,7 +91,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
       <Explorer
         provider={demoProvider}
         categories={categories.config}
-        renderTrackHeaders={nativeClient ? (headers) => <CollectionMenu status={collection.status} busy={collection.busy} onSettings={collection.changeSettings}>{headers}</CollectionMenu> : undefined}
+        renderTrackHeaders={nativeClient ? (headers) => <CollectionMenu simplifyGpuNames={appearance.simplifyGpuNames} showSoftwareGpus={appearance.showSoftwareGpus} onSimplifyGpuNames={appearance.setSimplifyGpuNames} onShowSoftwareGpus={appearance.setShowSoftwareGpus} status={collection.status} busy={collection.busy} onSettings={collection.changeSettings}>{headers}</CollectionMenu> : undefined}
         renderAppIcon={nativeClient ? (app, fallback) => <ApplicationIcon executable={app.executablePath ?? app.exe} fallback={fallback} /> : undefined}
         capture={nativeClient ? timeline.capture : undefined}
         calendar={nativeClient ? timeline.calendar : undefined}
@@ -107,7 +107,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
         onShowTimeline={() => setPage("timeline")}
         captureLabel={t(nativeClient ? "Recorded metrics" : "Demo capture")}
         navigation={<Navigation page={page} expanded={appearance.expanded} width={appearance.navigationWidth} onWidth={appearance.setNavigationWidth} onToggle={appearance.toggleNavigation} onNavigate={setPage} onAbout={() => about.current?.showModal()} />}
-        pageContent={page === "audio" ? <Audio monitor={audio} media={media} /> : page === "settings" ? <Settings categories={categories} status={collection.status} error={collection.error} onTimeline={() => setPage("timeline")} zoom={appearance.zoom} onZoom={appearance.setZoom} accent={appearance.accent} onAccent={appearance.setAccent} language={appearance.language} onLanguage={appearance.setLanguage} /> : page === "utilities" ? <Utilities status={collection.status} busy={collection.busy} error={collection.error} onAwake={collection.changeAwake} /> : page === "metrics" ? <SystemMetrics status={collection.status} history={collection.history} error={collection.error} onSettings={() => { setPage("timeline"); setNotice("Right-click track headers to configure collection"); }} /> : undefined}
+        pageContent={page === "audio" ? <Audio monitor={audio} media={media} /> : page === "settings" ? <Settings categories={categories} status={collection.status} error={collection.error} onTimeline={() => setPage("timeline")} zoom={appearance.zoom} onZoom={appearance.setZoom} accent={appearance.accent} onAccent={appearance.setAccent} language={appearance.language} onLanguage={appearance.setLanguage} /> : page === "utilities" ? <Utilities status={collection.status} busy={collection.busy} error={collection.error} onAwake={collection.changeAwake} /> : page === "metrics" ? <SystemMetrics gpuOptions={appearance} status={collection.status} history={collection.history} error={collection.error} onSettings={() => { setPage("timeline"); setNotice("Right-click track headers to configure collection"); }} /> : undefined}
       />
       <div className="desktop-notice" role="status" aria-live="polite">{t(notice)}</div>
       <dialog ref={about} className="desktop-about" onClick={(event) => { if (event.target === event.currentTarget) about.current?.close(); }}>

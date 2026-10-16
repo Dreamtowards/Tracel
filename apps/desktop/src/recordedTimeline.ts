@@ -1,5 +1,5 @@
 import type { Capture, MetricKey, MetricSample, MediaInterval } from "@tracel/timeline/model";
-import { gpuDisplayNames, gpuIdentity } from "./gpuNames";
+import { gpuDisplayNames, gpuIdentity, type GpuDisplayOptions } from "./gpuNames";
 import type { StoredObservation, ObservedProcess, StateIntervals } from "./native";
 
 export function localDate(date = new Date()): string {
@@ -13,15 +13,16 @@ export function dayRange(value: string) {
 const emptyValues = (): Partial<Record<MetricKey, number | null>> => ({ cpu: null, ram: null, gpu: null, download: null, upload: null, read: null, write: null, audio: null });
 
 /** Native-to-UI boundary: UTC milliseconds to epoch-relative seconds; no simulated activity. */
-export function recordedCapture(day: string, rows: StoredObservation[], now = Date.now(), intervals?: StateIntervals): Capture {
+export function recordedCapture(day: string, rows: StoredObservation[], now = Date.now(), intervals?: StateIntervals, gpuOptions: GpuDisplayOptions = {}): Capture {
   const { startMs, endMs } = dayRange(day);
   const bounds = { start: 0, end: (endMs - startMs) / 1000 };
   const samples = [...rows].sort((a, b) => a.sample.capturedAtMs - b.sample.capturedAtMs || a.id - b.id);
   const metricOverrides: NonNullable<Capture["metricOverrides"]> = {};
   const metricTracks: NonNullable<Capture["metricTracks"]> = [];
-  const gpuNames = gpuDisplayNames(samples.map(({sample}) => sample));
+  const gpuNames = gpuDisplayNames(samples.map(({sample}) => sample), gpuOptions);
+  const visibleGpus = (sample: StoredObservation["sample"]) => (sample.gpus ?? []).filter(gpu => gpuNames.has(gpuIdentity(gpu.id)));
   const gpus = new Map<string, { name: string; engines: Map<string,string> }>();
-  for (const { sample } of samples) for (const gpu of sample.gpus ?? []) {
+  for (const { sample } of samples) for (const gpu of visibleGpus(sample)) {
     const device = gpus.get(gpuIdentity(gpu.id)) ?? { name: gpuNames.get(gpuIdentity(gpu.id))!, engines: new Map<string,string>() };
     for (const engine of gpu.engines) device.engines.set(engine.id,engine.name);
     gpus.set(gpuIdentity(gpu.id),device);
@@ -44,7 +45,7 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
     metricOverrides[dedicated] = { name: "Dedicated GPU memory", color: "#5485df", unit: "GiB", max: 1 };
     metricOverrides[shared] = { name: "Shared GPU memory", color: "#ae9bdd", unit: "GiB", max: 1 };
     metricTracks.push({ id: `adapter:${id}`, name: device.name, keys: [total], details, subtitle: "GPU · expand for engines" },
-      { id: `memory:${id}`, name: "GPU memory", keys: [dedicated,shared], subtitle: `${device.name} · GiB` });
+      { id: `memory:${id}`, name: "GPU memory", keys: [dedicated,shared], subtitle: device.name });
   }
   if (hasBattery) metricTracks.push({ id: "battery", name: "Battery", keys: ["battery"], subtitle: "0 – 100%" });
   if (hasPower) metricTracks.push({ id: "power", name: "Power status", keys: hasBattery ? ["pluggedIn","charging"] : ["pluggedIn"], subtitle: "Plugged in / charging" });
@@ -74,12 +75,12 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
     // CPU and throughput readings summarize the preceding measured interval.
     if (interval != null && interval < sample.capturedAtMs && sample.capturedAtMs - interval <= 6000) {
       const gpuValues: Partial<Record<MetricKey, number | null>> = {};
-      for (const gpu of sample.gpus ?? []) {
+      for (const gpu of visibleGpus(sample)) {
         gpuValues[gpuKey(gpu.id,"total")] = gpu.utilizationPercent;
         for (const engine of gpu.engines) gpuValues[gpuKey(gpu.id,`engine:${engine.id}`)] = engine.utilizationPercent;
       }
       // Overall summary uses the busiest observed adapter, never a sum of percentages.
-      const totals = (sample.gpus ?? []).map((gpu) => gpu.utilizationPercent).filter((value): value is number => value != null);
+      const totals = visibleGpus(sample).map((gpu) => gpu.utilizationPercent).filter((value): value is number => value != null);
       add(seconds(interval), time, { ...emptyValues(), ...gpuValues, gpu: totals.length ? Math.max(...totals) : null, cpu: sample.cpuPercent,
         download: sample.networkReceiveBytesPerSecond == null ? null : sample.networkReceiveBytesPerSecond / 1024 ** 2,
         upload: sample.networkSendBytesPerSecond == null ? null : sample.networkSendBytesPerSecond / 1024 ** 2,
@@ -95,7 +96,7 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
       pluggedIn: sample.battery?.pluggedIn == null ? null : Number(sample.battery.pluggedIn),
       charging: sample.battery?.charging == null ? null : Number(sample.battery.charging),
     };
-    for (const gpu of sample.gpus ?? []) {
+    for (const gpu of visibleGpus(sample)) {
       hardwareValues[gpuKey(gpu.id,"dedicated")] = gpu.dedicatedUsedBytes == null ? null : gpu.dedicatedUsedBytes / 1024 ** 3;
       hardwareValues[gpuKey(gpu.id,"shared")] = gpu.sharedUsedBytes == null ? null : gpu.sharedUsedBytes / 1024 ** 3;
     }
