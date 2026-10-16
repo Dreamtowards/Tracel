@@ -18,6 +18,8 @@ Classification is derived at display/query time, not written into SQLite observa
 
 ## Implemented
 
+Web `/` is a Chinese static product page with locally hosted, versioned Desktop downloads and real Desktop screenshots using fabricated example data. `src/release.json` owns public release metadata; Web tests verify the EXE size, SHA-256, checksum file and PE signature. `/radar` preserves the original Radar experience and `/timeline` preserves the interactive Activity demo. MapLibre and legacy live/industrial styles are imported by the demo route layouts instead of the root layout; the landing page uses a scoped CSS module and no product-specific client state. Desktop and the reusable Timeline package are unaffected by website routing.
+
 The root is an npm and Cargo workspace. `apps/web` owns Next.js routes, Radar, MapLibre/Three.js, Tailwind and static Cloudflare export. `apps/desktop` owns a lean Vite/React entry point and Tauri 2 lifecycle; it imports neither Radar nor Next.js.
 
 Web and browser preview pass `@tracel/timeline/mock` to `Explorer` from `packages/timeline`. Native Desktop supplies a controlled Capture derived from persisted numeric samples and state intervals; it never substitutes demo readings for missing measurements. This preserves the original Canvas Timeline, selection/analytics, hover/context, collapse/resize, settings and export. The package owns React UI, domain helpers and scoped CSS. Host resets remain in each app. No native API appears in the package or Web bundle. Pure model/analytics and mock subpath exports avoid mixing the demo adapter into the main UI entry point.

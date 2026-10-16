@@ -2,7 +2,7 @@
 
 A quiet, science-fiction-inspired live website observation surface. This visual MVP uses local simulated visitors only; it does not collect real traffic.
 
-> This document preserves the original Radar product guide. Run the commands below from the repository root; web sources and generated assets now live in `apps/web`.
+> This document preserves the original Radar product guide. Radar now lives at `/radar`; `/` introduces the Tracel desktop app and `/timeline` retains the interactive Activity demo. Run the commands below from the repository root; web sources and generated assets now live in `apps/web`.
 
 ## Run
 
@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. Run `npm run build` for production.
+Open http://127.0.0.1:3000/radar. Run `npm run build` for production.
 
 Production builds export a static site to `apps/web/out/`. Preview it with a static HTTP server.
 To deploy to Cloudflare Pages, run `npx wrangler login` once, then `npm run deploy`.

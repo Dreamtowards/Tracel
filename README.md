@@ -1,6 +1,6 @@
 # Tracel
 
-Tracel contains two independent experiences: **Radar**, a simulated website visitor map/globe at `/`, and **Activity**, a personal computer activity/performance explorer. The website `/timeline` and Desktop browser preview use demo data; native Desktop Timeline displays real observations persisted in SQLite. The Windows client also offers opt-in real CPU/RAM/network/disk/audio/media collection, Settings and power tools (including AC/DC Windows display timeouts), plus an on-demand Audio page for per-session levels and recent sounds across output devices.
+Tracel is a personal computer activity/performance explorer. The product website lives at `/`, **Radar** (a simulated website visitor map/globe) at `/radar`, and the interactive **Activity** demo at `/timeline`. The website and Desktop browser preview use demo data; native Desktop Timeline displays real observations persisted in SQLite. The Windows client offers opt-in CPU/frequency, RAM, GPU/engines/VRAM, network, disk, microphone/output levels, media and battery/power collection, Settings and power tools, plus an on-demand Audio page for per-session levels and recent sounds across output devices.
 
 ## Layout
 
@@ -21,7 +21,7 @@ npm ci
 npm run dev
 ```
 
-Open [Radar](http://127.0.0.1:3000/) or [Activity](http://127.0.0.1:3000/timeline).
+Open the [product website](http://127.0.0.1:3000/), [Radar](http://127.0.0.1:3000/radar) or [Activity](http://127.0.0.1:3000/timeline).
 
 ```sh
 npm run dev:desktop:ui       # Vite at http://127.0.0.1:1420
@@ -50,6 +50,8 @@ npm run build:desktop:installer # Optional NSIS installer; explicit request only
 
 `build:web` writes `apps/web/out/`; `build:desktop` writes `apps/desktop/dist/`. Preview the web export with a static HTTP server. Web predev/prebuild prepares matching MapLibre worker/shared modules in ignored `apps/web/public/maplibre/`.
 
+The product website serves a versioned Windows EXE and its SHA-256 file from `apps/web/public/downloads`. When publishing a new Desktop download, copy the verified portable EXE there and update `apps/web/src/release.json` (version, date, size, URL and hash) together with the checksum file. Web tests verify the download's integrity. Product screenshots in `apps/web/public/images` show the real Desktop UI with fabricated example data, not personal activity records.
+
 ## Deploy
 
 From root, `npm run deploy` builds Web and runs Wrangler in `apps/web`, publishing its `out` directory to the existing Cloudflare Pages `tracel` project, branch `main`. Authenticate with Wrangler first. Git-based Pages builds should use repository root, `npm ci && npm run build:web`, output `apps/web/out`. Desktop is not deployed to Pages.
@@ -62,6 +64,6 @@ From root, `npm run deploy` builds Web and runs Wrangler in `apps/web`, publishi
 - [Migration and verification record](docs/migration.md).
 - [Original migration specification](CODEX_CONTEXT.md); its pre-migration paths are historical.
 
-Desktop collection starts disabled on first launch. CPU, RAM, network, disk, audio and media have independent native queries; the master switch stops all. Additional sources default off on upgrade. Preferences and measured observations persist locally. SQLite history appears in the native Timeline with date navigation, live following, selection analytics and JSON range export; the latest 1,800 readings are restored to System metrics on restart. Settings shows the database path and committed row count. No automatic retention limit is applied yet. GPU, browser URLs, per-process metrics and independent agent lifetime remain future work. The flat Radar map fetches external basemap tiles without sending visitor telemetry to that service.
+Desktop collection starts disabled on first launch. Sources have independent native queries; the master switch stops all. Additional sources default off on upgrade. Preferences and measured observations persist locally. SQLite history appears in the native Timeline with date navigation, live following, selection analytics and JSON range export; the latest 1,800 readings are restored to System metrics on restart. Settings shows the database path and committed row count. No automatic retention limit is applied yet. Browser URLs, per-process metrics and independent agent lifetime remain future work. The flat Radar map fetches external basemap tiles without sending visitor telemetry to that service.
 
 Desktop 0.2.1 disables manual display-off after a wake-up reliability incident. Prevent automatic sleep now requests system activity only and allows normal display timeout. See [collector limitations](docs/collectors.md). Portable releases require WebView2; preferences still use the Windows user application-data directory.
