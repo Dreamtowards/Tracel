@@ -34,7 +34,7 @@ Desktop owns its fixed navigation, viewport sizing and local appearance preferen
 
 Desktop owns the persisted English/Chinese preference and provides its message catalog to a lightweight shared Timeline locale context. The default context is English, keeping Web unchanged; locale changes update labels and Canvas date/duration formatting without changing data, identifiers or view state. Native diagnostics and export data remain unmodified. Desktop buttons use an owned ghost/secondary primitive and shared focus tokens.
 
-Utilities owns one-shot file usage UI. Its Desktop-native adapter queries Windows Restart Manager on a blocking worker, with RAII sessions and bounded buffer retries. It shares no file data with the Timeline or metrics history and adds no background watcher, driver or bundled runtime. Settings retains collection/appearance/foreground diagnostics; power controls move to Utilities while keeping the same collector-thread lifecycle.
+Utilities owns one-shot file usage UI. Its Desktop-native adapter queries Windows Restart Manager on a blocking worker, with RAII sessions and bounded buffer retries. It shares no file data with the Timeline or metrics history and adds no background watcher, driver or bundled runtime. Settings retains appearance/foreground diagnostics and links to Timeline collection controls; power controls move to Utilities while keeping the same collector-thread lifecycle.
 
 ## Explicit Windows utilities
 
@@ -71,3 +71,9 @@ Schema 5 adds nullable CPU-frequency MHz and variable per-adapter GPU/battery ob
 ## Input audio level
 
 The collector has an independent opt-in microphone meter source using the existing Core Audio endpoint meter, defaulting off for old settings. It reads default multimedia input peak only, with no audio client or raw recording. Schema 6 persists nullable input levels. Native Timeline adds an input lane immediately above output, while the Web/demo layout stays unchanged. System metrics, settings and exports expose the input source independently; the separate Audio diagnostics worker is unchanged.
+
+## Track collection context menu and GPU labels
+
+Desktop owns a shadcn-style Radix Context Menu through the shared Explorer/Timeline renderTrackHeaders slot. Only the label column (including its axis and collapsed groups) triggers the menu; Web keeps its normal layout with no Radix/native dependencies. All source toggles and the master switch move from Settings into this menu, reusing the existing persisted settings mutation, busy guard and failure behavior. Settings links back to Timeline. Changes affect collection, not historical visibility or archive deletion. The menu supports keyboard context-menu invocation and viewport-bounded portals with the existing interface scale.
+
+GPU PDH adapter IDs are normalized to lowercase for DXGI name lookup. Display adapters also normalize old casing without modifying archived JSON, prefer the latest resolved model name over fallback names, and give unresolved historical adapters short GPU-number labels. Different LUIDs/physical indices remain separate; devices from different Windows sessions are never guessed to be the same hardware.

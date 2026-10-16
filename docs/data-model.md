@@ -67,3 +67,7 @@ GPU utilization and engines cover the preceding confirmed sample interval. GPU m
 ## Microphone observation, schema 6
 
 `audioInputPeakPercent` is a nullable 0–100 default-capture-endpoint peak meter reading, separate from existing output `audioPeakPercent`. Schema 6 adds a nullable `audio_input_peak` REAL column and extends the recent-ring view and bounded numeric query without rewriting previous values or intervals. Old rows deserialize as missing. Input follows the same capped sample-and-hold support as output audio; zero is valid, null breaks coverage. Shared Capture uses `audioInput` as the metric key and percent as the unit. Exported measurements retain the original nullable percent field, while range exports contain clipped support and weighted input analytics.
+
+## GPU display identity normalization
+
+Desktop's view adapter compares GPU IDs case-insensitively and uses the canonical lowercase ID for metric keys. Existing archive JSON and raw exports remain unchanged. Resolved names replace historical fallback labels for the same identity within the loaded data; no schema migration or cross-session identity merging is performed. Missing names use short GPU-number display labels.

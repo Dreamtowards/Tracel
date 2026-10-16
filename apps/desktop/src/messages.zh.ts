@@ -1,4 +1,11 @@
 export const desktopZh: Readonly<Record<string, string>> = {
+  "Collection is paused. Right-click track headers to start.": "采集已暂停，可右键点击轨道表头开启。",
+  "Track collection · right-click to configure": "轨道采集 · 右键配置",
+  "Right-click track headers to configure collection": "右键点击左侧轨道表头，可开启或关闭采集",
+  "Changes affect new measurements. Saved history is kept.": "修改只影响新数据采集，已有历史记录会保留。",
+  "Open Timeline": "打开时间轴",
+  "System performance": "系统性能",
+
   "Edit this file, then return to Tracel to reload categories.": "编辑此文件，切回 Tracel 后重新加载分类。",
   "Browser preview uses the default categories.": "浏览器预览使用默认分类。",
   "Open configuration folder": "打开配置文件夹",

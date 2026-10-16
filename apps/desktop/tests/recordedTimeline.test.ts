@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { gpuDisplayNames } from "../src/gpuNames";
 import { recordedCapture, dayRange } from "../src/recordedTimeline";
 import { analyze } from "@tracel/timeline/analytics";
 import { metricAt } from "@tracel/timeline/model";
@@ -136,4 +137,22 @@ test("a full day stays bounded and does not spread large arrays into the call st
   const capture = recordedCapture(day,rows,epoch+86400000);
   assert.equal(capture.metrics.length,86399);
   assert.equal(analyze(capture,{start:0,end:86400}).metrics.download.coverage,86398);
+});
+
+test("GPU labels recover real names across casing changes without merging other sessions", () => {
+  const upper = "luid_0x00000000_0x0000F455_phys_0", lower = upper.toLowerCase();
+  const gpu = { id: upper, name: `GPU ${upper}`, utilizationPercent: 45, engines: [], dedicatedUsedBytes: 1024 ** 3, sharedUsedBytes: 0 };
+  const old = row(1, 10, { gpus: [gpu] });
+  const named = row(2, 12, { intervalStartMs: epoch + 10000, gpus: [{ ...gpu, id: lower, name: "AMD Radeon 780M Graphics" }] });
+  const missing = row(3, 14, { intervalStartMs: epoch + 12000, gpus: [{ ...gpu, name: "GPU 1" }, { ...gpu, id: "previous-boot", name: "GPU luid_old" }] });
+  const names = gpuDisplayNames([old.sample, named.sample, missing.sample]);
+  assert.equal(names.get(lower), "AMD Radeon 780M Graphics");
+  assert.equal(names.get("previous-boot"), "GPU 2");
+  const capture = recordedCapture(day, [old, named, missing], epoch + 100000);
+  const adapters = capture.metricTracks!.filter(track => track.id.startsWith("adapter:"));
+  assert.deepEqual(adapters.map(track => track.name), ["AMD Radeon 780M Graphics", "GPU 2"]);
+  assert.equal(metricAt(capture, 11, `gpu:${lower}:total`), 45);
+  assert.equal(metricAt(capture, 13, `gpu:${lower}:total`), 45);
+  assert.equal(metricAt(capture, 11, `gpu:${lower}:dedicated`), 1);
+  assert.equal(old.sample.gpus![0].name, `GPU ${upper}`, "raw archive data is preserved");
 });

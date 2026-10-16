@@ -1,4 +1,5 @@
 import type { Capture, MetricKey, MetricSample, MediaInterval } from "@tracel/timeline/model";
+import { gpuDisplayNames, gpuIdentity } from "./gpuNames";
 import type { StoredObservation, ObservedProcess, StateIntervals } from "./native";
 
 export function localDate(date = new Date()): string {
@@ -18,13 +19,14 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
   const samples = [...rows].sort((a, b) => a.sample.capturedAtMs - b.sample.capturedAtMs || a.id - b.id);
   const metricOverrides: NonNullable<Capture["metricOverrides"]> = {};
   const metricTracks: NonNullable<Capture["metricTracks"]> = [];
+  const gpuNames = gpuDisplayNames(samples.map(({sample}) => sample));
   const gpus = new Map<string, { name: string; engines: Map<string,string> }>();
   for (const { sample } of samples) for (const gpu of sample.gpus ?? []) {
-    const device = gpus.get(gpu.id) ?? { name: gpu.name, engines: new Map<string,string>() };
+    const device = gpus.get(gpuIdentity(gpu.id)) ?? { name: gpuNames.get(gpuIdentity(gpu.id))!, engines: new Map<string,string>() };
     for (const engine of gpu.engines) device.engines.set(engine.id,engine.name);
-    gpus.set(gpu.id,device);
+    gpus.set(gpuIdentity(gpu.id),device);
   }
-  const gpuKey = (id: string, field: string): MetricKey => `gpu:${id}:${field}`;
+  const gpuKey = (id: string, field: string): MetricKey => `gpu:${gpuIdentity(id)}:${field}`;
   const engineColors = ["#54bdd6", "#ae9bdd", "#83bc68", "#d783c3", "#5485df", "#d4ab72"];
   const hasFrequency = samples.some(({sample}) => sample.cpuFrequencyMhz != null);
   const hasBattery = samples.some(({sample}) => sample.battery?.present === true);

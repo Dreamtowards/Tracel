@@ -1,24 +1,23 @@
 import { useI18n, type Locale, type CategoryConfig } from "@tracel/timeline";
 import { Button } from "./components/ui/Button";
-import { SettingsGroup, SettingToggle as Toggle } from "./components/SettingsGroup";
+import { SettingsGroup } from "./components/SettingsGroup";
 import { Select } from "./components/ui/Select";
 import { accentPresets, defaultAccent } from "./theme";
 import { useState } from "react";
 import { FolderOpen } from "lucide-react";
 import { InfoTip } from "./components/ui/InfoTip";
 import { openCategoryFolder } from "./native";
-import { inspectForeground, openDatabaseFolder, nativeClient, type CollectionSettings, type CollectionStatus, type ForegroundInfo } from "./native";
+import { inspectForeground, openDatabaseFolder, nativeClient, type CollectionStatus, type ForegroundInfo } from "./native";
 import { zoomLevels } from "./useAppearance";
 
-export default function Settings({ categories, status, busy, error, onSettings, zoom, onZoom, accent, onAccent, language, onLanguage }: {
+export default function Settings({ categories, status, error, onTimeline, zoom, onZoom, accent, onAccent, language, onLanguage }: {
   categories: { config: CategoryConfig; path: string; error: string };
-  status: CollectionStatus | null; busy: boolean; error: string;
-  onSettings: (settings: CollectionSettings) => Promise<void>;
+  status: CollectionStatus | null; error: string;
+  onTimeline: () => void;
   language: Locale; onLanguage: (language: Locale) => void;
   zoom: number; onZoom: (zoom: number) => void; accent: string; onAccent: (accent: string) => void;
 }) {
   const { t, locale } = useI18n();
-  const settings: CollectionSettings = status?.settings ?? { enabled: false, cpu: true, ram: true, network: false, disk: false, audio: false, media: false };
   const unavailable = !nativeClient || !status?.supported;
   const [debug, setDebug] = useState<ForegroundInfo | null>(null);
   const [debugging, setDebugging] = useState(false);
@@ -64,20 +63,8 @@ export default function Settings({ categories, status, busy, error, onSettings, 
       {categoryFolderError && <p role="alert" className="settings-error">{categoryFolderError}</p>}
     </SettingsGroup>
     <SettingsGroup title={t("Collection")}>
-      <Toggle label="Enable collection" description="Every 2 seconds. Disabled sources are not queried." checked={settings.enabled} disabled={unavailable} pending={busy} onChange={(enabled) => { void onSettings({ ...settings, enabled }); }} />
-      <Toggle label="CPU usage" description="" checked={settings.cpu} disabled={unavailable} pending={busy} onChange={(cpu) => { void onSettings({ ...settings, cpu }); }} />
-      <Toggle label="RAM usage" description="" checked={settings.ram} disabled={unavailable} pending={busy} onChange={(ram) => { void onSettings({ ...settings, ram }); }} />
-      {([['network', 'Network traffic', 'Physical adapters · receive and send'], ['disk', 'Disk activity', 'Physical disks · read and write'], ['audioInput', 'Audio input level', 'Default microphone peak only · no audio recording'], ['audio', 'Audio output level', 'Output peak only · no audio recording'], ['media', 'Now playing', 'Title and artist from supported media apps']] as const).map(([key, label, description]) => <Toggle key={key} label={label} description={description} checked={settings[key] ?? false} disabled={unavailable} pending={busy} onChange={(value) => { void onSettings({ ...settings, [key]: value }); }} />)}
-      {([['gpu', 'GPU usage and memory', 'Per GPU · engines, dedicated and shared memory'], ['battery', 'Battery and power', 'Battery percentage · plugged in and charging'], ['cpuFrequency', 'CPU frequency', 'Windows-reported frequency · separate GHz track']] as const).map(([key,label,description]) => <Toggle key={key} label={label} description={description} checked={settings[key] ?? false} disabled={unavailable} pending={busy} onChange={(value) => { void onSettings({ ...settings, [key]: value }); }} />)}
-      <p className="settings-footnote">{t("Measurements are saved locally in SQLite and shown on the Timeline.")}</p>
-    </SettingsGroup>
-    <SettingsGroup title={t("Application activity")}>
-      {([
-        ['foreground','Foreground apps and window titles','Window titles only · no URLs or file contents'],
-        ['background','Apps','Apps with desktop windows, including minimized windows'],
-        ['idle','Idle / AFK detection','Idle after 5 minutes without keyboard or mouse input'],
-      ] as const).map(([key,label,description]) => <Toggle key={key} label={label} description={description} checked={settings[key] ?? false} disabled={unavailable} pending={busy} onChange={(value) => { void onSettings({...settings,[key]:value}); }} />)}
-      <p className="settings-footnote">{t("Uses the collection master switch. New activity is saved locally; earlier activity cannot be recovered.")}</p>
+      <p>{t("Right-click track headers to configure collection")}</p>
+      <Button onClick={onTimeline}>{t("Open Timeline")}</Button>
     </SettingsGroup>
     <SettingsGroup title={t("Storage")}>
       <div className="settings-action"><div><strong>SQLite</strong><small>{t("Saved observations")}: {status?.persistedCount?.toLocaleString(locale) ?? "—"}</small></div>

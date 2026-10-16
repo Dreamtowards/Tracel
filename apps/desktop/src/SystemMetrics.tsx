@@ -1,3 +1,4 @@
+import { gpuDisplayNames, gpuIdentity } from "./gpuNames";
 import { useI18n, type Locale } from "@tracel/timeline";
 import { Button } from "./components/ui/Button";
 import { useState } from "react";
@@ -46,11 +47,12 @@ export default function SystemMetrics({ status, history, error, onSettings }: { 
   const settings = status?.settings;
   const active = !!(status?.supported && settings?.enabled && (settings.cpu || settings.ram || settings.network || settings.disk || settings.audio || settings.audioInput || settings.media || settings.gpu || settings.battery || settings.cpuFrequency));
   const latest = status?.latest;
+  const gpuNames = gpuDisplayNames([...history, ...(latest ? [latest] : [])]);
   const memoryCapacity = latest?.memoryTotalBytes ?? [...history].reverse().find((sample) => sample.memoryTotalBytes != null)?.memoryTotalBytes ?? 1;
   const cpu = settings?.enabled && settings.cpu ? latest?.cpuPercent : null;
   const gpuDevices = new Map<string, NonNullable<SystemObservation["gpus"]>[number]>();
-  for (const point of history) for (const gpu of point.gpus ?? []) gpuDevices.set(gpu.id,gpu);
-  for (const gpu of latest?.gpus ?? []) gpuDevices.set(gpu.id,gpu);
+  for (const point of history) for (const gpu of point.gpus ?? []) gpuDevices.set(gpuIdentity(gpu.id),{...gpu,id:gpuIdentity(gpu.id)});
+  for (const gpu of latest?.gpus ?? []) gpuDevices.set(gpuIdentity(gpu.id),{...gpu,id:gpuIdentity(gpu.id)});
   const hardwareHistory = latest && history.at(-1)?.capturedAtMs !== latest.capturedAtMs ? [...history,latest] : history;
   const battery = settings?.enabled && settings.battery ? latest?.battery : null;
   const ram = settings?.enabled && settings.ram ? latest?.memoryUsedBytes : null;
@@ -70,21 +72,21 @@ export default function SystemMetrics({ status, history, error, onSettings }: { 
     <header className="desktop-page-heading"><h1>{t("System metrics")}</h1><div className="metrics-actions"><Button className="tx-button" onClick={onSettings}>{t("Collection settings")}</Button><Button className="tx-button" onClick={() => { void exportHistory(); }} disabled={!nativeClient || exporting || !status?.sampleCount}>{t(exporting ? "Saving…" : "Export measurements")}</Button></div></header>
     <div className="metrics-state"><i className={active ? "active" : ""} />{t(!nativeClient ? "Windows client required" : !status ? "Connecting…" : active ? "Collecting every 2s" : "Paused")}<span>{status?.sampleCount ?? 0} {" "}{t("samples · local")}</span></div>
     {error && <p role="alert" className="settings-error">{t(error)}</p>}
-    {!active && <p className="settings-banner">{t("Collection is paused. Enable it in Settings to start.")}</p>}
+    {!active && <p className="settings-banner">{t("Collection is paused. Right-click track headers to start.")}</p>}
     <div className="metrics-grid">
       <section className="settings-card"><h2>{t("CPU usage")}</h2><div className="metrics-value">{cpu == null ? "—" : cpu.toFixed(1)}<small>%</small></div><p>{t(!settings?.cpu ? "CPU sampling disabled" : active && cpu == null ? "Warming up…" : "System utilization")}</p><MetricChart history={history} field="cpuPercent" max={100} color="#54bdd6" /></section>
       {settings?.cpuFrequency && <section className="settings-card"><h2>{t("CPU frequency")}</h2><div className="metrics-value">{settings.enabled && latest?.cpuFrequencyMhz != null ? (latest.cpuFrequencyMhz / 1000).toFixed(2) : "—"}<small>GHz</small></div><p>{t("Mean Windows-reported frequency · not effective per-core clocks")}</p><SeriesChart history={hardwareHistory} series={[{label:"CPU frequency",color:"#9dacce",value:(sample)=>sample.cpuFrequencyMhz}]} max={Math.max(6000,...hardwareHistory.map((sample)=>sample.cpuFrequencyMhz ?? 0))} label="CPU frequency" /></section>}
       {settings?.gpu && gpuDevices.size === 0 && <section className="settings-card"><h2>GPU</h2><p>{t("Waiting for GPU counters · unsupported readings stay empty")}</p></section>}
       {Array.from(gpuDevices.values()).map((device) => {
-        const current = settings?.enabled && settings.gpu ? latest?.gpus?.find((gpu)=>gpu.id===device.id) : undefined;
-        const read = (sample: SystemObservation) => sample.gpus?.find((gpu)=>gpu.id===device.id);
+        const current = settings?.enabled && settings.gpu ? latest?.gpus?.find((gpu)=>gpuIdentity(gpu.id)===device.id) : undefined;
+        const read = (sample: SystemObservation) => sample.gpus?.find((gpu)=>gpuIdentity(gpu.id)===device.id);
         const engines = new Map<string,string>();
         for (const point of hardwareHistory) for (const engine of read(point)?.engines ?? []) engines.set(engine.id,engine.name);
         const series: ChartSeries[] = [{label:"GPU utilization",color:"#d4ab72",value:(sample)=>read(sample)?.utilizationPercent}, ...Array.from(engines,([id,label],index)=>({label,color:engineColors[index%engineColors.length],value:(sample: SystemObservation)=>read(sample)?.engines.find((engine)=>engine.id===id)?.utilizationPercent}))];
         const memoryMax = Math.max(1024**3,...hardwareHistory.flatMap((point)=>[read(point)?.dedicatedUsedBytes ?? 0,read(point)?.sharedUsedBytes ?? 0]));
-        return <section className="settings-card" key={device.id}><h2>{device.name}</h2><div className="metrics-value">{current?.utilizationPercent?.toFixed(1) ?? "—"}<small>%</small></div>
+        return <section className="settings-card" key={device.id}><h2>{gpuNames.get(device.id)}</h2><div className="metrics-value">{current?.utilizationPercent?.toFixed(1) ?? "—"}<small>%</small></div>
           <p>{t("Busiest engine · expand GPU on Timeline for individual engines")}</p>
-          <SeriesChart history={hardwareHistory} series={series} max={100} label={device.name} />
+          <SeriesChart history={hardwareHistory} series={series} max={100} label={gpuNames.get(device.id) ?? "GPU"} />
           <dl className="metrics-engine-list">{series.map((item,index)=><div key={item.label}><dt><i style={{background:item.color}} />{t(item.label)}</dt><dd>{index===0 ? current?.utilizationPercent?.toFixed(1) ?? "—" : current?.engines.find((engine)=>engine.name===item.label)?.utilizationPercent.toFixed(1) ?? "—"}%</dd></div>)}</dl>
           <div className="metrics-duplex"><div><small>{t("Dedicated GPU memory")}</small><strong>{current?.dedicatedUsedBytes == null ? "—" : (current.dedicatedUsedBytes/1024**3).toFixed(2)} GiB</strong></div><div><small>{t("Shared GPU memory")}</small><strong>{current?.sharedUsedBytes == null ? "—" : (current.sharedUsedBytes/1024**3).toFixed(2)} GiB</strong></div></div>
           <p>{t("Dedicated / shared · solid / dashed")}</p><SeriesChart history={hardwareHistory} series={[{label:"Dedicated GPU memory",color:"#5485df",value:(sample)=>read(sample)?.dedicatedUsedBytes},{label:"Shared GPU memory",color:"#ae9bdd",dashed:true,value:(sample)=>read(sample)?.sharedUsedBytes}]} max={memoryMax} label="GPU memory" />

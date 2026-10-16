@@ -140,13 +140,13 @@ impl GpuReader {
         if devices.len() > 32 {
             return Err("GPU adapter limit exceeded".into());
         }
-        for gpu in devices.values_mut() {
+        for (index, gpu) in devices.values_mut().enumerate() {
             let luid = gpu.id.split("_phys_").next().unwrap_or(&gpu.id);
             gpu.name = self
                 .names
-                .get(luid)
+                .get(&luid.to_ascii_lowercase())
                 .cloned()
-                .unwrap_or_else(|| format!("GPU {}", gpu.id));
+                .unwrap_or_else(|| format!("GPU {}", index + 1));
             if gpu.engines.len() > 128 {
                 return Err("GPU engine limit exceeded".into());
             }
@@ -271,7 +271,7 @@ fn adapter_id(instance: &str) -> Option<String> {
     let (luid, physical) = suffix.split_once("_phys_")?;
     let physical = physical.split('_').next()?;
     physical.parse::<u32>().ok()?;
-    Some(format!("{luid}_phys_{physical}"))
+    Some(format!("{luid}_phys_{physical}").to_ascii_lowercase())
 }
 fn aggregate_engines(values: &[(String, f64)]) -> Result<BTreeMap<String, GpuObservation>, String> {
     let mut sums: BTreeMap<(String, String, String), f64> = BTreeMap::new();
@@ -311,6 +311,25 @@ fn aggregate_engines(values: &[(String, f64)]) -> Result<BTreeMap<String, GpuObs
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn adapter_identity_normalizes_pdh_hex_casing_for_dxgi_lookup() {
+        let upper =
+            adapter_id("pid_123_luid_0x00000000_0x0000F455_phys_0_eng_1_engtype_3D").unwrap();
+        let lower = adapter_id("luid_0x00000000_0x0000f455_phys_0").unwrap();
+        assert_eq!(upper, lower);
+        let names = BTreeMap::from([(
+            "luid_0x00000000_0x0000f455".to_string(),
+            "GPU model".to_string(),
+        )]);
+        assert_eq!(
+            names.get(upper.split("_phys_").next().unwrap()).unwrap(),
+            "GPU model"
+        );
+        assert_ne!(
+            adapter_id("luid_0x00000000_0x0000F455_phys_1").unwrap(),
+            lower
+        );
+    }
     #[test]
     fn engine_aggregation_keeps_adapters_and_physical_engines_separate() {
         let entry = |pid, low, engine, value| {

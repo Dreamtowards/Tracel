@@ -1,7 +1,7 @@
 "use client";
 import { useI18n, useCaptureTime } from "./i18n";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode, type ReactElement } from "react";
 import {
   Activity,
   Cpu,
@@ -110,9 +110,12 @@ export default function Explorer({
   dataError,
   categories,
   renderAppIcon,
+  renderTrackHeaders,
 }: {
   provider: DataProvider;
   categories?: CategoryConfig;
+  /** Host-owned context menu for the label column, without native/shared dependencies. */
+  renderTrackHeaders?: (headers: ReactElement) => ReactNode;
   /** Optional native-host icon renderer; the shared Timeline never reads executable files. */
   renderAppIcon?: (app: Application, fallback: ReactNode) => ReactNode;
   capture?: Capture;
@@ -628,6 +631,7 @@ export default function Explorer({
                   <span>·</span> {" "}{t(recorded ? "2s nominal samples" : "30s samples")}</span>
               </div>
               <Timeline
+                renderTrackHeaders={renderTrackHeaders}
                 data={data}
                 view={view}
                 selection={selection}

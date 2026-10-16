@@ -1,7 +1,7 @@
 "use client";
 import { useI18n, useCaptureTime } from "./i18n";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
 import type { TimelineAppearance } from "./DisplaySettings";
@@ -50,6 +50,7 @@ type Props = {
   focus: string | null;
   appearance: TimelineAppearance;
   palette?: TimelinePalette;
+  renderTrackHeaders?: (headers: ReactElement) => ReactNode;
   onView: (r: Range) => void;
   onSelect: (r: Range | null) => void;
   onFocus: (id: string | null) => void;
@@ -64,6 +65,7 @@ export function Timeline({
   focus,
   appearance,
   palette = defaultPalette,
+  renderTrackHeaders,
   onView,
   onSelect,
   onFocus,
@@ -714,9 +716,7 @@ export function Timeline({
     }
     return { time, event, row };
   }
-  return (
-    <div className="tx-timeline-scroll">
-      <div ref={host} className="tx-timeline" style={{ height: totalHeight, "--track-label-width": `${LABEL}px` } as CSSProperties}>
+  const headers = <div className="tx-track-headers" style={{ position: "absolute", top: 0, left: 0, width: LABEL, height: totalHeight }}>
         <div className="tx-axis-label">
           {t("TRACKS")}{" "}<span>UTC+08:00</span>
         </div>
@@ -824,6 +824,11 @@ export function Timeline({
             )}
           </div>
         ))}
+  </div>;
+  return (
+    <div className="tx-timeline-scroll">
+      <div ref={host} className="tx-timeline" style={{ height: totalHeight, "--track-label-width": `${LABEL}px` } as CSSProperties}>
+        {renderTrackHeaders ? renderTrackHeaders(headers) : headers}
         <div className="tx-label-width-resizer" role="separator" tabIndex={0} aria-orientation="vertical"
           aria-label={t("Track label width")} title={t("Drag to resize track labels · Double-click to reset")}
           aria-valuemin={128} aria-valuemax={maximumLabelWidth} aria-valuenow={LABEL}
