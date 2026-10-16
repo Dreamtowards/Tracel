@@ -1,8 +1,8 @@
 {
-  "version": "0.2.10",
-  "date": "2026-10-16",
+  "version": "0.2.11",
+  "date": "2026-10-17",
   "platform": "Windows x64",
-  "bytes": 14373888,
-  "url": "/downloads/Tracel-0.2.10-windows-x64.exe",
-  "sha256": "3a127855a68d9e44cfb6254af12329caf0670ec52ecb6e406071334cdd798a61"
+  "bytes": 14373376,
+  "url": "/downloads/Tracel-0.2.11-windows-x64.exe",
+  "sha256": "263a89bec55b14267c5684830fa912f4e4cf1539828fe58827fb425a371613e2"
 }

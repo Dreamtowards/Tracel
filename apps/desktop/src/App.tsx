@@ -1,4 +1,6 @@
 import { DesktopExplorer, useDesktopTheme } from "@tracel/timeline/desktop";
+import { PlatformProvider } from "@tracel/timeline/desktop/platform";
+import { desktopPlatform } from "./platform";
 import CollectionMenu from "./CollectionMenu";
 import { X } from "lucide-react";
 import { I18nProvider, useI18n } from "@tracel/timeline";
@@ -42,7 +44,7 @@ function Recovery() {
 
 export default function App() {
   const appearance = useAppearance();
-  return <I18nProvider locale={appearance.language} messages={desktopZh}><DesktopApp appearance={appearance} /></I18nProvider>;
+  return <PlatformProvider value={desktopPlatform}><I18nProvider locale={appearance.language} messages={desktopZh}><DesktopApp appearance={appearance} /></I18nProvider></PlatformProvider>;
 }
 function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearance> }) {
   const { t, locale } = useI18n();

@@ -1,5 +1,7 @@
 import { cloneElement, type ReactElement, type HTMLAttributes } from "react";
 import { useI18n } from "@tracel/timeline";
+import type { CollectionSettings } from "./platformTypes";
+export type { CollectionSettings } from "./platformTypes";
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuCheckboxItem, ContextMenuLabel, ContextMenuSeparator } from "./components/ui/ContextMenu";
 
 const groups = [
@@ -8,7 +10,6 @@ const groups = [
   ["AUDIO & MEDIA", [["audioInput", "Audio input level"], ["audio", "Audio output level"], ["media", "Now playing"]]],
 ] as const;
 
-export type CollectionSettings = Record<"enabled" | "cpu" | "ram" | "network" | "disk" | "audio" | "media", boolean> & Partial<Record<typeof groups[number][1][number][0], boolean>>;
 type CollectionStatus = { supported: boolean; settings: CollectionSettings };
 
 export default function CollectionMenu({ children, status, busy, onSettings, simplifyGpuNames, showSoftwareGpus, onSimplifyGpuNames, onShowSoftwareGpus, demo = false }: {

@@ -1,3 +1,5 @@
+import type { EnvironmentReport, UpdatePolicy, AppInfo, CollectionSettings, ObservedProcess, ObservedActivity, GpuObservation, BatteryObservation, SystemObservation, CollectionStatus, StoredObservation, StateInterval, StateIntervals, ArchivePage, ForegroundInfo, FileUsage, DisplayTimeout, AudioDevice, AudioSession, AudioSnapshot, MediaSessions } from "@tracel/timeline/desktop/platformTypes";
+export type { EnvironmentReport, UpdatePolicy, AppInfo, CollectionSettings, ObservedProcess, ObservedActivity, GpuObservation, BatteryObservation, SystemObservation, CollectionStatus, StoredObservation, StateInterval, StateIntervals, ArchivePage, ForegroundInfo, FileUsage, DisplayTimeout, AudioDevice, AudioSession, AudioSnapshot, MediaSessions } from "@tracel/timeline/desktop/platformTypes";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -5,43 +7,17 @@ import type { RangeExport } from "@tracel/timeline";
 
 export const nativeClient = isTauri();
 export const openCategoryFolder = () => invoke<void>("open_category_folder");
-export type EnvironmentReport = { entries: { kind: string; version: string; path: string; source: string }[]; warnings: string[] };
-export type UpdatePolicy = { edition: string; supported: boolean; administrator: boolean; disabled: boolean; owned: boolean; since: string | null };
+
 export const inspectEnvironment = () => invoke<EnvironmentReport>("developer_environment");
 export const updatePolicy = (action: "read" | "disable" | "restore") => invoke<UpdatePolicy>("windows_update_policy", { action });
 export const openSystemShortcut = (target: string) => invoke<void>("open_system_shortcut", { target });
-
-export type AppInfo = { version: string; platform: string; deviceName: string };
 
 export function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("app_info");
 }
 
-export type CollectionSettings = { enabled: boolean; cpuFrequency?: boolean; gpu?: boolean; battery?: boolean; cpu: boolean; ram: boolean; network: boolean; disk: boolean; audio: boolean; audioInput?: boolean; media: boolean; foreground?: boolean; background?: boolean; idle?: boolean };
-export type ObservedProcess = { instanceId: string; processId: number; name: string; executable: string | null };
-export type ObservedActivity = { foreground: { process: ObservedProcess; windowId: string; title: string } | null; background: ObservedProcess[] | null; idleMs: number | null };
-export type GpuObservation = { id: string; name: string; utilizationPercent: number | null; engines: { id: string; name: string; utilizationPercent: number }[]; dedicatedUsedBytes: number | null; sharedUsedBytes: number | null };
-export type BatteryObservation = { present: boolean | null; percent: number | null; pluggedIn: boolean | null; charging: boolean | null };
-export type SystemObservation = { capturedAtMs: number; intervalStartMs: number | null; cpuPercent: number | null; cpuFrequencyMhz?: number | null; gpus?: GpuObservation[] | null; battery?: BatteryObservation | null; memoryUsedBytes: number | null; memoryTotalBytes: number | null; networkReceiveBytesPerSecond: number | null; networkSendBytesPerSecond: number | null; diskReadBytesPerSecond: number | null; diskWriteBytesPerSecond: number | null; audioPeakPercent: number | null; audioInputPeakPercent?: number | null; media: { title: string; artist: string; application: string; playbackStatus: string } | null; activity?: ObservedActivity | null; errors: string[] };
-export type CollectionStatus = {
-  settings: CollectionSettings; supported: boolean; periodMs: number; sampleCount: number;
-  latest: SystemObservation | null; keepAwakeRequested: boolean; keepAwakeActive: boolean;
-  powerError: string | null; startupWarning: string | null;
-  storageError: string | null; persistedCount: number;
-  databasePath: string;
-  databaseSizeBytes?: number | null;
-};
-export type StoredObservation = { id: number; sample: SystemObservation };
-export type StateInterval<T> = { id: number; startMs: number; endMs: number; value: T };
-export type StateIntervals = {
-  apps: StateInterval<ObservedProcess>[];
-  foreground: StateInterval<NonNullable<ObservedActivity["foreground"]>>[];
-  media: StateInterval<NonNullable<SystemObservation["media"]>>[];
-  idle: StateInterval<null>[];
-};
-export type ArchivePage = { observations: StoredObservation[]; nextCursor: number; firstAtMs: number | null; lastAtMs: number | null; intervals?: StateIntervals };
 export const queryTimeline = (query: { startMs: number; endMs: number; afterId: number }) => invoke<ArchivePage>("timeline_observations", query);
-export type ForegroundInfo = { capturedAtMs: number; windowId: string; processId: number; title: string; executable: string | null; url: string | null; notes: string[] };
+
 export const getCollectionStatus = () => invoke<CollectionStatus>("collection_status");
 export const setCollectionSettings = (settings: CollectionSettings) => invoke<CollectionStatus>("set_collection_settings", { settings });
 export const getSystemHistory = () => invoke<SystemObservation[]>("system_history");
@@ -59,19 +35,14 @@ export async function saveRange(payload: RangeExport, title = "Export timeline r
   return "saved";
 }
 
-export type FileUsage = { path: string; checkedAtMs: number; modifiedAtMs: number | null; processes: { processId: number; startedAtTicks: string; name: string; service: string; executable: string | null }[] };
 export const inspectFileUsers = (path: string) => invoke<FileUsage>("inspect_file_usage", { path });
 
-export type DisplayTimeout = { schemeId: string; acSeconds: number; dcSeconds: number };
 export const readDisplayTimeout = () => invoke<DisplayTimeout>("read_display_timeout");
 export const setDisplayTimeout = (expected: DisplayTimeout, acSeconds: number, dcSeconds: number) => invoke<DisplayTimeout>("set_display_timeout", { expected, acSeconds, dcSeconds });
 
-export type AudioDevice = { id: string; name: string; direction: "input" | "output"; defaultRoles: string[] };
-export type AudioSession = { id: string; deviceId: string; processId: number; name: string; executable: string | null; systemSounds: boolean; multiProcess: boolean; state: string; peakPercent: number | null; volumePercent: number | null; muted: boolean | null; lastHeardAtMs: number | null; heldPeakPercent: number };
-export type AudioSnapshot = { monitoring: boolean; capturedAtMs: number; devices: AudioDevice[]; sessions: AudioSession[]; errors: string[] };
 export const getAudioStatus = () => invoke<AudioSnapshot>("audio_status");
 export const setAudioMonitor = (enabled: boolean) => invoke<AudioSnapshot>("set_audio_monitor", { enabled });
 export const openSoundSettings = () => invoke<void>("open_sound_settings");
 export const openDatabaseFolder = () => invoke<void>("open_database_folder");
-export type MediaSessions = { sessions: NonNullable<SystemObservation["media"]>[]; errors: string[] };
+
 export const getMediaSessions = () => invoke<MediaSessions>("media_sessions");

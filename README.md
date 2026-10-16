@@ -52,7 +52,7 @@ npm run build:desktop:installer # Optional NSIS installer; explicit request only
 
 The product website serves a versioned Windows EXE and its SHA-256 file from `apps/web/public/downloads`. When publishing a new Desktop download, copy the verified portable EXE there and update `apps/web/src/release.json` (version, date, size, URL and hash) together with the checksum file. Web tests verify the download's integrity. Product screenshots in `apps/web/public/images` show the real Desktop UI with fabricated example data, not personal activity records.
 
-The `/timeline` online demo uses the same `@tracel/timeline/desktop` presentation as the Windows app, with a separately injected, fabricated `DataProvider`. It includes GPU engines/VRAM, CPU frequency, microphone and battery/power tracks. Its switches simulate state only; it never monitors the visitor's computer. See the [Timeline guide](packages/timeline/README.md) for dataset injection. Native-only diagnostics and system tools remain in Desktop.
+The `/timeline` online demo uses the same `@tracel/timeline/desktop` presentation as the Windows app, with a separately injected, fabricated `DataProvider`. It includes GPU engines/VRAM, CPU frequency, microphone and battery/power tracks. Its switches simulate state only; it never monitors the visitor's computer. See the [Timeline guide](packages/timeline/README.md) for dataset injection. All five pages stay visible; browser-unsupported controls are disabled. Native hooks and Tauri implementations remain in Desktop behind an injected platform interface.
 
 ## Deploy
 

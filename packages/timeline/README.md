@@ -41,7 +41,7 @@ const provider: DataProvider = {
 <DemoApp provider={provider} />
 ```
 
-Include `metricTracks` and `metricOverrides` alongside `metrics` to define hardware tracks, engine names, colors and units. Times are seconds relative to `epoch`; null measurements mean unavailable. Example data is explicitly labelled in the page and exported source. Native collection controls are represented only as simulated checkbox state; they do not collect browser/device information or hide existing history. The website's native-only Tools, Audio diagnostics and System metrics pages are omitted.
+Include `metricTracks` and `metricOverrides` alongside `metrics` to define hardware tracks, engine names, colors and units. Times are seconds relative to `epoch`; null measurements mean unavailable. Example data is explicitly labelled in the page and exported source. Native collection controls are represented only as simulated checkbox state; they do not collect browser/device information or hide existing history. All five navigation pages remain visible. Shared Audio, Utilities, System metrics and Settings use `PlatformServices`; the browser disables Windows-only operations and leaves unsupported readings empty. Desktop injects the actual services and controlled state from its native hooks.
 
 Run `npm run typecheck`, `npm test`, `npm run build`. `tests/tracel.test.ts` covers overlap clipping, AFK, weighted integration, missing-vs-zero samples, media and anchored viewport math.
 

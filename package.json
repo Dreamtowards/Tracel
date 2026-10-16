@@ -26,6 +26,7 @@
     "check:core": "cargo check --package tracel-agent --package tracel-core --package tracel-storage --package tracel-query",
     "test:core": "cargo test --package tracel-agent --package tracel-core --package tracel-storage --package tracel-query",
     "agent": "cargo run --package tracel-agent",
-    "verify": "npm run typecheck && npm test && npm run build && npm run check:rust && npm run test:rust"
+    "verify": "npm run typecheck && npm test && npm run build && npm run check:rust && npm run test:rust",
+    "icons:generate": "node apps/desktop/scripts/generate-icons.mjs"
   }
 }
