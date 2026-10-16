@@ -610,7 +610,7 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: #ef5555;
+  background: #c4c4cc66;
   pointer-events: none;
   z-index: 2;
 }
