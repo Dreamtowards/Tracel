@@ -3703,7 +3703,7 @@ dependencies = [
 
 [[package]]
 name = "tracel-desktop"
-version = "0.2.12"
+version = "0.2.13"
 dependencies = [
  "png 0.17.16",
  "serde",
