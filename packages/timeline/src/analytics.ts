@@ -1,4 +1,5 @@
 import { Capture, MetricKey, Range, overlap, sampleEnd, metricInfo } from "./model";
+import { metricSamples } from "./metricIndex";
 
 /** Half-open support intervals; missing values are excluded independently per metric. */
 export function analyze(data: Capture, range: Range) {
@@ -31,8 +32,7 @@ export function analyze(data: Capture, range: Range) {
       let integral = 0,
         peak = 0,
         coverage = 0;
-      for (const sample of data.metrics) {
-        if (sample.time >= range.end) break;
+      for (const sample of metricSamples(data, key, range)) {
         const value = sample.values?.[key];
         if (value == null || !Number.isFinite(value)) continue;
         const weight = overlap(

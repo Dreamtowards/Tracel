@@ -7,6 +7,8 @@ import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
 import type { TimelineAppearance } from "./DisplaySettings";
 import { CurrentTimeLine } from "./CurrentTimeLine";
 import { foregroundAppIntervals } from "./foreground";
+import { metricSamples } from "./metricIndex";
+import { frameQueue } from "./frameQueue";
 import {
   Capture,
   Range,
@@ -81,6 +83,9 @@ export function Timeline({
   const [expanded, setExpanded] = useState<string[]>(["foreground"]);
   const [heights, setHeights] = useState<Record<string, number>>({});
   const [width, setWidth] = useState(900);
+  const [viewport, setViewport] = useState({ top: 0, bottom: Infinity });
+  const pointerFrames = useMemo(() => frameQueue(), []);
+  useEffect(() => () => pointerFrames.clear(), [pointerFrames]);
   const host = useRef<HTMLDivElement>(null),
     canvas = useRef<HTMLCanvasElement>(null),
     cursor = useRef<HTMLDivElement>(null),
@@ -268,15 +273,33 @@ export function Timeline({
   }, [LABEL]);
 
   useEffect(() => {
+    const scroller = host.current?.parentElement;
+    if (!scroller) return;
+    const frames = frameQueue();
+    const measure = () => setViewport(previous => {
+      const top = scroller.scrollTop, bottom = top + scroller.clientHeight;
+      return previous.top === top && previous.bottom === bottom ? previous : { top, bottom };
+    });
+    const scroll = () => frames.schedule(measure);
+    const observer = new ResizeObserver(scroll);
+    observer.observe(scroller);
+    scroller.addEventListener("scroll", scroll, { passive: true });
+    measure();
+    return () => { frames.clear(); observer.disconnect(); scroller.removeEventListener("scroll", scroll); };
+  }, []);
+
+  useEffect(() => {
     const element = canvas.current;
     if (!element) return;
     const draw = () => {
       const scale = element.getBoundingClientRect().width / width || 1;
       const dpr = (window.devicePixelRatio || 1) * scale;
-      element.width = width * dpr;
-      element.height = totalHeight * dpr;
+      const pixelWidth = Math.max(1, Math.round(width * dpr));
+      const pixelHeight = Math.max(1, Math.round(totalHeight * dpr));
+      if (element.width !== pixelWidth) element.width = pixelWidth;
+      if (element.height !== pixelHeight) element.height = pixelHeight;
       const ctx = element.getContext("2d")!;
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.fillStyle = palette.background;
       ctx.fillRect(0, 0, width, totalHeight);
       const span = view.end - view.start;
@@ -347,6 +370,7 @@ export function Timeline({
       }
       for (const row of tracks) {
         const { y, height } = row;
+        if (y + height < viewport.top - 64 || y > viewport.bottom + 64) continue;
         const pad = Math.min(appearance.padding, Math.max(0, (height - 8) / 2));
         ctx.strokeStyle = palette.divider;
         ctx.beginPath();
@@ -488,8 +512,7 @@ export function Timeline({
               number,
               { min: number; max: number; last: number }
             >();
-            for (const sample of data.metrics) {
-              if (sample.time >= view.end) break;
+            for (const sample of metricSamples(data, key, view)) {
               const value = sample.values?.[key];
               if (sampleEnd(sample,data.samplePeriod) <= view.start || value == null || !Number.isFinite(value)) continue;
               const left = Math.max(0, Math.floor(x(sample.time))),
@@ -499,11 +522,8 @@ export function Timeline({
                 );
               for (let px = left; px <= right; px++) {
                 const old = buckets.get(px);
-                buckets.set(px, {
-                  min: Math.min(old?.min ?? value, value),
-                  max: Math.max(old?.max ?? value, value),
-                  last: value,
-                });
+                if (old) { old.min = Math.min(old.min, value); old.max = Math.max(old.max, value); old.last = value; }
+                else buckets.set(px, { min: value, max: value, last: value });
               }
             }
             ctx.strokeStyle = info.color;
@@ -556,25 +576,7 @@ export function Timeline({
           ctx.textAlign = "left";
         }
       }
-      if (selection && overlap(selection, view) > 0) {
-        const left = Math.max(0, x(selection.start)),
-          right = Math.min(width, x(selection.end));
-        ctx.fillStyle = `${palette.selection}12`;
-        ctx.fillRect(left, 32, right - left, totalHeight - 32);
-        ctx.strokeStyle = palette.selection;
-        ctx.setLineDash([3, 3]);
-        for (const edge of [selection.start, selection.end])
-          if (edge >= view.start && edge <= view.end) {
-            ctx.beginPath();
-            ctx.moveTo(x(edge), 30);
-            ctx.lineTo(x(edge), totalHeight);
-            ctx.stroke();
-          }
-        ctx.setLineDash([]);
-        ctx.fillStyle = palette.selection;
-        ctx.font = '10px "Segoe UI", "Microsoft YaHei UI", sans-serif';
-        ctx.fillText(duration(selection.end - selection.start), left + 5, 44);
-      }
+
     };
     const frame = requestAnimationFrame(draw);
     window.addEventListener("resize", draw);
@@ -582,38 +584,26 @@ export function Timeline({
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", draw);
     };
-  }, [data, view, selection, tracks, width, totalHeight, focus, appearance, palette, duration, dateLabel, presenceApps, foregroundApps]);
+  }, [data, view, tracks, width, totalHeight, focus, appearance, palette, duration, dateLabel, presenceApps, foregroundApps, viewport]);
 
   useEffect(() => {
     const element = canvas.current!;
+    const frames = frameQueue();
+    let pending: Range | null = null;
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
-      const { view, onView, data } = state.current;
+      const { onView, data } = state.current;
+      const view = pending ?? state.current.view;
       const rect = element.getBoundingClientRect();
-      const anchor =
-        view.start +
-        ((e.clientX - rect.left) / rect.width) * (view.end - view.start);
+      const anchor = view.start + ((e.clientX - rect.left) / rect.width) * (view.end - view.start);
       if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        const delta =
-          ((e.deltaX || e.deltaY) / rect.width) * (view.end - view.start);
-        onView(
-          clampRange(
-            { start: view.start + delta, end: view.end + delta },
-            data.bounds,
-          ),
-        );
-      } else
-        onView(
-          zoomRange(
-            view,
-            Math.exp(Math.max(-150, Math.min(150, e.deltaY)) * 0.004),
-            anchor,
-            data.bounds,
-          ),
-        );
+        const delta = ((e.deltaX || e.deltaY) / rect.width) * (view.end - view.start);
+        pending = clampRange({ start: view.start + delta, end: view.end + delta }, data.bounds);
+      } else pending = zoomRange(view, Math.exp(Math.max(-150, Math.min(150, e.deltaY)) * 0.004), anchor, data.bounds);
+      frames.schedule(() => { const next = pending!; pending = null; state.current.view = next; onView(next); });
     };
     element.addEventListener("wheel", wheel, { passive: false });
-    return () => element.removeEventListener("wheel", wheel);
+    return () => { frames.clear(); element.removeEventListener("wheel", wheel); };
   }, []);
 
   function inspect(clientX: number, clientY: number) {
@@ -659,10 +649,10 @@ export function Timeline({
         lines +=
           "\n" +
           row.keys
-            .map(
-              (key) =>
-                `${t(getMetricInfo(data,key).name)}: ${metricAt(data,time,key) != null ? (getMetricInfo(data,key).boolean ? t(metricAt(data,time,key) ? "Yes" : "No") : metricAt(data,time,key)!.toFixed(2) + " " + getMetricInfo(data,key).unit) : t("No sample · asleep / capture gap")}`,
-            )
+            .map((key) => {
+              const info = getMetricInfo(data, key), value = metricAt(data, time, key);
+              return `${t(info.name)}: ${value != null ? (info.boolean ? t(value ? "Yes" : "No") : value.toFixed(2) + " " + info.unit) : t("No sample · asleep / capture gap")}`;
+            })
             .join("\n");
       else if (row.kind === "media") {
         const media = data.media.find((m) => m.start <= time && m.end > time);
@@ -717,6 +707,38 @@ export function Timeline({
     }
     return { time, event, row };
   }
+  function movePointer(clientX: number, clientY: number) {
+    const current = drag.current;
+    if (current) {
+      if (Math.abs(clientX - current.x) > 3) current.moved = true;
+      if (!current.moved) return;
+      const delta =
+        ((clientX - current.x) / canvas.current!.getBoundingClientRect().width) *
+        (current.view.end - current.view.start);
+      if (current.pan)
+        onView(
+          clampRange(
+            {
+              start: current.view.start - delta,
+              end: current.view.end - delta,
+            },
+            data.bounds,
+          ),
+        );
+      else {
+        const end = Math.max(
+          data.bounds.start,
+          Math.min(data.bounds.end, current.time + delta),
+        );
+        if (Math.abs(end - current.time) < 0.001) return;
+        onSelect({
+          start: Math.min(current.time, end),
+          end: Math.max(current.time, end),
+        });
+      }
+    } else inspect(clientX, clientY);
+  }
+
   const headers = <div className="tx-track-headers" style={{ position: "absolute", top: 0, left: 0, width: LABEL, height: totalHeight }}>
         <div className="tx-axis-label">
           {t("TRACKS")}{" "}<span>UTC+08:00</span>
@@ -889,6 +911,7 @@ export function Timeline({
             }
           }}
           onPointerDown={(e) => {
+            pointerFrames.clear();
             if (e.button !== 0 && e.button !== 1) return;
             e.preventDefault();
             e.currentTarget.focus();
@@ -910,37 +933,12 @@ export function Timeline({
             if (tip.current) tip.current.style.display = "none";
           }}
           onPointerMove={(e) => {
-            const current = drag.current;
-            if (current) {
-              if (Math.abs(e.clientX - current.x) > 3) current.moved = true;
-              if (!current.moved) return;
-              const delta =
-                ((e.clientX - current.x) / e.currentTarget.getBoundingClientRect().width) *
-                (current.view.end - current.view.start);
-              if (current.pan)
-                onView(
-                  clampRange(
-                    {
-                      start: current.view.start - delta,
-                      end: current.view.end - delta,
-                    },
-                    data.bounds,
-                  ),
-                );
-              else {
-                const end = Math.max(
-                  data.bounds.start,
-                  Math.min(data.bounds.end, current.time + delta),
-                );
-                if (Math.abs(end - current.time) < 0.001) return;
-                onSelect({
-                  start: Math.min(current.time, end),
-                  end: Math.max(current.time, end),
-                });
-              }
-            } else inspect(e.clientX, e.clientY);
+            const { clientX, clientY } = e;
+            pointerFrames.schedule(() => movePointer(clientX, clientY));
           }}
           onPointerUp={(e) => {
+            pointerFrames.flush();
+            if (drag.current) movePointer(e.clientX, e.clientY);
             const current = drag.current;
             drag.current = null;
             if (current && !current.moved) {
@@ -955,13 +953,24 @@ export function Timeline({
             }
           }}
           onPointerCancel={() => {
+            pointerFrames.clear();
             drag.current = null;
           }}
           onPointerLeave={() => {
+            if (!drag.current) pointerFrames.clear();
             if (cursor.current) cursor.current.style.display = "none";
             if (tip.current) tip.current.style.display = "none";
           }}
         />
+        {selection && overlap(selection, view) > 0 && <div className="tx-selection-overlay" style={{
+          left: LABEL + Math.max(0, (selection.start - view.start) / (view.end - view.start) * width),
+          width: Math.min(width, (selection.end - view.start) / (view.end - view.start) * width) - Math.max(0, (selection.start - view.start) / (view.end - view.start) * width),
+          height: totalHeight - 32,
+          color: palette.selection,
+          backgroundColor: `${palette.selection}12`,
+          borderLeftWidth: selection.start >= view.start ? 1 : 0,
+          borderRightWidth: selection.end <= view.end ? 1 : 0,
+        }}><span>{duration(selection.end - selection.start)}</span></div>}
         {appearance.currentTime && <CurrentTimeLine epoch={data.epoch} view={view} labelWidth={LABEL} width={width} />}
         <div ref={cursor} className="tx-hover-cursor" />
         {typeof document !== "undefined" &&

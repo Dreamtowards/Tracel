@@ -2,6 +2,7 @@ import type { GpuDisplayOptions } from "./gpuNames";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { nativeClient, queryTimeline, type StoredObservation, type StateIntervals } from "./native";
 import { dayRange, localDate, recordedCapture } from "./recordedTimeline";
+import { retainIntervals } from "./archiveSnapshot";
 
 export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSoftwareGpus }: GpuDisplayOptions = {}) {
   const [day, setDay] = useState(localDate);
@@ -11,6 +12,7 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
   const [loadedDay, setLoadedDay] = useState(day);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captureNow, setCaptureNow] = useState(Date.now);
   const cache = useRef<{ day: string; observations: StoredObservation[]; cursor: number; intervals?: StateIntervals }>({ day, observations: [], cursor: 0 });
   useEffect(() => {
     if (!nativeClient || !visible) return;
@@ -23,11 +25,14 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
       try {
         const page = await queryTimeline({ ...dayRange(day), afterId: cursor });
         if (!active) return;
-        observations = observations.concat(page.observations);
+        if (page.observations.length) observations = observations.concat(page.observations);
         if (observations.length > 50000) throw Error("Too many observations for one day.");
         cursor = page.nextCursor;
-        cache.current = { day, observations, cursor, intervals: page.intervals };
-        setIntervals(page.intervals);
+        const nextIntervals = retainIntervals(cache.current.intervals, page.intervals);
+        cache.current = { day, observations, cursor, intervals: nextIntervals };
+        setIntervals(nextIntervals);
+        // One final refresh may extend the last gauge support to its 2-second cap.
+        setCaptureNow(Math.min(Date.now(), (observations.at(-1)?.sample.capturedAtMs ?? Date.now()) + 2000));
         if (page.firstAtMs != null) setEarliest(localDate(new Date(Math.min(page.firstAtMs,Date.now()))));
         if (page.observations.length || cursor === 0) setRows(observations);
         setError("");
@@ -37,6 +42,6 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
     void poll();
     return () => { active = false; window.clearTimeout(timer); };
   }, [day, visible]);
-  const capture = useMemo(() => recordedCapture(day, loadedDay === day ? rows : [], Date.now(), loadedDay === day ? intervals : undefined, { simplifyGpuNames, showSoftwareGpus }), [day,loadedDay,rows,intervals,simplifyGpuNames,showSoftwareGpus]);
+  const capture = useMemo(() => recordedCapture(day, loadedDay === day ? rows : [], captureNow, loadedDay === day ? intervals : undefined, { simplifyGpuNames, showSoftwareGpus }), [day,loadedDay,rows,intervals,captureNow,simplifyGpuNames,showSoftwareGpus]);
   return { capture, error, loading, calendar: { value: day, min: earliest, max: localDate(), onChange: setDay } };
 }

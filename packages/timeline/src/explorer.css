@@ -614,6 +614,20 @@
   pointer-events: none;
   z-index: 2;
 }
+.tx-selection-overlay {
+  position: absolute;
+  top: 32px;
+  border: 0 dashed currentColor;
+  pointer-events: none;
+  z-index: 1;
+}
+.tx-selection-overlay > span {
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  white-space: nowrap;
+  font: 10px "Segoe UI", sans-serif;
+}
 .tx-hover-cursor {
   position: absolute;
   top: 32px;

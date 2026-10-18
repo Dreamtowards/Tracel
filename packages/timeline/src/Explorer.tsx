@@ -213,10 +213,18 @@ export default function Explorer({
     };
   }, [help]);
   const range = selection ?? view;
+  const [settledStats, setSettledStats] = useState({ data, range, selected: !!selection });
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSettledStats({ data, range, selected: !!selection }), 100);
+    return () => window.clearTimeout(timer);
+  }, [data, range, !!selection]);
+  // Keep labels and values on the same range while interaction takes priority.
+  const statsRange = settledStats.data === data ? settledStats.range : range;
+  const statsSelected = settledStats.data === data ? settledStats.selected : !!selection;
   const overview = useMemo(() => (data ? overviewPath(data) : ""), [data]);
   const stats = useMemo(
-    () => (data ? analyze(data, range) : null),
-    [data, range],
+    () => (data ? analyze(data, statsRange) : null),
+    [data, statsRange],
   );
   const categoryStats = useMemo(() => categories && stats ? categoryTotals(categories, stats.apps) : [], [categories, stats]);
   if (!data || !stats)
@@ -271,19 +279,21 @@ export default function Explorer({
     );
   const exportSelection = async () => {
     if (exporting) return;
+    // Export always uses the current selection, including during the debounce window.
+    const exportStats = statsRange === range ? stats : analyze(data, range);
     const payload: RangeExport = {
       source: data.source ?? "Tracel simulated capture",
       epoch: data.epoch,
       range,
-      analytics: stats,
-      ...(categories ? { classification: { config: categories, totals: categoryStats } } : {}),
+      analytics: exportStats,
+      ...(categories ? { classification: { config: categories, totals: categoryTotals(categories, exportStats.apps) } } : {}),
       ...(recorded ? {
         apps: data.apps,
         activity: data.activity.filter((a) => overlap(a,range) > 0).map((a) => ({...a,start:Math.max(a.start,range.start),end:Math.min(a.end,range.end),contexts:a.contexts.filter((c) => overlap(c,range)>0).map((c) => ({...c,start:Math.max(c.start,range.start),end:Math.min(c.end,range.end)}))})),
         background: data.background.filter((a) => overlap(a,range)>0).map((a) => ({...a,start:Math.max(a.start,range.start),end:Math.min(a.end,range.end)})),
         afk: data.afk.filter((a) => overlap(a,range)>0).map((a) => ({...a,start:Math.max(a.start,range.start),end:Math.min(a.end,range.end)})),
         metrics: data.metrics.filter((s) => s.time < range.end && sampleEnd(s,data.samplePeriod) > range.start).map((s) => ({...s,time:Math.max(s.time,range.start),end:Math.min(sampleEnd(s,data.samplePeriod),range.end)})),
-        media: stats.media.map((m) => ({...m,start:Math.max(m.start,range.start),end:Math.min(m.end,range.end)})),
+        media: exportStats.media.map((m) => ({...m,start:Math.max(m.start,range.start),end:Math.min(m.end,range.end)})),
         metricUnits: Object.fromEntries(Object.entries(metricInfo).map(([key, info]) => [key, { value: info.unit, integral: info.unit === "MiB/s" ? "MiB" : `${info.unit}·s` }])),
       } : {}),
     };
@@ -658,11 +668,11 @@ export default function Explorer({
               </div>
             </section>
             {inspector && (
-              <aside className="tx-inspector">
+              <aside className="tx-inspector" aria-busy={statsRange !== range}>
                 <div className="tx-inspector-title">
                   <span>
                     <Focus size={15} />{" "}
-                    {t(selection ? "Selection inspector" : "Range overview")}
+                    {t(statsSelected ? "Selection inspector" : "Range overview")}
                   </span>
                   {selection ? (
                     <button
@@ -678,19 +688,19 @@ export default function Explorer({
                 </div>
                 <div className="tx-range">
                   <strong>
-                    {duration(range.end - range.start)}{" "}
+                    {duration(statsRange.end - statsRange.start)}{" "}
                     <small>
-                      {t(selection ? "Selected duration" : "Visible duration")}
+                      {t(statsSelected ? "Selected duration" : "Visible duration")}
                     </small>
                   </strong>
                   <div>
-                    {dateLabel(range.start)}
-                    {Math.floor(range.start / DAY) !==
-                    Math.floor(range.end / DAY)
-                      ? ` – ${dateLabel(range.end)}`
+                    {dateLabel(statsRange.start)}
+                    {Math.floor(statsRange.start / DAY) !==
+                    Math.floor(statsRange.end / DAY)
+                      ? ` – ${dateLabel(statsRange.end)}`
                       : ""}{" "}
                     <span>
-                      {clock(range.start, true)} — {clock(range.end, true)}
+                      {clock(statsRange.start, true)} — {clock(statsRange.end, true)}
                     </span>
                   </div>
                   {selection && (
@@ -966,7 +976,7 @@ export default function Explorer({
                 <div className="tx-inspector-foot">
                   <span className="tx-live-dot" />{" "}
                   {(
-                    (coverage / Math.max(0.001, range.end - range.start)) *
+                    (coverage / Math.max(0.001, statsRange.end - statsRange.start)) *
                     100
                   ).toFixed(1)}
                   {t(recorded ? "% best metric coverage" : "% metric coverage")}{" "}<span>{t("System subject")}</span>
