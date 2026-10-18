@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./model": "./src/model.ts",
     "./analytics": "./src/analytics.ts",
+    "./metric-index": "./src/metricIndex.ts",
     "./mock": "./src/data.ts",
     "./styles.css": "./src/explorer.css",
     "./desktop": "./src/desktop/index.ts",

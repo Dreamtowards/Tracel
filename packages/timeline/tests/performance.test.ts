@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { metricSamples, metricSeries } from "../src/metricIndex";
+import { inheritMetricIndex, metricSamples, metricSeries } from "../src/metricIndex";
 import { frameQueue } from "../src/frameQueue";
 import { analyze } from "../src/analytics";
 import { sampleEnd, type Capture, type MetricKey, type MetricSample } from "../src/model";
@@ -74,4 +74,20 @@ test("frame queue coalesces input, flushes the final endpoint and cancels stale 
   queue.clear();
   queue.flush();
   assert.deepEqual(result, [99, 100]);
+});
+
+test("successor metric indexes handle replaced tails, internal removals and overlapping inserted samples without mutating the source", () => {
+  const original = capture([sample(0, 100, { cpu: 10 }), sample(10, 12, { cpu: 20, ram: 8 }), sample(20, 22, { cpu: 30 })]);
+  const oldIndex = metricSeries(original);
+  const oldStats = analyze(original, { start: 0, end: 50 });
+  for (const removed of [new Set([original.metrics[2]]), new Set([original.metrics[1]]), new Set<typeof original.metrics[number]>()]) {
+    const added = [sample(5, 90, { cpu: 70 }), sample(25, 27, { ram: 9 })];
+    const next = { ...original, metrics: original.metrics.filter(s => !removed.has(s)).concat(added).sort((a, b) => a.time - b.time) };
+    const full = { ...next, metrics: [...next.metrics] };
+    inheritMetricIndex(original, next, removed, added);
+    for (const range of [{ start: 15, end: 21 }, { start: 60, end: 80 }, { start: 22, end: 27 }])
+      assert.deepEqual(analyze(next, range), analyze(full, range));
+    assert.equal(metricSeries(original), oldIndex);
+    assert.deepEqual(analyze(original, { start: 0, end: 50 }), oldStats);
+  }
 });

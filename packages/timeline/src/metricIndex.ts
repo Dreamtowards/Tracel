@@ -3,6 +3,45 @@ import { sampleEnd, type Capture, type MetricKey, type MetricSample, type Range 
 type Series = { samples: MetricSample[]; endPrefix: number[] };
 const cache = new WeakMap<MetricSample[], { period: number; series: Map<MetricKey, Series> }>();
 
+/** Seed an immutable successor from the old index, updating only affected series tails. */
+export function inheritMetricIndex(previous: Capture, next: Capture, removed: ReadonlySet<MetricSample>, added: MetricSample[]) {
+  const prior = cache.get(previous.metrics);
+  if (!prior || prior.period !== next.samplePeriod) return;
+  const additions = metricSeries({ ...next, metrics: added });
+  const series = new Map<MetricKey, Series>();
+  let firstRemovedTime = Infinity;
+  for (const sample of removed) firstRemovedTime = Math.min(firstRemovedTime, sample.time);
+  for (const key of new Set([...prior.series.keys(), ...additions.keys()])) {
+    const old = prior.series.get(key), extra = additions.get(key);
+    let length = old?.samples.length ?? 0;
+    while (length && removed.has(old!.samples[length - 1])) length--;
+    const retained = old?.samples.slice(0, length) ?? [];
+    // The native adapter replaces the last observation. Keep the helper safe for other callers too.
+    let low = 0, high = length;
+    while (low < high) {
+      const mid = (low + high) >>> 1;
+      if (retained[mid].time < firstRemovedTime) low = mid + 1;
+      else high = mid;
+    }
+    let internalRemoval = false;
+    for (let i = low; i < length; i++) if (removed.has(retained[i])) { internalRemoval = true; break; }
+    if (internalRemoval || (extra?.samples.length && retained.length && extra.samples[0].time < retained.at(-1)!.time)) {
+      const samples = retained.filter(sample => !removed.has(sample)).concat(extra?.samples ?? []).sort((a, b) => a.time - b.time);
+      const endPrefix: number[] = [];
+      for (const sample of samples) endPrefix.push(Math.max(endPrefix.at(-1) ?? -Infinity, sampleEnd(sample, next.samplePeriod)));
+      series.set(key, { samples, endPrefix });
+    } else {
+      const endPrefix = old?.endPrefix.slice(0, length) ?? [];
+      for (const sample of extra?.samples ?? []) {
+        retained.push(sample);
+        endPrefix.push(Math.max(endPrefix.at(-1) ?? -Infinity, sampleEnd(sample, next.samplePeriod)));
+      }
+      series.set(key, { samples: retained, endPrefix });
+    }
+  }
+  cache.set(next.metrics, { period: next.samplePeriod, series });
+}
+
 /** Capture arrays are immutable. Index once per snapshot, shared by drawing and analytics. */
 export function metricSeries(data: Capture): Map<MetricKey, Series> {
   const cached = cache.get(data.metrics);

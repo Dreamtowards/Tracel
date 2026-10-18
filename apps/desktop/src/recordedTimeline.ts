@@ -1,6 +1,9 @@
 import type { Capture, MetricKey, MetricSample, MediaInterval } from "@tracel/timeline/model";
-import { gpuDisplayNames, gpuIdentity, type GpuDisplayOptions } from "./gpuNames";
+import { gpuDisplayNames, gpuIdentity, isGpuFallbackName, type GpuDisplayOptions } from "./gpuNames";
 import type { StoredObservation, ObservedProcess, StateIntervals } from "./native";
+import { inheritMetricIndex } from "@tracel/timeline/metric-index";
+
+const metricOwners = new WeakMap<MetricSample, StoredObservation>();
 
 export function localDate(date = new Date()): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -13,13 +16,13 @@ export function dayRange(value: string) {
 const emptyValues = (): Partial<Record<MetricKey, number | null>> => ({ cpu: null, ram: null, gpu: null, download: null, upload: null, read: null, write: null, audio: null });
 
 /** Native-to-UI boundary: UTC milliseconds to epoch-relative seconds; no simulated activity. */
-export function recordedCapture(day: string, rows: StoredObservation[], now = Date.now(), intervals?: StateIntervals, gpuOptions: GpuDisplayOptions = {}): Capture {
+export function recordedCapture(day: string, rows: StoredObservation[], now = Date.now(), intervals?: StateIntervals, gpuOptions: GpuDisplayOptions = {}, resolvedGpuNames?: ReadonlyMap<string, string>): Capture {
   const { startMs, endMs } = dayRange(day);
   const bounds = { start: 0, end: (endMs - startMs) / 1000 };
   const samples = [...rows].sort((a, b) => a.sample.capturedAtMs - b.sample.capturedAtMs || a.id - b.id);
   const metricOverrides: NonNullable<Capture["metricOverrides"]> = {};
   const metricTracks: NonNullable<Capture["metricTracks"]> = [];
-  const gpuNames = gpuDisplayNames(samples.map(({sample}) => sample), gpuOptions);
+  const gpuNames = resolvedGpuNames ?? gpuDisplayNames(samples.map(({sample}) => sample), gpuOptions);
   const visibleGpus = (sample: StoredObservation["sample"]) => (sample.gpus ?? []).filter(gpu => gpuNames.has(gpuIdentity(gpu.id)));
   const gpus = new Map<string, { name: string; engines: Map<string,string> }>();
   for (const { sample } of samples) for (const gpu of visibleGpus(sample)) {
@@ -64,11 +67,16 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
     return id;
   };
   const seconds = (ms: number) => (ms - startMs) / 1000;
+  let metricOwner: StoredObservation;
   const add = (start: number, end: number, values: MetricSample["values"]) => {
     start = Math.max(bounds.start, start); end = Math.min(bounds.end, end);
-    if (start < end && values && Object.values(values).some((value) => value != null)) metrics.push({ time: start, end, subject: { kind: "system", id: "system" }, values });
+    if (start < end && values && Object.values(values).some((value) => value != null)) {
+      const metric: MetricSample = { time: start, end, subject: { kind: "system", id: "system" }, values };
+      metrics.push(metric); metricOwners.set(metric, metricOwner);
+    }
   };
   for (let i = 0; i < samples.length; i++) {
+    metricOwner = samples[i];
     const sample = samples[i].sample, next = samples[i + 1]?.sample;
     const time = seconds(sample.capturedAtMs);
     const interval = sample.intervalStartMs;
@@ -176,4 +184,75 @@ export function recordedCapture(day: string, rows: StoredObservation[], now = Da
     initialView: { start: Math.max(0, latest - 3600), end: latest }, samplePeriod: 2, maxSampleSpan: 6,
     metricTracks, metricOverrides: { ...metricOverrides, ram: { max: memoryMax, unit: "GiB" }, download: { max: rateMax, unit: "MiB/s" }, upload: { max: rateMax, unit: "MiB/s" }, read: { max: diskMax, unit: "MiB/s" }, write: { max: diskMax, unit: "MiB/s" } },
     apps, activity, background, afk, metrics, media, events: [] };
+}
+
+function hardwareInventory(rows: StoredObservation[]) {
+  const result = new Set<string>();
+  for (const { sample } of rows) {
+    if (sample.cpuFrequencyMhz != null) result.add("frequency");
+    if (sample.battery?.present === true) result.add("battery");
+    if (sample.battery?.pluggedIn != null) result.add("power");
+    for (const gpu of sample.gpus ?? []) {
+      result.add(JSON.stringify([gpuIdentity(gpu.id), gpu.name]));
+      for (const engine of gpu.engines) result.add(JSON.stringify([gpuIdentity(gpu.id), engine.id, engine.name]));
+    }
+  }
+  return result;
+}
+
+/** Per-view builder: snapshots remain immutable, only the previous numeric tail is replaced. */
+export function createRecordedCaptureBuilder() {
+  let prior: { day: string; rows: StoredObservation[]; now: number; intervals?: StateIntervals;
+    options: string; capture: Capture; inventory: Set<string>; supported: boolean;
+    names: Map<string, string>; engines: Map<string, string> } | undefined;
+  return (day: string, rows: StoredObservation[], now: number, intervals?: StateIntervals, options: GpuDisplayOptions = {}): Capture => {
+    const optionKey = JSON.stringify([options.simplifyGpuNames !== false, options.showSoftwareGpus === true]);
+    if (prior?.day === day && prior.rows === rows && prior.now === now && prior.intervals === intervals && prior.options === optionKey) return prior.capture;
+    const previous = prior;
+    const added = previous ? rows.slice(previous.rows.length) : [];
+    const ordered = (items: StoredObservation[], before?: StoredObservation) => items.every(row => {
+      const valid = !before || row.sample.capturedAtMs > before.sample.capturedAtMs;
+      before = row; return valid;
+    });
+    const inventory = hardwareInventory(added);
+    const incremental = previous && previous.supported && intervals && previous.day === day && previous.options === optionKey
+      && now >= previous.now && previous.now >= previous.rows.at(-1)!.sample.capturedAtMs
+      && rows.length >= previous.rows.length && previous.rows.every((row, i) => row === rows[i])
+      && ordered(added, previous.rows.at(-1)) && added.every(row => !row.sample.activity && !row.sample.media)
+      && [...inventory].every(item => previous.inventory.has(item))
+      && added.every(({ sample }) => (sample.gpus ?? []).every(gpu =>
+        (isGpuFallbackName(gpu.name) || gpu.name.trim() === previous.names.get(gpuIdentity(gpu.id)))
+        && gpu.engines.every(engine => previous.engines.get(JSON.stringify([gpuIdentity(gpu.id), engine.id])) === engine.name)));
+    let capture: Capture;
+    if (incremental) {
+      const last = previous.rows.at(-1)!;
+      const names = new Map((previous.capture.metricTracks ?? []).filter(track => track.id.startsWith("adapter:"))
+        .map(track => [track.id.slice("adapter:".length), track.name]));
+      const tail = recordedCapture(day, [last, ...added], now, intervals, options, names);
+      const removed = new Set(previous.capture.metrics.filter(sample => metricOwners.get(sample) === last));
+      const retained = previous.capture.metrics.filter(sample => !removed.has(sample));
+      const metrics: MetricSample[] = [];
+      let left = 0, right = 0;
+      // Stable merge retains the original order of equal-time rate/gauge samples.
+      while (left < retained.length || right < tail.metrics.length) {
+        if (right >= tail.metrics.length || (left < retained.length && retained[left].time <= tail.metrics[right].time)) metrics.push(retained[left++]);
+        else metrics.push(tail.metrics[right++]);
+      }
+      const overrides = { ...previous.capture.metricOverrides };
+      for (const [key, info] of Object.entries(tail.metricOverrides ?? {})) {
+        const metric = key as MetricKey;
+        if (overrides[metric] && info?.max != null) overrides[metric] = { ...overrides[metric], max: Math.max(overrides[metric]!.max ?? 0, info.max) };
+      }
+      capture = { ...tail, metrics, metricTracks: previous.capture.metricTracks, metricOverrides: overrides };
+      inheritMetricIndex(previous.capture, capture, removed, tail.metrics);
+    } else capture = recordedCapture(day, rows, now, intervals, options);
+    const engines = incremental ? previous.engines : new Map<string, string>();
+    if (!incremental) for (const { sample } of rows) for (const gpu of sample.gpus ?? [])
+      for (const engine of gpu.engines) engines.set(JSON.stringify([gpuIdentity(gpu.id), engine.id]), engine.name);
+    prior = { day, rows, now, intervals, options: optionKey, capture, engines,
+      names: incremental ? previous.names : gpuDisplayNames(rows.map(row => row.sample), { simplifyGpuNames: false, showSoftwareGpus: true }),
+      inventory: incremental ? previous.inventory : hardwareInventory(rows),
+      supported: !!intervals && rows.length > 0 && rows.every(row => !row.sample.activity && !row.sample.media) && ordered(rows) };
+    return capture;
+  };
 }

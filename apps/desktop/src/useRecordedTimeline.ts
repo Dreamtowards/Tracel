@@ -1,7 +1,7 @@
 import type { GpuDisplayOptions } from "./gpuNames";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { nativeClient, queryTimeline, type StoredObservation, type StateIntervals } from "./native";
-import { dayRange, localDate, recordedCapture } from "./recordedTimeline";
+import { dayRange, localDate, createRecordedCaptureBuilder } from "./recordedTimeline";
 import { retainIntervals } from "./archiveSnapshot";
 
 export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSoftwareGpus }: GpuDisplayOptions = {}) {
@@ -13,6 +13,7 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [captureNow, setCaptureNow] = useState(Date.now);
+  const builder = useMemo(() => createRecordedCaptureBuilder(), []);
   const cache = useRef<{ day: string; observations: StoredObservation[]; cursor: number; intervals?: StateIntervals }>({ day, observations: [], cursor: 0 });
   useEffect(() => {
     if (!nativeClient || !visible) return;
@@ -42,6 +43,6 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
     void poll();
     return () => { active = false; window.clearTimeout(timer); };
   }, [day, visible]);
-  const capture = useMemo(() => recordedCapture(day, loadedDay === day ? rows : [], captureNow, loadedDay === day ? intervals : undefined, { simplifyGpuNames, showSoftwareGpus }), [day,loadedDay,rows,intervals,captureNow,simplifyGpuNames,showSoftwareGpus]);
+  const capture = useMemo(() => builder(day, loadedDay === day ? rows : [], captureNow, loadedDay === day ? intervals : undefined, { simplifyGpuNames, showSoftwareGpus }), [builder,day,loadedDay,rows,intervals,captureNow,simplifyGpuNames,showSoftwareGpus]);
   return { capture, error, loading, calendar: { value: day, min: earliest, max: localDate(), onChange: setDay } };
 }
