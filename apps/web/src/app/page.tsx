@@ -19,7 +19,7 @@ const sources = [
   { icon: Layers3, name: "应用与窗口", details: "前台应用 · 窗口标题 · 桌面应用存在状态 · 空闲时段", color: "#b8a2dc" },
   { icon: Cpu, name: "系统与性能", details: "CPU 与频率 · RAM · GPU 与引擎 · 专用 / 共享显存", color: "#83b8c5" },
   { icon: Waves, name: "网络与磁盘", details: "物理网络收发速率 · 物理磁盘读写速率", color: "#bca2ce" },
-  { icon: AudioLines, name: "音频与媒体", details: "麦克风电平 · 输出电平 · 媒体标题 · 播放与暂停", color: "#a5bd9b" },
+  { icon: AudioLines, name: "音频与媒体", details: "麦克风电平 · 输出电平 · 媒体标题 · 播放与暂停", color: "#a6b5d0" },
   { icon: BatteryMedium, name: "电池与供电", details: "电量百分比 · 插电状态 · 充电状态", color: "#d1b781" },
 ];
 const faqs = [
