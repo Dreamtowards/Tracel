@@ -12,8 +12,22 @@
   "app": {
     "windows": [
       {
+        "label": "splash",
+        "title": "Tracel — Starting",
+        "url": "splash.html",
+        "width": 520,
+        "height": 320,
+        "center": true,
+        "decorations": false,
+        "resizable": false,
+        "maximizable": false,
+        "skipTaskbar": true,
+        "backgroundColor": "#171719"
+      },
+      {
         "label": "main",
         "title": "Tracel Activity",
+        "visible": false,
         "width": 1440,
         "height": 960,
         "minWidth": 800,

@@ -1,5 +1,9 @@
 # Architecture
 
+## Desktop startup
+
+Desktop creates a small, centered, undecorated static `splash.html` window before the hidden main window. The existing window-state plugin restores main-window geometry/maximization without controlling visibility; the splash is excluded from persistence. After the React shell commits, Desktop calls the main-window-only `frontend_ready` command to show/focus the restored window and close the splash. Paint scheduling has a 250 ms fallback for hidden WebViews that suspend animation frames. A native 12-second watchdog reveals the client if frontend startup fails. The handoff is idempotent and does not wait for history queries or collector readings. The splash uses inline SVG/CSS, honors reduced motion, has no fake progress percentage, and adds no dependency or Web/shared UI behavior.
+
 ## Shared Desktop presentation and online demo
 
 `packages/timeline/src/desktop` owns the browser-safe Desktop composition (`DesktopExplorer`), neutral theme/styles, date picker, navigation, appearance preferences/settings, Chinese catalog and Radix track-header menu. The native host and Web `/timeline` consume this same implementation. Desktop's old presentation paths re-export the shared modules; its collectors, Tauri commands, archive adapters, diagnostics and application-icon reads stay in `apps/desktop`. The main Timeline entry remains independent of these optional Desktop widgets; consumers opt into `@tracel/timeline/desktop` and its CSS. The existing Radix/DayPicker dependencies are declared by the shared package without introducing new versions.

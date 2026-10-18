@@ -4,6 +4,7 @@ mod audio;
 mod categories;
 mod file_usage;
 mod screen_timeout;
+mod startup;
 mod storage_tools;
 mod system_tools;
 mod telemetry;
@@ -216,15 +217,26 @@ fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_denylist(&["splash"])
+                // Geometry is restored while hidden; only startup controls visibility.
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        & !tauri_plugin_window_state::StateFlags::VISIBLE,
+                )
+                .build(),
+        )
         .setup(|app| {
             let path = app.path().app_config_dir()?.join("collection.json");
             let database_path = app.path().app_local_data_dir()?.join("activity.sqlite3");
             app.manage(telemetry::Telemetry::with_database(path, database_path)?);
             app.manage(audio::Monitor::new()?);
+            startup::start_watchdog(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            startup::frontend_ready,
             app_info,
             application_icon,
             category_configuration,

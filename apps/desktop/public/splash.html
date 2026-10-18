@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tracel — Starting</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+    body { background: #171719; color: #ededee; font-family: "Segoe UI", sans-serif; user-select: none; }
+    main { position: relative; height: 100%; padding: 35px 38px 25px; border: 1px solid #ffffff24; background: radial-gradient(ellipse at 95% 0, #ffffff09, transparent 65%); }
+    header { display: flex; align-items: center; gap: 11px; }
+    header svg { width: 34px; height: 34px; }
+    header span { font-size: 12px; font-weight: 500; letter-spacing: .22em; color: #b5b5bc; }
+    h1 { margin: 24px 0 5px; font-size: 38px; line-height: 1.1; font-weight: 500; letter-spacing: -.045em; }
+    p { margin: 0; font-size: 12px; letter-spacing: .025em; color: #96969f; }
+    .timeline { position: relative; margin-top: 23px; height: 65px; overflow: hidden; background: repeating-linear-gradient(90deg, transparent 0 43px, #ffffff07 43px 44px); }
+    .lane { position: absolute; height: 6px; border-radius: 2px; background: #ffffff15; }
+    .lane:nth-child(1) { top: 10px; left: 0; width: 41%; background: #ffffff35; }
+    .lane:nth-child(2) { top: 10px; left: 43%; width: 24%; }
+    .lane:nth-child(3) { top: 28px; left: 9%; width: 55%; background: #ffffff23; }
+    .lane:nth-child(4) { top: 46px; left: 25%; width: 48%; }
+    .cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: #d4d4d4; box-shadow: 0 0 14px #ffffff33; animation: scan 3.4s ease-in-out infinite alternate; }
+    footer { position: absolute; left: 38px; right: 38px; bottom: 24px; display: flex; align-items: center; justify-content: space-between; color: #777780; font-size: 10px; letter-spacing: .04em; }
+    .status { display: flex; align-items: center; gap: 7px; color: #ababB3; }
+    .dot { width: 4px; height: 4px; border-radius: 50%; background: #d4d4d4; animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes scan { from { left: 32%; opacity: .35; } to { left: 84%; opacity: .8; } }
+    @keyframes pulse { 50% { opacity: .25; } }
+    @media (prefers-reduced-motion: reduce) { .cursor { animation: none; left: 65%; } .dot { animation: none; } }
+  </style>
+</head>
+<body>
+  <main aria-label="Tracel is starting">
+    <header>
+      <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="2" y="2" width="44" height="44" rx="11" stroke="#d4d4d4" stroke-opacity=".4"/><path d="M13 16h17m-12 8h17m-22 8h14" stroke="#d4d4d4" stroke-width="3" stroke-linecap="round"/><path d="M32 10v28" stroke="#d4d4d4" stroke-opacity=".4"/></svg>
+      <span>TRACEL ACTIVITY</span>
+    </header>
+    <h1>Your time, in view.</h1>
+    <p>A timeline of your digital day.</p>
+    <div class="timeline" aria-hidden="true"><i class="lane"></i><i class="lane"></i><i class="lane"></i><i class="lane"></i><i class="cursor"></i></div>
+    <footer><span class="status" role="status"><i class="dot"></i>Starting your workspace</span><span>LOCAL FIRST · BUILT FOR WINDOWS</span></footer>
+  </main>
+</body>
+</html>
