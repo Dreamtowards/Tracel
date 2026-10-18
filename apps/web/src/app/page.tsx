@@ -13,7 +13,7 @@ function Mark() {
   return <svg width="27" height="27" viewBox="0 0 27 27" fill="none" aria-hidden="true"><rect x="1" y="1" width="25" height="25" rx="7" stroke="currentColor" strokeOpacity=".4" /><path d="M7 9H17M10 13.5H20M7 18H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path d="M18 6V21" stroke="currentColor" strokeOpacity=".4" /></svg>;
 }
 function Download() {
-  return <a className={s.downloadButton} href={release.url}><ArrowDownToLine size={17} />下载 Windows 版<ArrowRight size={16} /></a>;
+  return <a className={s.downloadButton} href={release.url}><ArrowDownToLine size={17} />下载 Windows 版</a>;
 }
 const sources = [
   { icon: Layers3, name: "应用与窗口", details: "前台应用 · 窗口标题 · 桌面应用存在状态 · 空闲时段", color: "#b8a2dc" },

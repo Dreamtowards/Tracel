@@ -6,7 +6,7 @@
 .container { width:calc(100% - 96px); max-width:1180px; margin-inline:auto; }
 .skip { position:absolute; top:-60px; left:20px; padding:8px 15px; background:#232323; z-index:10; }
 .skip:focus { top:12px; }
-.header { max-width:1320px; width:calc(100% - 96px); margin:auto; height:84px; display:flex; align-items:center; gap:36px; border-bottom:1px solid var(--stroke); }
+.header { max-width:1320px; width:calc(100% - 96px); margin:auto; height:84px; display:flex; align-items:center; gap:36px; }
 .brand { display:inline-flex; align-items:center; gap:10px; font-size:20px; font-weight:600; letter-spacing:-.6px; }
 .header nav { display:flex; align-items:center; gap:30px; margin-left:auto; font-size:12px; color:#b7b7b4; }
 .header nav a,.navDownload { display:inline-flex; align-items:center; gap:8px; }
