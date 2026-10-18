@@ -47,7 +47,7 @@ export default function Home() {
         <figure className={s.product}>
           <div className={s.productBar}><span><SquareActivity size={14} />TRACEL / ACTIVITY & PERFORMANCE</span><span>真实界面 · 示例数据</span></div>
           {/* A local image keeps static export independent of image-optimization services. */}
-          <img src="/images/tracel-timeline.png" width={1600} height={1100} alt="Tracel 桌面界面：前台应用、窗口上下文与系统性能沿时间对齐，右侧显示范围分析。图中为示例数据。" fetchPriority="high" />
+          <img src="/images/tracel-timeline.webp" width={3031} height={1677} alt="Tracel 桌面界面：前台应用、窗口上下文与系统性能沿时间对齐，右侧显示范围分析。图中为示例数据。" fetchPriority="high" />
           <figcaption><span>从「今天做了什么」，到「那几分钟发生了什么」。</span><a href="/timeline">自己探索一下<ChevronRight size={14} /></a></figcaption>
         </figure>
         <div className={s.principles}><span><LockKeyhole size={15} />记录留在你的电脑</span><span><SlidersHorizontal size={15} />每类采集独立开关</span><span><MousePointer2 size={15} />选中一段，即刻分析</span><a href="#why">为什么做它<ArrowDown size={14} /></a></div>

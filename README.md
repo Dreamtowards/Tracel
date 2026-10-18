@@ -8,7 +8,7 @@ Tracel 是一款 Windows 桌面应用，把应用活动、窗口、系统性能�
 
 [下载 Windows 版](https://github.com/Dreamtowards/Tracel/releases) · [使用方式](#开始使用) · [开发指南](docs/development.md)
 
-![Tracel 时间轴：应用活动、系统性能与右侧范围分析](apps/web/public/images/tracel-timeline.png)
+![Tracel 时间轴：应用活动、系统性能与右侧范围分析](apps/web/public/images/tracel-timeline.webp)
 
 *截图来自实际桌面界面，使用虚构示例数据，不包含个人活动记录。*
 
