@@ -58,6 +58,7 @@ import {
 import { Timeline, type TimelinePalette } from "./Timeline";
 import { OverviewViewport } from "./OverviewViewport";
 import { overviewPath } from "./overview";
+import type { TrackSource } from "./trackVisibility";
 import { DisplaySettings, defaultAppearance } from "./DisplaySettings";
 import "./explorer.css";
 
@@ -111,7 +112,9 @@ export default function Explorer({
   categories,
   renderAppIcon,
   renderTrackHeaders,
+  hiddenSources,
 }: {
+  hiddenSources?: readonly TrackSource[];
   provider: DataProvider;
   categories?: CategoryConfig;
   /** Host-owned context menu for the label column, without native/shared dependencies. */
@@ -652,6 +655,7 @@ export default function Explorer({
                 focus={focus}
                 appearance={appearance}
                 palette={palette}
+                hiddenSources={hiddenSources}
                 onView={changeView}
                 onSelect={(range) => { setSelection(range); if (range) setFollow(false); }}
                 onFocus={setFocus}

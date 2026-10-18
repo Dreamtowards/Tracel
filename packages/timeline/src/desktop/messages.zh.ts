@@ -1,4 +1,7 @@
 export const desktopZh: Readonly<Record<string, string>> = {
+  "Track visibility": "轨道显示",
+  "Visible tracks": "显示的轨道",
+  "Hiding also stops collection. Showing restores history without starting collection.": "取消勾选会隐藏轨道并停止采集。重新勾选只恢复历史显示，不会开启采集。",
   "Online demo": "在线演示",
   "Back to website": "返回官网",
   "Online demo · Example data": "在线演示 · 示例数据",

@@ -53,6 +53,9 @@ a { color: inherit; text-decoration: none; }
 .settings-card { margin: 0 0 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0 20px; }
 .settings-card h2 { margin: 0; padding: 16px 0 12px; font-size: 13px; font-weight: 600; color: #e4e4e7; }
 .settings-card > p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0 0 16px; }
+.settings-card-actions { padding-bottom: 16px; }
+.settings-card-body { padding: 16px 0; }
+.settings-card-body > p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0 0 12px; }
 .settings-toggle, .settings-action { display: flex; align-items: center; gap: 20px; padding: 14px 0; border-top: 1px solid var(--border); }
 .settings-toggle > label, .settings-action > div, .settings-action > label { flex: 1; min-width: 0; }
 .settings-toggle label { cursor: pointer; }

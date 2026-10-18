@@ -9,6 +9,7 @@ import { CurrentTimeLine } from "./CurrentTimeLine";
 import { foregroundAppIntervals } from "./foreground";
 import { metricSamples } from "./metricIndex";
 import { frameQueue } from "./frameQueue";
+import { isTrackHidden, type TrackSource } from "./trackVisibility";
 import {
   Capture,
   Range,
@@ -45,6 +46,7 @@ const defaultPalette: TimelinePalette = {
   background: "#101416", grid: "#22292d", divider: "#242b2e", group: "#151a1d", focus: "#bacbbd12", selection: "#d7b17a",
 };
 type Props = {
+  hiddenSources?: readonly TrackSource[];
   data: Capture;
   view: Range;
   selection: Range | null;
@@ -58,8 +60,10 @@ type Props = {
   onFocus: (id: string | null) => void;
 };
 const defaultLabelWidth = 192;
+const noHiddenSources: readonly TrackSource[] = [];
 
 export function Timeline({
+  hiddenSources = noHiddenSources,
   data,
   view,
   selection,
@@ -241,13 +245,13 @@ export function Timeline({
     const hasAdapterTracks = data.metricTracks?.some(track => track.keys.some(key => key.startsWith("gpu:")));
     const visible = data.kind === "recorded" || hasAdapterTracks ? all.filter((track) => track.id !== "gpu") : all;
     let y = 32;
-    return visible.map((track) => {
+    return visible.filter(track => !isTrackHidden(track.id, hiddenSources)).map((track) => {
       const height = heights[track.id] ?? track.height;
       const row = { ...track, baseHeight: track.height, height, y };
       y += height;
       return row;
     });
-  }, [closed, expanded, heights, data, appearance, presenceApps]);
+  }, [closed, expanded, heights, data, appearance, presenceApps, hiddenSources]);
   const totalHeight = tracks.reduce((s, t) => s + t.height, 32);
   const toggle = (id: string, group: boolean) =>
     (group ? setClosed : setExpanded)((previous) =>

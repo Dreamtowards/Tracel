@@ -47,12 +47,12 @@ export default function Settings({ categories, status, error, onTimeline, zoom, 
     <SettingsGroup title={t("Categories")}>
       <div className="settings-action"><div><strong>categories.json</strong><small>{t("Edit this file, then return to Tracel to reload categories.")}</small><small style={{ overflowWrap: "anywhere" }}>{categories.path || t("Browser preview uses the default categories.")}</small></div></div>
       {categories.error && <p role="alert" className="settings-error">{categories.error}</p>}
-      <Button disabled={!nativeClient} onClick={() => { setCategoryFolderError(""); void openCategoryFolder().catch(reason => setCategoryFolderError(String(reason))); }}><FolderOpen size={14} />{t("Open configuration folder")}</Button>
+      <div className="settings-card-actions"><Button disabled={!nativeClient} onClick={() => { setCategoryFolderError(""); void openCategoryFolder().catch(reason => setCategoryFolderError(String(reason))); }}><FolderOpen size={14} />{t("Open configuration folder")}</Button></div>
       {categoryFolderError && <p role="alert" className="settings-error">{categoryFolderError}</p>}
     </SettingsGroup>
     <SettingsGroup title={t("Collection")}>
-      <p>{t("Right-click track headers to configure collection")}</p>
-      <Button onClick={onTimeline}>{t("Open Timeline")}</Button>
+      <div className="settings-card-body"><p>{t("Right-click track headers to configure collection")}</p>
+      <Button onClick={onTimeline}>{t("Open Timeline")}</Button></div>
     </SettingsGroup>
     <SettingsGroup title={t("Storage")}>
       <div className="settings-action"><div><strong>SQLite</strong><small>{t("Saved observations")}: {status?.persistedCount?.toLocaleString(locale) ?? "—"}</small></div>

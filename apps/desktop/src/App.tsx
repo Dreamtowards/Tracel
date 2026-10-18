@@ -82,10 +82,11 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
     <ClientBoundary>
       <div ref={ui} className="desktop-ui" style={{ "--ui-scale": appearance.zoom / 100 } as CSSProperties}>
       <DesktopExplorer
+        hiddenSources={nativeClient ? appearance.hiddenSources : undefined}
         accent={appearance.accent}
         provider={demoProvider}
         categories={categories.config}
-        renderTrackHeaders={nativeClient ? (headers) => <CollectionMenu simplifyGpuNames={appearance.simplifyGpuNames} showSoftwareGpus={appearance.showSoftwareGpus} onSimplifyGpuNames={appearance.setSimplifyGpuNames} onShowSoftwareGpus={appearance.setShowSoftwareGpus} status={collection.status} busy={collection.busy} onSettings={collection.changeSettings}>{headers}</CollectionMenu> : undefined}
+        renderTrackHeaders={nativeClient ? (headers) => <CollectionMenu hiddenSources={appearance.hiddenSources} onHiddenSourcesChange={appearance.setHiddenSources} simplifyGpuNames={appearance.simplifyGpuNames} showSoftwareGpus={appearance.showSoftwareGpus} onSimplifyGpuNames={appearance.setSimplifyGpuNames} onShowSoftwareGpus={appearance.setShowSoftwareGpus} status={collection.status} busy={collection.busy} onSettings={collection.changeSettings}>{headers}</CollectionMenu> : undefined}
         renderAppIcon={nativeClient ? (app, fallback) => <ApplicationIcon executable={app.executablePath ?? app.exe} fallback={fallback} /> : undefined}
         capture={nativeClient ? timeline.capture : undefined}
         calendar={nativeClient ? timeline.calendar : undefined}

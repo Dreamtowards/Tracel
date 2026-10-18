@@ -31,15 +31,15 @@ export function useCollection(historyVisible: boolean) {
     return () => { active = false; window.clearTimeout(timer); };
   }, [historyVisible]);
   const update = useCallback(async (request: () => Promise<CollectionStatus>) => {
-    if (mutation.current) return;
+    if (mutation.current) return false;
     mutation.current = true; generation.current += 1; setBusy(true); setError("");
-    try { setStatus(await request()); }
-    catch { setError("Could not apply the change. Your previous settings are still active."); }
+    try { setStatus(await request()); return true; }
+    catch { setError("Could not apply the change. Your previous settings are still active."); return false; }
     finally { mutation.current = false; generation.current += 1; setBusy(false); }
   }, []);
   return {
     status, history, error, busy,
     changeSettings: (settings: CollectionSettings) => update(() => setCollectionSettings(settings)),
-    changeAwake: (enabled: boolean) => update(() => setKeepAwake(enabled)),
+    changeAwake: async (enabled: boolean) => { await update(() => setKeepAwake(enabled)); },
   };
 }
