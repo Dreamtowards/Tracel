@@ -3,6 +3,12 @@ import { metricSamples } from "./metricIndex";
 
 /** Half-open support intervals; missing values are excluded independently per metric. */
 export function analyze(data: Capture, range: Range) {
+  const visibleAfk = data.afk.filter(item => overlap(item, range) > 0);
+  const byApp = new Map<string, Capture["activity"]>();
+  for (const item of data.activity) {
+    if (!overlap(item, range)) continue;
+    const list = byApp.get(item.appId) ?? []; list.push(item); byApp.set(item.appId, list);
+  }
   const activeTime = (interval: Range) => {
     const clipped = {
       start: Math.max(interval.start, range.start),
@@ -11,12 +17,12 @@ export function analyze(data: Capture, range: Range) {
     return Math.max(
       0,
       overlap(interval, range) -
-        data.afk.reduce((sum, afk) => sum + overlap(clipped, afk), 0),
+        visibleAfk.reduce((sum, afk) => sum + overlap(clipped, afk), 0),
     );
   };
   const apps = data.apps
     .map((app) => {
-      const intervals = data.activity.filter((a) => a.appId === app.id);
+      const intervals = byApp.get(app.id) ?? [];
       return {
         ...app,
         foreground: intervals.reduce((s, a) => s + overlap(a, range), 0),
@@ -35,14 +41,15 @@ export function analyze(data: Capture, range: Range) {
       for (const sample of metricSamples(data, key, range)) {
         const value = sample.values?.[key];
         if (value == null || !Number.isFinite(value)) continue;
-        const weight = overlap(
+        const covered = overlap(
           { start: sample.time, end: sampleEnd(sample, data.samplePeriod) },
           range,
         );
+        const weight = covered * (sample.coverage?.[key] == null ? 1 : sample.coverage[key]! / (sampleEnd(sample,data.samplePeriod)-sample.time));
         if (!weight) continue;
         coverage += weight;
         integral += value * weight;
-        peak = Math.max(peak, value);
+        peak = Math.max(peak, sample.extrema?.[key]?.max ?? value);
       }
       return [
         key,

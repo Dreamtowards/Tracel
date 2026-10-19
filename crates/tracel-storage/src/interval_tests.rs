@@ -61,6 +61,70 @@ fn count(store: &SqliteStore, table: &str) -> i64 {
 }
 
 #[test]
+fn fragmented_presence_is_exactly_unioned_before_the_response_budget() {
+    let fixture = Fixture::new();
+    let mut store = SqliteStore::open(&fixture.0).unwrap();
+    store.append(&[sample(10000)]).unwrap();
+    let process: i64 = store
+        .connection
+        .query_row(
+            "SELECT process_instance_id FROM app_presence_intervals LIMIT 1",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    store
+        .connection
+        .execute("DELETE FROM app_presence_intervals", [])
+        .unwrap();
+    store.connection.execute("WITH RECURSIVE n(v) AS (VALUES(0) UNION ALL SELECT v+1 FROM n WHERE v<59999) INSERT INTO app_presence_intervals(process_instance_id,start_ms,end_ms,first_sample_id,last_sample_id) SELECT ?1,1000000+v,1000001+v,1,1 FROM n",[process]).unwrap();
+    store.connection.execute("INSERT INTO app_presence_intervals(process_instance_id,start_ms,end_ms,first_sample_id,last_sample_id) VALUES(?1,1060100,1060200,1,1)",[process]).unwrap();
+    let page = SqliteStore::query_timeline(&fixture.0, 1000000, 1100000, 0).unwrap();
+    assert_eq!(page.intervals.apps.len(), 2);
+    assert_eq!(
+        (
+            page.intervals.apps[0].start_ms,
+            page.intervals.apps[0].end_ms
+        ),
+        (1000000, 1060000)
+    );
+    assert_eq!(
+        (
+            page.intervals.apps[1].start_ms,
+            page.intervals.apps[1].end_ms
+        ),
+        (1060100, 1060200)
+    );
+    assert_eq!(
+        count(&store, "app_presence_intervals"),
+        60001,
+        "query must not rewrite history"
+    );
+}
+
+#[test]
+fn daily_overview_clips_foreground_and_idle_without_loading_window_titles() {
+    let fixture = Fixture::new();
+    let mut store = SqliteStore::open(&fixture.0).unwrap();
+    let mut first = sample(10000);
+    first.activity.as_mut().unwrap().idle_ms = Some(0);
+    store
+        .append(&[first, sample(12000), sample(14000)])
+        .unwrap();
+    let summary = crate::history_overview(&fixture.0, &[(0, 13000), (13000, 20000)]).unwrap();
+    assert_eq!(summary.days[0].foreground_ms, 3000);
+    assert_eq!(summary.days[0].active_ms, 2000);
+    assert_eq!(summary.days[0].sample_count, 2);
+    assert_eq!(summary.days[1].foreground_ms, 3000);
+    assert_eq!(summary.days[1].active_ms, 0);
+    assert_eq!(summary.days[1].sample_count, 1);
+    assert_eq!(summary.first_at_ms, Some(10000));
+    assert_eq!(summary.last_at_ms, Some(14000));
+    assert!(crate::history_overview(&fixture.0, &[(0, 13000), (12000, 20000)]).is_err());
+    assert!(crate::history_overview(&fixture.0, &vec![(0, 1000); 32]).is_err());
+}
+
+#[test]
 fn stationary_state_is_one_interval_and_metadata_is_interned() {
     let fixture = Fixture::new();
     let mut store = SqliteStore::open(&fixture.0).unwrap();

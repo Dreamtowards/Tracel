@@ -31,6 +31,9 @@ export type BackgroundLifetime = Range & { appId: string };
 export type MetricKey =
   "cpu" | "ram" | "gpu" | "download" | "upload" | "read" | "write" | "audio" | "audioInput" | "cpuFrequency" | "battery" | "pluggedIn" | "charging" | `gpu:${string}`;
 export type MetricSample = {
+  /** Coarse display bins carry exact per-metric covered seconds and extrema. */
+  coverage?: Partial<Record<MetricKey, number>>;
+  extrema?: Partial<Record<MetricKey, { min: number; max: number }>>;
   time: number;
   /** Explicit support interval for irregular native samples; legacy demo uses samplePeriod. */
   end?: number;
@@ -48,6 +51,7 @@ export type TimelineEvent = Range & {
   title: string;
 };
 export type Capture = {
+  detailLevel?: "aggregate";
   kind?: "recorded";
   source?: string;
   initialView?: Range;

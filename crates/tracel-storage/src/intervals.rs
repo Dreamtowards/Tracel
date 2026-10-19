@@ -278,6 +278,17 @@ fn process_row(r: &rusqlite::Row<'_>, at: usize) -> rusqlite::Result<ProcessObse
     })
 }
 pub fn query(db: &Connection, start: u64, end: u64) -> Result<StateIntervals, String> {
+    query_mode(db, start, end, false)
+}
+pub fn query_display(db: &Connection, start: u64, end: u64) -> Result<StateIntervals, String> {
+    query_mode(db, start, end, true)
+}
+fn query_mode(
+    db: &Connection,
+    start: u64,
+    end: u64,
+    coalesce: bool,
+) -> Result<StateIntervals, String> {
     fn read<T, F: FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>>(
         db: &Connection,
         sql: &str,
@@ -302,7 +313,14 @@ pub fn query(db: &Connection, start: u64, end: u64) -> Result<StateIntervals, St
         }
         Ok(values)
     }
-    let apps=read(db,"SELECT i.id,i.start_ms,i.end_ms,p.instance_key,p.process_id,p.name,a.executable FROM app_presence_intervals i JOIN process_instances p ON p.id=i.process_instance_id JOIN applications a ON a.id=p.application_id WHERE i.start_ms<?2 AND i.end_ms>?1 ORDER BY i.start_ms,i.id LIMIT 50001",start,end,|r|process_row(r,3))?;
+    // Merge only the same process identity, preserving every genuine gap. This is
+    // a query projection; the archive and per-process identities are untouched.
+    let apps_sql = if coalesce {
+        "WITH ordered AS (SELECT i.*,MAX(end_ms) OVER (PARTITION BY process_instance_id ORDER BY start_ms,end_ms,id ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prior_end FROM app_presence_intervals i WHERE start_ms<?2 AND end_ms>?1), marked AS (SELECT *,SUM(CASE WHEN prior_end IS NULL OR start_ms>prior_end THEN 1 ELSE 0 END) OVER (PARTITION BY process_instance_id ORDER BY start_ms,end_ms,id) AS island FROM ordered), merged AS (SELECT MIN(id) AS id,MIN(start_ms) AS start_ms,MAX(end_ms) AS end_ms,process_instance_id FROM marked GROUP BY process_instance_id,island) SELECT i.id,i.start_ms,i.end_ms,p.instance_key,p.process_id,p.name,a.executable FROM merged i JOIN process_instances p ON p.id=i.process_instance_id JOIN applications a ON a.id=p.application_id ORDER BY i.start_ms,i.id LIMIT 50001"
+    } else {
+        "SELECT i.id,i.start_ms,i.end_ms,p.instance_key,p.process_id,p.name,a.executable FROM app_presence_intervals i JOIN process_instances p ON p.id=i.process_instance_id JOIN applications a ON a.id=p.application_id WHERE i.start_ms<?2 AND i.end_ms>?1 ORDER BY i.start_ms,i.id LIMIT 50001"
+    };
+    let apps = read(db, apps_sql, start, end, |r| process_row(r, 3))?;
     // Split foreground focus by title transitions at query time; changing a title never splits app presence.
     let foreground=read(db,"SELECT t.id,MAX(f.start_ms,t.start_ms),MIN(f.end_ms,t.end_ms),p.instance_key,p.process_id,p.name,a.executable,w.handle,s.value FROM foreground_intervals f JOIN windows w ON w.id=f.window_id JOIN process_instances p ON p.id=w.process_instance_id JOIN applications a ON a.id=p.application_id JOIN window_title_intervals t ON t.window_id=w.id AND t.start_ms<f.end_ms AND t.end_ms>f.start_ms AND t.first_sample_id<=f.last_sample_id AND t.last_sample_id>=f.first_sample_id JOIN strings s ON s.id=t.title_id WHERE f.start_ms<?2 AND f.end_ms>?1 AND t.start_ms<?2 AND t.end_ms>?1 ORDER BY f.start_ms,t.start_ms,t.id LIMIT 50001",start,end,|r|Ok(tracel_core::WindowObservation {process:process_row(r,3)?,window_id:r.get(7)?,title:r.get(8)?}))?;
     let media=read(db,"SELECT i.id,i.start_ms,i.end_ms,t.value,a.value,s.value,i.playback_status FROM media_intervals i JOIN media_items m ON m.id=i.media_item_id JOIN strings t ON t.id=m.title_id JOIN strings a ON a.id=m.artist_id JOIN strings s ON s.id=m.source_id WHERE i.start_ms<?2 AND i.end_ms>?1 ORDER BY i.start_ms,i.id LIMIT 50001",start,end,|r|Ok(tracel_core::MediaObservation{title:r.get(3)?,artist:r.get(4)?,application:r.get(5)?,playback_status:r.get(6)?}))?;

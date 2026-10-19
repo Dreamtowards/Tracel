@@ -1,4 +1,11 @@
 export const desktopZh: Readonly<Record<string, string>> = {
+  "Daily active time": "每日活动时长",
+  "Activity overview period": "活动概览范围",
+  "30 days": "30 天",
+  "7 days": "7 天",
+  "Month": "月",
+  "Loading history in blocks": "正在分块加载历史",
+  "Aggregated display · Zoom in for precise intervals. Statistics use original records.": "当前为汇总显示，放大可查看精确区间。统计依据原始记录。",
   "Track visibility": "轨道显示",
   "Visible tracks": "显示的轨道",
   "Hiding also stops collection. Showing restores history without starting collection.": "取消勾选会隐藏轨道并停止采集。重新勾选只恢复历史显示，不会开启采集。",

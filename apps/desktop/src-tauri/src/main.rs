@@ -101,6 +101,16 @@ fn system_history(
     state.history()
 }
 #[tauri::command]
+async fn timeline_overview(
+    days: Vec<(u64, u64)>,
+    state: tauri::State<'_, telemetry::Telemetry>,
+) -> Result<tracel_storage::HistoryOverview, String> {
+    let path = state.database_path();
+    tauri::async_runtime::spawn_blocking(move || tracel_storage::history_overview(&path, &days))
+        .await
+        .map_err(|e| e.to_string())?
+}
+#[tauri::command]
 async fn timeline_observations(
     start_ms: u64,
     end_ms: u64,
@@ -109,7 +119,7 @@ async fn timeline_observations(
 ) -> Result<tracel_storage::ArchivePage, String> {
     let path = state.database_path();
     tauri::async_runtime::spawn_blocking(move || {
-        tracel_storage::SqliteStore::query(&path, start_ms, end_ms, after_id)
+        tracel_storage::SqliteStore::query_timeline(&path, start_ms, end_ms, after_id)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -253,6 +263,7 @@ fn main() {
             set_collection_settings,
             system_history,
             timeline_observations,
+            timeline_overview,
             set_keep_awake,
             inspect_foreground,
             inspect_file_usage,

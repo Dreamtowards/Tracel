@@ -1,5 +1,7 @@
 //! Local SQLite persistence and bounded system-observation queries.
+mod history;
 mod intervals;
+pub use history::{overview as history_overview, HistoryDay, HistoryOverview};
 mod sqlite;
 pub use intervals::{Interval, StateIntervals};
 pub use sqlite::{ArchivePage, SqliteStore, StoredObservation};

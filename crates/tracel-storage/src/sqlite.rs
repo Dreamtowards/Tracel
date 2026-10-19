@@ -100,6 +100,24 @@ impl SqliteStore {
     /// One local calendar day (including DST), never unbounded history over IPC.
     /// Cursor is a row identity, independent of wall-clock changes and timestamps.
     pub fn query(path: &Path, start: u64, end: u64, after_id: u64) -> Result<ArchivePage, String> {
+        Self::query_mode(path, start, end, after_id, false)
+    }
+    /// Presentation projection: exact adjacent/overlapping presence union before budgeting.
+    pub fn query_timeline(
+        path: &Path,
+        start: u64,
+        end: u64,
+        after_id: u64,
+    ) -> Result<ArchivePage, String> {
+        Self::query_mode(path, start, end, after_id, true)
+    }
+    fn query_mode(
+        path: &Path,
+        start: u64,
+        end: u64,
+        after_id: u64,
+        coalesce: bool,
+    ) -> Result<ArchivePage, String> {
         if start >= end
             || end - start > 25 * 3600 * 1000
             || end > i64::MAX as u64 - 6000
@@ -149,7 +167,11 @@ impl SqliteStore {
             next_cursor,
             first_at_ms,
             last_at_ms,
-            intervals: super::intervals::query(&connection, start, end)?,
+            intervals: if coalesce {
+                super::intervals::query_display(&connection, start, end)?
+            } else {
+                super::intervals::query(&connection, start, end)?
+            },
         })
     }
 }

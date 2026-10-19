@@ -1,48 +1,254 @@
+import { useEffect, useRef, useState, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { nativeClient, queryTimeline, type ArchivePage } from "./native";
+import { dayRange, localDate } from "./recordedTimeline";
 import type { GpuDisplayOptions } from "./gpuNames";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { nativeClient, queryTimeline, type StoredObservation, type StateIntervals } from "./native";
-import { dayRange, localDate, createRecordedCaptureBuilder } from "./recordedTimeline";
-import { retainIntervals } from "./archiveSnapshot";
-
+import { clampRange, type Capture, type Range } from "@tracel/timeline/model";
+import { combineAnalyses, combineCaptures, type HistoryAnalysis } from "./historyProjection";
+import type { HistoryControls, HistoryDay } from "@tracel/timeline/history";
+type Result = {
+    capture: Capture;
+    stats: HistoryAnalysis;
+    firstAtMs?: number | null;
+    lastAtMs?: number | null;
+    firstActivity?: Capture["activity"][number];
+    lastActivity?: Capture["activity"][number];
+};
+function blockStats(items: Result[]) {
+    const stats = combineAnalyses(items.map(r => r.stats));
+    for (let i = 1; i < items.length; i++) {
+        const a = items[i - 1].lastActivity, b = items[i].firstActivity;
+        if (a && b && a.end === b.start && a.appId !== b.appId)
+            stats.switches++;
+    }
+    return stats;
+}
+type Tile = {
+    range: Range;
+    key: string;
+};
+const sameRange = (a: Range, b: Range) => a.start === b.start && a.end === b.end;
+const seconds = (r: {
+    startMs: number;
+    endMs: number;
+}): Range => ({ start: r.startMs / 1000, end: r.endMs / 1000 });
+const today = () => dayRange(localDate());
+const initialView = () => ({ start: Date.now() / 1000 - 3600, end: Date.now() / 1000 + 120 });
+export function historyTiles(range: Range): Tile[] {
+    const result: Tile[] = [];
+    let start = Math.max(Math.floor(range.start / 3600) * 3600, dayRange(localDate(new Date(range.start * 1000))).startMs / 1000);
+    while (start < range.end) {
+        const end = Math.min(start + 3600, dayRange(localDate(new Date(start * 1000))).endMs / 1000);
+        result.push({ range: { start, end }, key: `${start}:${end}` });
+        start = end;
+    }
+    return result;
+}
+async function readChunk(range: Range): Promise<ArchivePage> {
+    try {
+        return await queryTimeline({ startMs: Math.floor(range.start * 1000), endMs: Math.ceil(range.end * 1000), afterId: 0 });
+    }
+    catch (error) {
+        if (!/too many (?:state intervals|observations)/i.test(String(error)) || range.end - range.start <= 1)
+            throw error;
+        const middle = (range.start + range.end) / 2, a = await readChunk({ start: range.start, end: middle }), b = await readChunk({ start: middle, end: range.end });
+        const observations = [...new Map([...a.observations, ...b.observations].map(row => [row.id, row])).values()].sort((a, b) => a.id - b.id);
+        const join = <T extends {
+            id: number;
+            startMs: number;
+            endMs: number;
+        }>(left: T[] = [], right: T[] = []) => [...new Map([...left, ...right].map(i => [`${i.id}:${i.startMs}:${i.endMs}`, i])).values()];
+        return { ...b, observations, firstAtMs: a.firstAtMs ?? b.firstAtMs, intervals: { apps: join(a.intervals?.apps, b.intervals?.apps), foreground: join(a.intervals?.foreground, b.intervals?.foreground), media: join(a.intervals?.media, b.intervals?.media), idle: join(a.intervals?.idle, b.intervals?.idle) } };
+    }
+}
 export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSoftwareGpus }: GpuDisplayOptions = {}) {
-  const [day, setDay] = useState(localDate);
-  const [earliest, setEarliest] = useState(localDate);
-  const [rows, setRows] = useState<StoredObservation[]>([]);
-  const [intervals, setIntervals] = useState<StateIntervals>();
-  const [loadedDay, setLoadedDay] = useState(day);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [captureNow, setCaptureNow] = useState(Date.now);
-  const builder = useMemo(() => createRecordedCaptureBuilder(), []);
-  const cache = useRef<{ day: string; observations: StoredObservation[]; cursor: number; intervals?: StateIntervals }>({ day, observations: [], cursor: 0 });
-  useEffect(() => {
-    if (!nativeClient || !visible) return;
-    if (cache.current.day !== day) cache.current = { day, observations: [], cursor: 0 };
-    let active = true, cursor = cache.current.cursor;
-    let observations = cache.current.observations;
-    let timer: number;
-    setRows(observations); setIntervals(cache.current.intervals); setLoadedDay(day); setLoading(true); setError("");
-    const poll = async () => {
-      try {
-        const page = await queryTimeline({ ...dayRange(day), afterId: cursor });
-        if (!active) return;
-        if (page.observations.length) observations = observations.concat(page.observations);
-        if (observations.length > 50000) throw Error("Too many observations for one day.");
-        cursor = page.nextCursor;
-        const nextIntervals = retainIntervals(cache.current.intervals, page.intervals);
-        cache.current = { day, observations, cursor, intervals: nextIntervals };
-        setIntervals(nextIntervals);
-        // One final refresh may extend the last gauge support to its 2-second cap.
-        setCaptureNow(Math.min(Date.now(), (observations.at(-1)?.sample.capturedAtMs ?? Date.now()) + 2000));
-        if (page.firstAtMs != null) setEarliest(localDate(new Date(Math.min(page.firstAtMs,Date.now()))));
-        if (page.observations.length || cursor === 0) setRows(observations);
-        setError("");
-      } catch (reason) { if (active) setError(String(reason)); }
-      finally { if (active) { setLoading(false); timer = window.setTimeout(poll, day === localDate() ? 2000 : 15000); } }
-    };
-    void poll();
-    return () => { active = false; window.clearTimeout(timer); };
-  }, [day, visible]);
-  const capture = useMemo(() => builder(day, loadedDay === day ? rows : [], captureNow, loadedDay === day ? intervals : undefined, { simplifyGpuNames, showSoftwareGpus }), [builder,day,loadedDay,rows,intervals,captureNow,simplifyGpuNames,showSoftwareGpus]);
-  return { capture, error, loading, calendar: { value: day, min: earliest, max: localDate(), onChange: setDay } };
+    const [day, setDay] = useState(localDate), [earliest, setEarliest] = useState(localDate);
+    const [period, setPeriod] = useState<7 | 30>(30), [days, setDays] = useState<HistoryDay[]>([]), [bounds, setBounds] = useState<Range>(() => seconds(today()));
+    const [view, setView] = useState<Range>(initialView), [selection, setSelection] = useState<Range | null>(null);
+    const [capture, setCapture] = useState(() => combineCaptures([], seconds(today()))), [analysis, setAnalysis] = useState<HistoryControls["analysis"]>();
+    const [error, setError] = useState(""), [overviewError, setOverviewError] = useState(""), [loading, setLoading] = useState(false), [progress, setProgress] = useState("");
+    const [requested, setRequested] = useState(view);
+    useEffect(() => { const timer = setTimeout(() => setRequested(view), 160); return () => clearTimeout(timer); }, [view]);
+    const currentView = useRef(view);
+    currentView.current = view;
+    const selected = useRef(selection);
+    selected.current = selection;
+    const viewAnalysis = useRef<HistoryControls["analysis"]>(undefined);
+    const worker = useRef<Worker | null>(null), serial = useRef(0), waiting = useRef(new Map<number, {
+        resolve: (r: Result) => void;
+        reject: (e: unknown) => void;
+    }>());
+    const cache = useRef(new Map<string, Result>());
+    useEffect(() => {
+        if (!nativeClient)
+            return;
+        const instance = new Worker(new URL("./history.worker.ts", import.meta.url), { type: "module" });
+        worker.current = instance;
+        instance.onmessage = event => { const pending = waiting.current.get(event.data.id); if (!pending)
+            return; waiting.current.delete(event.data.id); if (event.data.error)
+            pending.reject(event.data.error);
+        else
+            pending.resolve(event.data.result); };
+        instance.onerror = event => { for (const pending of waiting.current.values())
+            pending.reject(event.message); waiting.current.clear(); };
+        return () => { instance.terminate(); worker.current = null; for (const pending of waiting.current.values())
+            pending.reject("History worker closed"); waiting.current.clear(); };
+    }, []);
+    const project = useCallback((page: ArchivePage, range: Range, budget: number, coarse: boolean) => new Promise<Result>((resolve, reject) => {
+        if (!worker.current) {
+            reject("History worker unavailable");
+            return;
+        }
+        const id = ++serial.current;
+        waiting.current.set(id, { resolve, reject });
+        worker.current.postMessage({ id, page, range, budget, coarse, now: Date.now(), options: { simplifyGpuNames, showSoftwareGpus } });
+    }), [simplifyGpuNames, showSoftwareGpus]);
+    useEffect(() => {
+        if (!nativeClient || !visible)
+            return;
+        let active = true;
+        let timer: ReturnType<typeof setTimeout>;
+        const poll = async () => {
+            try {
+                const anchor = new Date(day + "T12:00:00"), ranges = Array.from({ length: period }, (_, i) => { const d = new Date(anchor); d.setDate(d.getDate() - (period - 1 - i)); return dayRange(localDate(d)); });
+                const overview = await invoke<{
+                    days: HistoryDay[];
+                    firstAtMs: number | null;
+                    lastAtMs: number | null;
+                }>("timeline_overview", { days: ranges.map(r => [r.startMs, r.endMs]) });
+                if (!active)
+                    return;
+                setDays(overview.days);
+                setOverviewError("");
+                const first = overview.firstAtMs == null ? ranges[0].startMs : dayRange(localDate(new Date(overview.firstAtMs))).startMs;
+                if (overview.firstAtMs != null)
+                    setEarliest(localDate(new Date(overview.firstAtMs)));
+                setBounds(previous => { const next = { start: Math.min(first, ranges[0].startMs, currentView.current.start * 1000) / 1000, end: today().endMs / 1000 }; return sameRange(previous, next) ? previous : next; });
+            }
+            catch (reason) {
+                if (active)
+                    setOverviewError(String(reason));
+            }
+            finally {
+                if (active)
+                    timer = setTimeout(poll, 30000);
+            }
+        };
+        void poll();
+        return () => { active = false; clearTimeout(timer); };
+    }, [day, period, visible]);
+    useEffect(() => {
+        if (!nativeClient || !visible)
+            return;
+        let active = true;
+        let timer: ReturnType<typeof setTimeout>;
+        const tiles = historyTiles(requested), span = requested.end - requested.start, coarse = span > 6 * 3600, budget = Math.max(1, Math.ceil(2400 * 3600 / span));
+        const run = async () => {
+            setLoading(true);
+            setError("");
+            const results = new Map<string, Result>();
+            for (const tile of tiles) {
+                const r = { start: Math.max(tile.range.start, requested.start), end: Math.min(tile.range.end, requested.end) }, key = `${r.start}:${r.end}:${budget}:${coarse}:${simplifyGpuNames}:${showSoftwareGpus}`, cached = cache.current.get(key);
+                if (cached)
+                    results.set(tile.key, cached);
+            }
+            const publish = () => {
+                const ordered = tiles.flatMap(t => results.has(t.key) ? [results.get(t.key)!] : []), combined = combineCaptures(ordered.map(r => r.capture), bounds);
+                const latest = Math.max(0, ...ordered.map(r => r.lastAtMs ?? 0));
+                const edge = (latest >= today().startMs ? latest / 1000 : Math.floor(Date.now() / 2000) * 2) + 120;
+                combined.initialView = { start: edge - 3600, end: edge };
+                setCapture(combined);
+                setProgress(`${results.size}/${tiles.length}`);
+                viewAnalysis.current = { range: requested, stats: blockStats(ordered), pending: results.size < tiles.length };
+                if (!selected.current)
+                    setAnalysis(viewAnalysis.current);
+            };
+            let lastPublish = 0, dirty = false, published = false;
+            try {
+                for (const tile of tiles) {
+                    const range = { start: Math.max(tile.range.start, requested.start), end: Math.min(tile.range.end, requested.end) }, key = `${range.start}:${range.end}:${budget}:${coarse}:${simplifyGpuNames}:${showSoftwareGpus}`;
+                    const current = tile.range.end * 1000 > Date.now() - 6000 && tile.range.start * 1000 < Date.now() + 2000;
+                    let result = cache.current.get(key);
+                    if (!result || current) {
+                        const page = await readChunk(range);
+                        if (!active)
+                            return;
+                        result = await project(page, range, budget, coarse);
+                        if (!active)
+                            return;
+                        cache.current.set(key, result);
+                        let weight = 0;
+                        for (const entry of cache.current.values())
+                            weight += entry.capture.metrics.length + entry.capture.activity.length + entry.capture.background.length + entry.capture.media.length;
+                        while ((weight > 100000 || cache.current.size > 1024) && cache.current.size > 1) {
+                            const oldest = cache.current.keys().next().value!, entry = cache.current.get(oldest)!;
+                            weight -= entry.capture.metrics.length + entry.capture.activity.length + entry.capture.background.length + entry.capture.media.length;
+                            cache.current.delete(oldest);
+                        }
+                    }
+                    dirty ||= results.get(tile.key) !== result;
+                    results.set(tile.key, result);
+                    if (dirty && performance.now() - lastPublish > 120) {
+                        publish();
+                        dirty = false;
+                        published = true;
+                        lastPublish = performance.now();
+                        await new Promise(r => setTimeout(r, 0));
+                        if (!active)
+                            return;
+                    }
+                }
+                if (dirty || !published)
+                    publish();
+            }
+            catch (reason) {
+                if (active)
+                    setError(String(reason));
+            }
+            finally {
+                if (active) {
+                    setLoading(false);
+                    timer = setTimeout(run, requested.end * 1000 > Date.now() - 6000 ? 2000 : 30000);
+                }
+            }
+        };
+        const start = setTimeout(() => void run(), 0);
+        return () => { active = false; clearTimeout(start); clearTimeout(timer); };
+    }, [requested, bounds, visible, project]);
+    useEffect(() => {
+        if (!selection) {
+            if (viewAnalysis.current)
+                setAnalysis(viewAnalysis.current);
+            return;
+        }
+        if (!nativeClient || !visible)
+            return;
+        let active = true;
+        const timer = setTimeout(async () => {
+            setAnalysis(previous => previous ? { ...previous, pending: true } : previous);
+            const results: Result[] = [];
+            try {
+                for (const tile of historyTiles(selection)) {
+                    const range = { start: Math.max(selection.start, tile.range.start), end: Math.min(selection.end, tile.range.end) };
+                    const page = await readChunk(range);
+                    if (!active)
+                        return;
+                    const result = await project(page, range, 1, true);
+                    if (!active)
+                        return;
+                    results.push(result);
+                }
+                setAnalysis({ range: selection, stats: blockStats(results), pending: false });
+            }
+            catch (reason) {
+                if (active)
+                    setError(String(reason));
+            }
+        }, 180);
+        return () => { active = false; clearTimeout(timer); };
+    }, [selection, visible, project]);
+    const onView = useCallback((next: Range) => setView(previous => sameRange(previous, next) ? previous : clampRange(next, bounds)), [bounds]);
+    const changeDay = useCallback((next: string) => { setDay(next); setSelection(null); setView(next === localDate() ? initialView() : seconds(dayRange(next))); }, []);
+    const history: HistoryControls = { view, onView, selection, onSelection: setSelection, days, period, onPeriod: setPeriod, loading, progress, analysis };
+    return { capture, error: error || overviewError, loading, history, calendar: { value: day, min: earliest, max: localDate(), onChange: changeDay } };
 }

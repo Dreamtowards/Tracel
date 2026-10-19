@@ -59,6 +59,7 @@ import { Timeline, type TimelinePalette } from "./Timeline";
 import { OverviewViewport } from "./OverviewViewport";
 import { overviewPath } from "./overview";
 import type { TrackSource } from "./trackVisibility";
+import type { HistoryControls } from "./history";
 import { DisplaySettings, defaultAppearance } from "./DisplaySettings";
 import "./explorer.css";
 
@@ -113,7 +114,9 @@ export default function Explorer({
   renderAppIcon,
   renderTrackHeaders,
   hiddenSources,
+  history,
 }: {
+  history?: HistoryControls;
   hiddenSources?: readonly TrackSource[];
   provider: DataProvider;
   categories?: CategoryConfig;
@@ -156,11 +159,18 @@ export default function Explorer({
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
-  const [view, setView] = useState<Range>(capture?.initialView ?? {
+  const [localView, setLocalView] = useState<Range>(capture?.initialView ?? {
     start: 6 * DAY + 6 * 3600,
     end: 7 * DAY,
   });
-  const [selection, setSelection] = useState<Range | null>(null);
+  const view = history?.view ?? localView;
+  const setView = (next: Range | ((current: Range) => Range)) => {
+    const value = typeof next === "function" ? next(view) : next;
+    if (history) history.onView(value); else setLocalView(value);
+  };
+  const [localSelection, setLocalSelection] = useState<Range | null>(null);
+  const selection = history ? history.selection : localSelection;
+  const setSelection = (range: Range | null) => history ? history.onSelection(range) : setLocalSelection(range);
   const [focus, setFocus] = useState<string | null>(null);
   const [mode, setMode] = useState<"select" | "pan">("select");
   const [tab, setTab] = useState<"Activity" | "Performance" | "Media">(
@@ -190,7 +200,7 @@ export default function Explorer({
     };
   }, [provider, loadAttempt, !!capture]);
   useEffect(() => {
-    if (data?.kind !== "recorded") return;
+    if (data?.kind !== "recorded" || history) return;
     setView(current => followRange(current, data.initialView?.end ?? data.bounds.end, data.bounds)); setSelection(null); setFocus(null); setTab(data.activity.length || data.background.length || data.afk.length ? "Activity" : "Performance");
     setFollow(calendar?.value === calendar?.max);
   }, [data?.epoch, data?.kind, !!(data?.metrics.length || data?.media.length || data?.activity.length || data?.background.length || data?.afk.length)]);
@@ -222,12 +232,12 @@ export default function Explorer({
     return () => window.clearTimeout(timer);
   }, [data, range, !!selection]);
   // Keep labels and values on the same range while interaction takes priority.
-  const statsRange = settledStats.data === data ? settledStats.range : range;
-  const statsSelected = settledStats.data === data ? settledStats.selected : !!selection;
-  const overview = useMemo(() => (data ? overviewPath(data) : ""), [data]);
+  const statsRange = history?.analysis?.range ?? (settledStats.data === data ? settledStats.range : range);
+  const statsSelected = history ? !!selection : settledStats.data === data ? settledStats.selected : !!selection;
+  const overview = useMemo(() => (data && !history ? overviewPath(data) : ""), [data, !!history]);
   const stats = useMemo(
-    () => (data ? analyze(data, statsRange) : null),
-    [data, statsRange],
+    () => history?.analysis?.stats ?? (data ? analyze(data, statsRange) : null),
+    [data, statsRange, history?.analysis?.stats],
   );
   const categoryStats = useMemo(() => categories && stats ? categoryTotals(categories, stats.apps) : [], [categories, stats]);
   if (!data || !stats)
@@ -246,7 +256,7 @@ export default function Explorer({
   const transferSize = (value: number) => recorded
     ? value >= 1024 ? `${(value / 1024).toFixed(2)} GiB` : `${value.toFixed(1)} MiB`
     : bytes(value);
-  const dateProps = calendar ?? { value: `2026-10-${String(day + 8).padStart(2, "0")}`, min: "2026-10-08", max: "2026-10-14", onChange: (value: string) => navigate(Number(value.slice(-2)) - 8,"Day") };
+  const dateProps = calendar ? { ...calendar,onChange:(value:string)=>{setFollow(false);setSelection(null);calendar.onChange(value)} } : { value: `2026-10-${String(day + 8).padStart(2, "0")}`, min: "2026-10-08", max: "2026-10-14", onChange: (value: string) => navigate(Number(value.slice(-2)) - 8,"Day") };
   const shiftDate = (offset: number) => {
     const date = new Date(`${dateProps.value}T12:00:00`); date.setDate(date.getDate() + offset);
     dateProps.onChange(`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`);
@@ -256,7 +266,8 @@ export default function Explorer({
       setFollow(false);
       setPreset(nextPreset); setSelection(null);
       const center = Math.min(data.bounds.end - 1800, Math.max(1800, (view.start + view.end)/2));
-      setView(nextPreset === "1 hour" ? clampRange({start:center-1800,end:center+1800},data.bounds) : data.bounds);
+      const span=nextPreset==="Week"?7*DAY:nextPreset==="Month"?30*DAY:nextPreset==="1 hour"?3600:DAY;
+      setView(history ? clampRange({start:(view.start+view.end-span)/2,end:(view.start+view.end+span)/2},data.bounds) : nextPreset === "1 hour" ? clampRange({start:center-1800,end:center+1800},data.bounds) : data.bounds);
       return;
     }
     const d = Math.max(0, Math.min(6, nextDay));
@@ -280,10 +291,12 @@ export default function Explorer({
     changeView(
       zoomRange(view, factor, (view.start + view.end) / 2, data.bounds),
     );
+  const exportBlocked = exporting || !!history && (!history.analysis || history.loading || history.analysis.pending || statsRange.start!==range.start || statsRange.end!==range.end);
   const exportSelection = async () => {
     if (exporting) return;
     // Export always uses the current selection, including during the debounce window.
-    const exportStats = statsRange === range ? stats : analyze(data, range);
+    if(history && (history.loading || history.analysis?.pending || statsRange.start!==range.start || statsRange.end!==range.end))return;
+    const exportStats = statsRange.start===range.start && statsRange.end===range.end ? stats : analyze(data, range);
     const payload: RangeExport = {
       source: data.source ?? "Tracel simulated capture",
       epoch: data.epoch,
@@ -431,7 +444,7 @@ export default function Explorer({
                 {t("A complete picture of your time. Every app, every resource, one timeline.")}</p>
             </div>
             <div className="tx-export-actions">
-              <button className="tx-button" onClick={exportSelection} disabled={exporting}>
+              <button className="tx-button" onClick={exportSelection} disabled={exportBlocked}>
                 <Download size={14} /> {t(exporting ? "Saving…" : "Export range")}
               </button>
               {exportError && <span role="alert">{t("Could not save the export. Please try again.")}</span>}
@@ -477,12 +490,12 @@ export default function Explorer({
               {t("Today")}</button>}
             <div className="tx-separator" />
             <div className="tx-segmented">
-              {["1 hour", "Day", "Week"].map((p) => (
+              {["1 hour", "Day", "Week", ...(history?["Month"]:[])].map((p) => (
                 <button
                   className={preset === p ? "active" : ""}
                   key={t(p)}
-                  disabled={recorded && p === "Week"}
-                  title={recorded && p === "Week" ? t("Week view requires multi-day history queries") : undefined}
+                  disabled={recorded && !history && p === "Week"}
+                  title={recorded && !history && p === "Week" ? t("Week view requires multi-day history queries") : undefined}
                   onClick={() => navigate(day, p)}
                 >
                   {t(p)}
@@ -497,7 +510,7 @@ export default function Explorer({
             <div className="tx-toolbar-space" />
             {compact && <>
               <button className="tx-icon-button" aria-label={t("Keyboard shortcuts")} title={t("Keyboard shortcuts")} onClick={() => setHelp(true)}><HelpCircle size={16} /></button>
-              <button className="tx-icon-button" onClick={exportSelection} disabled={exporting} aria-label={t("Export range")} title={t(exporting ? "Saving range..." : "Export range")}>
+              <button className="tx-icon-button" onClick={exportSelection} disabled={exportBlocked} aria-label={t("Export range")} title={t(exporting ? "Saving range..." : "Export range")}>
                 <Download size={16} />
               </button>
             </>}
@@ -559,7 +572,7 @@ export default function Explorer({
               className="tx-icon-button"
               aria-label={t("Fit all data")}
               title={t("Fit all data")}
-              onClick={() => navigate(day, "Week")}
+              onClick={() => history ? changeView(data.bounds) : navigate(day, "Week")}
             >
               <Maximize2 size={14} />
             </button>
@@ -578,6 +591,8 @@ export default function Explorer({
           </div>
           {compact && exportError && <p className="tx-export-error" role="alert">{t("Could not save the export. Please try again.")}</p>}
           {dataError && <p role="alert" className="tx-export-error">{dataError}</p>}
+          {history?.loading && <p className="tx-note" role="status">{t("Loading history in blocks")} · {history.progress}</p>}
+          {data.detailLevel && <p className="tx-note">{t("Aggregated display · Zoom in for precise intervals. Statistics use original records.")}</p>}
           {recorded && !data.metrics.length && !data.media.length && !data.activity.length && !data.background.length && !data.afk.length && <p role="status" className="tx-note">{t("No recorded metrics for this day. Enable collection in Settings.")}</p>}
           <div className="tx-overview">
             <div className="tx-overview-heading">
@@ -585,16 +600,19 @@ export default function Explorer({
                 <Radio size={12} /> {compact ? captureLabel : "CAPTURE OVERVIEW"}
               </span>
               <span>
-                {recorded ? dateLabel(data.bounds.start) : t("OCT 08 – OCT 14, 2026")}{" "}<b>{recorded ? t("Recorded") : t("7 days")}</b>
+                {history?.days.length ? `${dateLabel(history.days[0].startMs/1000)} — ${dateLabel(history.days.at(-1)!.startMs/1000)}` : recorded ? dateLabel(data.bounds.start) : t("OCT 08 – OCT 14, 2026")}{" "}<b>{recorded ? t("Recorded") : t("7 days")}</b>
               </span>
             </div>
-            <OverviewViewport data={data} bounds={data.bounds} view={view} onView={changeView}>
+            {history && <div className="tx-history-period" aria-label={t("Activity overview period")}>
+              <span>{t("Daily active time")}</span>{([7,30] as const).map(period=><button key={period} className={history.period===period?"active":""} onClick={()=>history.onPeriod(period)}>{t(period===7?"7 days":"30 days")}</button>)}
+            </div>}
+            <OverviewViewport data={data} bounds={history?.days.length ? {start:history.days[0].startMs/1000,end:history.days.at(-1)!.endMs/1000} : data.bounds} view={view} onView={changeView}>
               <svg
                 viewBox="0 0 1400 44"
                 preserveAspectRatio="none"
                 aria-hidden="true"
               >
-                {data.activity.map((a) => (
+                {!history && data.activity.map((a) => (
                   <rect
                     key={a.id}
                     x={(a.start / data.bounds.end) * 1400}
@@ -605,14 +623,20 @@ export default function Explorer({
                     opacity=".55"
                   />
                 ))}
-                <path
+                {history?.days.map(item=>{
+                  const start=history.days[0].startMs,total=history.days.at(-1)!.endMs-start,max=Math.max(8*3600000,...history.days.map(d=>d.activeMs));
+                  const height=item.activeMs/max*38;
+                  return <rect key={item.startMs} x={(item.startMs-start)/total*1400+2} y={42-Math.max(item.sampleCount?2:0,height)} width={Math.max(1,(item.endMs-item.startMs)/total*1400-4)} height={Math.max(item.sampleCount?2:0,height)} fill={item.activeMs?palette?.selection??metricInfo.cpu.color:"#66666e"} opacity={item.activeMs ? .7 : .3}><title>{dateLabel(item.startMs/1000)} · {duration(item.activeMs/1000)} · {t("Daily active time")}</title></rect>
+                })}
+                {!history && <path
                   d={overview}
                   fill="none"
                   stroke={metricInfo.cpu.color}
                   strokeWidth="1.2"
-                />
+                />}
               </svg>
             </OverviewViewport>
+            {history && <div className="tx-history-days" style={{gridTemplateColumns:`repeat(${history.days.length},minmax(0,1fr))`}}>{history.days.map(item=><button key={item.startMs} title={`${dateLabel(item.startMs/1000)} · ${duration(item.activeMs/1000)}`} onClick={()=>{const d=new Date(item.startMs);dateProps.onChange(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`)}}>{new Date(item.startMs).getDate()===1?`${new Date(item.startMs).getMonth()+1}/1`:new Date(item.startMs).getDate()}</button>)}</div>}
             {!recorded && <div className="tx-overview-days">
               {Array.from({ length: 7 }, (_, d) => (
                 <button
@@ -672,7 +696,7 @@ export default function Explorer({
               </div>
             </section>
             {inspector && (
-              <aside className="tx-inspector" aria-busy={statsRange !== range}>
+              <aside className="tx-inspector" aria-busy={!!history?.analysis?.pending || statsRange.start!==range.start || statsRange.end!==range.end}>
                 <div className="tx-inspector-title">
                   <span>
                     <Focus size={15} />{" "}

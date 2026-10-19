@@ -526,8 +526,9 @@ export function Timeline({
                 );
               for (let px = left; px <= right; px++) {
                 const old = buckets.get(px);
-                if (old) { old.min = Math.min(old.min, value); old.max = Math.max(old.max, value); old.last = value; }
-                else buckets.set(px, { min: value, max: value, last: value });
+                const low = sample.extrema?.[key]?.min ?? value, high = sample.extrema?.[key]?.max ?? value;
+                if (old) { old.min = Math.min(old.min, low); old.max = Math.max(old.max, high); old.last = value; }
+                else buckets.set(px, { min: low, max: high, last: value });
               }
             }
             ctx.strokeStyle = info.color;
@@ -655,7 +656,7 @@ export function Timeline({
           row.keys
             .map((key) => {
               const info = getMetricInfo(data, key), value = metricAt(data, time, key);
-              return `${t(info.name)}: ${value != null ? (info.boolean ? t(value ? "Yes" : "No") : value.toFixed(2) + " " + info.unit) : t("No sample · asleep / capture gap")}`;
+              return `${t(info.name)}: ${value != null ? (info.boolean ? data.detailLevel ? `${(value*100).toFixed(0)}%` : t(value ? "Yes" : "No") : value.toFixed(2) + " " + info.unit) : t("No sample · asleep / capture gap")}`;
             })
             .join("\n");
       else if (row.kind === "media") {
@@ -685,6 +686,7 @@ export function Timeline({
         timing = intervalTiming(interval);
       }
       else lines += "\n" + t("No foreground activity");
+      if (data.detailLevel) timing = t("Aggregated display · Zoom in for precise intervals. Statistics use original records.");
       const heading = document.createElement("div");
       heading.className = "tx-tooltip-heading";
       const name = document.createElement("strong");

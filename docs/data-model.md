@@ -1,5 +1,11 @@
 # Data model
 
+## Range history display projection
+
+Native Desktop history now uses a stable Unix epoch coordinate system and an archive-wide axis, with hour-block queries that may span multiple local dates. Source UTC timestamps, database tables and retention are unchanged. `query_timeline` provides a presentation union of contiguous/overlapping presence for the same process, while the existing raw query retains writer-session boundaries.
+
+Wide display captures have `detailLevel: "aggregate"`. Their metric samples contain weighted means with optional per-key `coverage` (covered seconds) and `extrema` (observed min/max); empty bins/keys remain absent, and zero remains observed. These fields describe display bins, not fabricated raw samples. State cells contain a representative observed state and are explicitly labelled coarse. Exact range analytics are calculated on original records before reduction, not inferred from partially selected coarse bins. Narrowing the viewport requests original intervals. Exported wide display samples retain their aggregation metadata/source label and exact matching statistics; they are not a raw-archive export. An incomplete range cannot be exported. The separate monthly overview returns daily foreground/AFK-excluded active milliseconds and numeric sample counts without window titles.
+
 The UI labels `Capture.background` as Apps (应用). It represents observed desktop application presence regardless of foreground focus; foreground intervals never subtract from these lifetimes. Expanded rows use compact 16px defaults and thin continuous bars. Hover resolves only the application's containing presence interval, including duration and start/end times, and stays empty across unobserved gaps. Existing archive/JSON field names remain unchanged. Presence still does not imply exact process start/exit or background CPU work.
 
 ## Current UI/demo

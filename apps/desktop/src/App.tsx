@@ -89,6 +89,7 @@ function DesktopApp({ appearance }: { appearance: ReturnType<typeof useAppearanc
         renderTrackHeaders={nativeClient ? (headers) => <CollectionMenu hiddenSources={appearance.hiddenSources} onHiddenSourcesChange={appearance.setHiddenSources} simplifyGpuNames={appearance.simplifyGpuNames} showSoftwareGpus={appearance.showSoftwareGpus} onSimplifyGpuNames={appearance.setSimplifyGpuNames} onShowSoftwareGpus={appearance.setShowSoftwareGpus} status={collection.status} busy={collection.busy} onSettings={collection.changeSettings}>{headers}</CollectionMenu> : undefined}
         renderAppIcon={nativeClient ? (app, fallback) => <ApplicationIcon executable={app.executablePath ?? app.exe} fallback={fallback} /> : undefined}
         capture={nativeClient ? timeline.capture : undefined}
+        history={nativeClient ? timeline.history : undefined}
         calendar={nativeClient ? timeline.calendar : undefined}
         dataError={nativeClient ? (collection.error || timeline.error || (collection.status?.storageError ? `${t("Storage unavailable:")} ${collection.status.storageError}` : "")) : undefined}
         homeHref="/"
