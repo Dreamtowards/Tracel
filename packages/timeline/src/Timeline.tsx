@@ -1,7 +1,7 @@
 "use client";
 import { useI18n, useCaptureTime } from "./i18n";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { useLayoutEffect, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
 import type { TimelineAppearance } from "./DisplaySettings";
@@ -292,7 +292,7 @@ export function Timeline({
     return () => { frames.clear(); observer.disconnect(); scroller.removeEventListener("scroll", scroll); };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = canvas.current;
     if (!element) return;
     const draw = () => {
@@ -583,10 +583,10 @@ export function Timeline({
       }
 
     };
-    const frame = requestAnimationFrame(draw);
+    // Keep the bitmap and React layout in the same painted frame.
+    draw();
     window.addEventListener("resize", draw);
     return () => {
-      cancelAnimationFrame(frame);
       window.removeEventListener("resize", draw);
     };
   }, [data, view, tracks, width, totalHeight, focus, appearance, palette, duration, dateLabel, presenceApps, foregroundApps, viewport]);

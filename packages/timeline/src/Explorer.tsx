@@ -591,7 +591,6 @@ export default function Explorer({
           </div>
           {compact && exportError && <p className="tx-export-error" role="alert">{t("Could not save the export. Please try again.")}</p>}
           {dataError && <p role="alert" className="tx-export-error">{dataError}</p>}
-          {history?.loading && <p className="tx-note" role="status">{t("Loading history in blocks")} · {history.progress}</p>}
           {data.detailLevel && <p className="tx-note">{t("Aggregated display · Zoom in for precise intervals. Statistics use original records.")}</p>}
           {recorded && !data.metrics.length && !data.media.length && !data.activity.length && !data.background.length && !data.afk.length && <p role="status" className="tx-note">{t("No recorded metrics for this day. Enable collection in Settings.")}</p>}
           <div className="tx-overview">
@@ -599,6 +598,9 @@ export default function Explorer({
               <span>
                 <Radio size={12} /> {compact ? captureLabel : "CAPTURE OVERVIEW"}
               </span>
+              {history && <span role="status" className="tx-history-progress">
+                {history.loading ? `${t("Loading history in blocks")} · ${history.progress}` : ""}
+              </span>}
               <span>
                 {history?.days.length ? `${dateLabel(history.days[0].startMs/1000)} — ${dateLabel(history.days.at(-1)!.startMs/1000)}` : recorded ? dateLabel(data.bounds.start) : t("OCT 08 – OCT 14, 2026")}{" "}<b>{recorded ? t("Recorded") : t("7 days")}</b>
               </span>

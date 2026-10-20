@@ -143,8 +143,10 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
         let active = true;
         let timer: ReturnType<typeof setTimeout>;
         const tiles = historyTiles(requested), span = requested.end - requested.start, coarse = span > 6 * 3600, budget = Math.max(1, Math.ceil(2400 * 3600 / span));
+        let hasPublished = false;
         const run = async () => {
-            setLoading(true);
+            // Background polling preserves the ready UI until its replacement is complete.
+            if (!hasPublished) setLoading(true);
             setError("");
             const results = new Map<string, Result>();
             for (const tile of tiles) {
@@ -163,7 +165,6 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
                 if (!selected.current)
                     setAnalysis(viewAnalysis.current);
             };
-            let lastPublish = 0, dirty = false, published = false;
             try {
                 for (const tile of tiles) {
                     const range = { start: Math.max(tile.range.start, requested.start), end: Math.min(tile.range.end, requested.end) }, key = `${range.start}:${range.end}:${budget}:${coarse}:${simplifyGpuNames}:${showSoftwareGpus}`;
@@ -186,20 +187,12 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
                             cache.current.delete(oldest);
                         }
                     }
-                    dirty ||= results.get(tile.key) !== result;
                     results.set(tile.key, result);
-                    if (dirty && performance.now() - lastPublish > 120) {
-                        publish();
-                        dirty = false;
-                        published = true;
-                        lastPublish = performance.now();
-                        await new Promise(r => setTimeout(r, 0));
-                        if (!active)
-                            return;
-                    }
+                    if (!hasPublished) setProgress(`${results.size}/${tiles.length}`);
                 }
-                if (dirty || !published)
-                    publish();
+                // Commit one complete snapshot, never a mixture of refreshed and missing tiles.
+                publish();
+                hasPublished = true;
             }
             catch (reason) {
                 if (active)
