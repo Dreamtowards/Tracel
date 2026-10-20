@@ -8,14 +8,21 @@ export type HistoryDay = {
     foregroundMs: number;
     sampleCount: number;
 };
+export type HistoryCpuBucket = { startMs: number; endMs: number; value: number };
+export type HistoryPreview = { range: Range; cpu: HistoryCpuBucket[] };
+
+/** Geometry follows input immediately; fetching the numeric preview can be debounced. */
+export function overviewContext(view: Range, bounds: Range): Range {
+    const padding = Math.max(3600, (view.end - view.start) / 4);
+    return { start: Math.max(bounds.start, view.start - padding), end: Math.min(bounds.end, view.end + padding) };
+}
 export type HistoryControls = {
     view: Range;
     onView: (range: Range) => void;
     selection: Range | null;
     onSelection: (range: Range | null) => void;
-    days: HistoryDay[];
-    period: 7 | 30;
-    onPeriod: (period: 7 | 30) => void;
+    overviewRange: Range;
+    preview?: HistoryPreview;
     loading: boolean;
     progress: string;
     analysis?: {

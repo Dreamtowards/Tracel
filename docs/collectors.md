@@ -2,7 +2,7 @@
 
 ## History loading
 
-The 7/30-day activity overview and cross-date Timeline change queries/presentation only. Collector cadence, opt-in switches, privacy and archived observations are unchanged. A native blocking worker supplies lightweight daily totals; bounded hour queries feed a frontend Web Worker for clipping, exact statistics and display LOD. Over-budget slices are subdivided rather than rejecting the whole day. Adjacent app-presence fragments are combined only in the Timeline query projection; raw archive APIs retain their original boundaries. No migration, historical rewrite, retention rule or added runtime is introduced.
+The CPU overview and cross-date Timeline change queries/presentation only. Collector cadence, opt-in switches, privacy and archived observations are unchanged. A native blocking worker supplies at most 320 time-weighted CPU preview bins for the current zoom context, using only numeric columns and preserving missing intervals. Bounded hour queries feed a frontend Web Worker for clipping, exact statistics and display LOD. Over-budget slices are subdivided rather than rejecting the whole day. Adjacent app-presence fragments are combined only in the Timeline query projection; raw archive APIs retain their original boundaries. No migration, historical rewrite, retention rule or added runtime is introduced.
 
 ## Implemented in Desktop 0.2
 

@@ -87,16 +87,18 @@ export interface DataProvider {
   load(): Promise<Capture>;
 }
 export const DAY = 86400;
+export const MAX_VIEW_SECONDS = 5000 * 3600;
 export const overlap = (a: Range, b: Range) =>
   Math.max(0, Math.min(a.end, b.end) - Math.max(a.start, b.start));
 export function clampRange(range: Range, bounds: Range): Range {
   const span = Math.min(
+    MAX_VIEW_SECONDS,
     bounds.end - bounds.start,
     Math.max(2, range.end - range.start),
   );
   const start = Math.max(
     bounds.start,
-    Math.min(bounds.end - span, range.start),
+    Math.min(bounds.end - span, range.end - range.start > MAX_VIEW_SECONDS ? range.end - span : range.start),
   );
   return { start, end: start + span };
 }
@@ -113,7 +115,7 @@ export function zoomRange(
   const fraction = (anchor - view.start) / (view.end - view.start);
   const span = Math.max(
     2,
-    Math.min(bounds.end - bounds.start, (view.end - view.start) * factor),
+    Math.min(MAX_VIEW_SECONDS, bounds.end - bounds.start, (view.end - view.start) * factor),
   );
   return clampRange(
     { start: anchor - fraction * span, end: anchor + (1 - fraction) * span },

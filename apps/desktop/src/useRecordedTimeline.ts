@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { nativeClient, queryTimeline, type ArchivePage } from "./native";
 import { dayRange, localDate } from "./recordedTimeline";
 import type { GpuDisplayOptions } from "./gpuNames";
 import { clampRange, type Capture, type Range } from "@tracel/timeline/model";
 import { combineAnalyses, combineCaptures, type HistoryAnalysis } from "./historyProjection";
-import type { HistoryControls, HistoryDay } from "@tracel/timeline/history";
+import { overviewContext, type HistoryControls, type HistoryPreview, type HistoryCpuBucket } from "@tracel/timeline/history";
 type Result = {
     capture: Capture;
     stats: HistoryAnalysis;
@@ -63,14 +63,15 @@ async function readChunk(range: Range): Promise<ArchivePage> {
 }
 export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSoftwareGpus }: GpuDisplayOptions = {}) {
     const [day, setDay] = useState(localDate), [earliest, setEarliest] = useState(localDate);
-    const [period, setPeriod] = useState<7 | 30>(30), [days, setDays] = useState<HistoryDay[]>([]), [bounds, setBounds] = useState<Range>(() => seconds(today()));
+    const [bounds, setBounds] = useState<Range>(() => ({ start: 0, end: today().endMs / 1000 }));
     const [view, setView] = useState<Range>(initialView), [selection, setSelection] = useState<Range | null>(null);
     const [capture, setCapture] = useState(() => combineCaptures([], seconds(today()))), [analysis, setAnalysis] = useState<HistoryControls["analysis"]>();
     const [error, setError] = useState(""), [overviewError, setOverviewError] = useState(""), [loading, setLoading] = useState(false), [progress, setProgress] = useState("");
     const [requested, setRequested] = useState(view);
+    const overviewRange = useMemo(() => overviewContext(view, bounds), [view, bounds]);
+    const [previewRequest, setPreviewRequest] = useState(overviewRange), [preview, setPreview] = useState<HistoryPreview>();
+    useEffect(() => { const timer = setTimeout(() => setPreviewRequest(overviewRange), 160); return () => clearTimeout(timer); }, [overviewRange]);
     useEffect(() => { const timer = setTimeout(() => setRequested(view), 160); return () => clearTimeout(timer); }, [view]);
-    const currentView = useRef(view);
-    currentView.current = view;
     const selected = useRef(selection);
     selected.current = selection;
     const viewAnalysis = useRef<HistoryControls["analysis"]>(undefined);
@@ -110,20 +111,20 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
         let timer: ReturnType<typeof setTimeout>;
         const poll = async () => {
             try {
-                const anchor = new Date(day + "T12:00:00"), ranges = Array.from({ length: period }, (_, i) => { const d = new Date(anchor); d.setDate(d.getDate() - (period - 1 - i)); return dayRange(localDate(d)); });
+                const startMs = Math.floor(previewRequest.start * 1000), endMs = Math.ceil(previewRequest.end * 1000);
+                const ranges = Array.from({ length: 7 }, (_, i) => [startMs + Math.floor((endMs-startMs)*i/7), startMs + Math.floor((endMs-startMs)*(i+1)/7)]);
                 const overview = await invoke<{
-                    days: HistoryDay[];
+                    cpu: HistoryCpuBucket[];
                     firstAtMs: number | null;
                     lastAtMs: number | null;
-                }>("timeline_overview", { days: ranges.map(r => [r.startMs, r.endMs]) });
+                }>("timeline_overview", { days: ranges });
                 if (!active)
                     return;
-                setDays(overview.days);
+                setPreview({ range: previewRequest, cpu: overview.cpu });
                 setOverviewError("");
-                const first = overview.firstAtMs == null ? ranges[0].startMs : dayRange(localDate(new Date(overview.firstAtMs))).startMs;
                 if (overview.firstAtMs != null)
                     setEarliest(localDate(new Date(overview.firstAtMs)));
-                setBounds(previous => { const next = { start: Math.min(first, ranges[0].startMs, currentView.current.start * 1000) / 1000, end: today().endMs / 1000 }; return sameRange(previous, next) ? previous : next; });
+                setBounds(previous => { const next = { start: 0, end: today().endMs / 1000 }; return sameRange(previous, next) ? previous : next; });
             }
             catch (reason) {
                 if (active)
@@ -136,7 +137,7 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
         };
         void poll();
         return () => { active = false; clearTimeout(timer); };
-    }, [day, period, visible]);
+    }, [previewRequest, visible]);
     useEffect(() => {
         if (!nativeClient || !visible)
             return;
@@ -242,6 +243,6 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
     }, [selection, visible, project]);
     const onView = useCallback((next: Range) => setView(previous => sameRange(previous, next) ? previous : clampRange(next, bounds)), [bounds]);
     const changeDay = useCallback((next: string) => { setDay(next); setSelection(null); setView(next === localDate() ? initialView() : seconds(dayRange(next))); }, []);
-    const history: HistoryControls = { view, onView, selection, onSelection: setSelection, days, period, onPeriod: setPeriod, loading, progress, analysis };
+    const history: HistoryControls = { view, onView, selection, onSelection: setSelection, overviewRange, preview, loading, progress, analysis };
     return { capture, error: error || overviewError, loading, history, calendar: { value: day, min: earliest, max: localDate(), onChange: changeDay } };
 }

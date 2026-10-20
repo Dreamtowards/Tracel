@@ -57,6 +57,7 @@ import {
 } from "./model";
 import { Timeline, type TimelinePalette } from "./Timeline";
 import { OverviewViewport } from "./OverviewViewport";
+import { RecordedOverview } from "./RecordedOverview";
 import { overviewPath } from "./overview";
 import type { TrackSource } from "./trackVisibility";
 import type { HistoryControls } from "./history";
@@ -591,24 +592,19 @@ export default function Explorer({
           </div>
           {compact && exportError && <p className="tx-export-error" role="alert">{t("Could not save the export. Please try again.")}</p>}
           {dataError && <p role="alert" className="tx-export-error">{dataError}</p>}
-          {data.detailLevel && <p className="tx-note">{t("Aggregated display · Zoom in for precise intervals. Statistics use original records.")}</p>}
-          {recorded && !data.metrics.length && !data.media.length && !data.activity.length && !data.background.length && !data.afk.length && <p role="status" className="tx-note">{t("No recorded metrics for this day. Enable collection in Settings.")}</p>}
-          <div className="tx-overview">
+          {!history && data.detailLevel && <p className="tx-note">{t("Aggregated display · Zoom in for precise intervals. Statistics use original records.")}</p>}
+          {!history && recorded && !data.metrics.length && !data.media.length && !data.activity.length && !data.background.length && !data.afk.length && <p role="status" className="tx-note">{t("No recorded metrics for this day. Enable collection in Settings.")}</p>}
+          {history ? <RecordedOverview data={data} history={history} label={captureLabel} color={metricInfo.cpu.color} onView={changeView} /> : <div className="tx-overview">
             <div className="tx-overview-heading">
               <span>
                 <Radio size={12} /> {compact ? captureLabel : "CAPTURE OVERVIEW"}
               </span>
-              {history && <span role="status" className="tx-history-progress">
-                {history.loading ? `${t("Loading history in blocks")} · ${history.progress}` : ""}
-              </span>}
+
               <span>
-                {history?.days.length ? `${dateLabel(history.days[0].startMs/1000)} — ${dateLabel(history.days.at(-1)!.startMs/1000)}` : recorded ? dateLabel(data.bounds.start) : t("OCT 08 – OCT 14, 2026")}{" "}<b>{recorded ? t("Recorded") : t("7 days")}</b>
+                {recorded ? dateLabel(data.bounds.start) : t("OCT 08 – OCT 14, 2026")}{" "}<b>{recorded ? t("Recorded") : t("7 days")}</b>
               </span>
             </div>
-            {history && <div className="tx-history-period" aria-label={t("Activity overview period")}>
-              <span>{t("Daily active time")}</span>{([7,30] as const).map(period=><button key={period} className={history.period===period?"active":""} onClick={()=>history.onPeriod(period)}>{t(period===7?"7 days":"30 days")}</button>)}
-            </div>}
-            <OverviewViewport data={data} bounds={history?.days.length ? {start:history.days[0].startMs/1000,end:history.days.at(-1)!.endMs/1000} : data.bounds} view={view} onView={changeView}>
+            <OverviewViewport data={data} bounds={data.bounds} view={view} onView={changeView}>
               <svg
                 viewBox="0 0 1400 44"
                 preserveAspectRatio="none"
@@ -625,11 +621,6 @@ export default function Explorer({
                     opacity=".55"
                   />
                 ))}
-                {history?.days.map(item=>{
-                  const start=history.days[0].startMs,total=history.days.at(-1)!.endMs-start,max=Math.max(8*3600000,...history.days.map(d=>d.activeMs));
-                  const height=item.activeMs/max*38;
-                  return <rect key={item.startMs} x={(item.startMs-start)/total*1400+2} y={42-Math.max(item.sampleCount?2:0,height)} width={Math.max(1,(item.endMs-item.startMs)/total*1400-4)} height={Math.max(item.sampleCount?2:0,height)} fill={item.activeMs?palette?.selection??metricInfo.cpu.color:"#66666e"} opacity={item.activeMs ? .7 : .3}><title>{dateLabel(item.startMs/1000)} · {duration(item.activeMs/1000)} · {t("Daily active time")}</title></rect>
-                })}
                 {!history && <path
                   d={overview}
                   fill="none"
@@ -638,7 +629,6 @@ export default function Explorer({
                 />}
               </svg>
             </OverviewViewport>
-            {history && <div className="tx-history-days" style={{gridTemplateColumns:`repeat(${history.days.length},minmax(0,1fr))`}}>{history.days.map(item=><button key={item.startMs} title={`${dateLabel(item.startMs/1000)} · ${duration(item.activeMs/1000)}`} onClick={()=>{const d=new Date(item.startMs);dateProps.onChange(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`)}}>{new Date(item.startMs).getDate()===1?`${new Date(item.startMs).getMonth()+1}/1`:new Date(item.startMs).getDate()}</button>)}</div>}
             {!recorded && <div className="tx-overview-days">
               {Array.from({ length: 7 }, (_, d) => (
                 <button
@@ -651,7 +641,7 @@ export default function Explorer({
                 </button>
               ))}
             </div>}
-          </div>
+          </div>}
           <div className="tx-content">
             <section className="tx-timeline-panel">
               <div className="tx-timeline-heading" onClick={() => setSelection(null)}>

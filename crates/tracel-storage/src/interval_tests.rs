@@ -125,6 +125,33 @@ fn daily_overview_clips_foreground_and_idle_without_loading_window_titles() {
 }
 
 #[test]
+fn overview_cpu_preview_is_bounded_weighted_and_keeps_gaps() {
+    let fixture = Fixture::new();
+    let mut store = SqliteStore::open(&fixture.0).unwrap();
+    let mut a = sample(10000);
+    a.cpu_percent = Some(0.0);
+    let mut b = sample(12000);
+    b.cpu_percent = Some(100.0);
+    let mut c = sample(22000);
+    c.cpu_percent = Some(50.0);
+    store.append(&[a, b, c]).unwrap();
+    let summary = crate::history_overview(&fixture.0, &[(0, 320000)]).unwrap();
+    assert_eq!(summary.cpu.len(), 6);
+    assert_eq!(summary.cpu[0].start_ms, 8000);
+    assert_eq!(summary.cpu[0].value, 0.0);
+    assert_eq!(summary.cpu[2].value, 100.0);
+    assert_eq!(summary.cpu[4].start_ms, 20000);
+    assert_eq!(summary.cpu[4].value, 50.0);
+    // A month uses bounded bins and real covered duration, never a daily activity bar.
+    let month = crate::history_overview(&fixture.0, &[(0, 30 * 86400000)]).unwrap();
+    assert!(month.cpu.len() <= 320);
+    assert_eq!(month.cpu.len(), 1);
+    assert_eq!(month.cpu[0].start_ms, 8000);
+    assert_eq!(month.cpu[0].end_ms, 12000);
+    assert_eq!(month.cpu[0].value, 50.0);
+}
+
+#[test]
 fn stationary_state_is_one_interval_and_metadata_is_interned() {
     let fixture = Fixture::new();
     let mut store = SqliteStore::open(&fixture.0).unwrap();
