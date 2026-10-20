@@ -1,5 +1,6 @@
 /** Interface copy only. Captured titles, URLs, app names and export data are never translated. */
 export const timelineZh: Readonly<Record<string, string>> = {
+  "Dots mark isolated CPU samples; gaps have no recorded coverage.": "点表示孤立的 CPU 采样；空白表示没有记录覆盖。",
   "Categories": "分类",
   "Loading history": "正在加载历史记录",
   "No recorded activity in this range.": "此范围内暂无已记录的数据。",

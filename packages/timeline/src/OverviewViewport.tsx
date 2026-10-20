@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import { clampRange, clock, MAX_VIEW_SECONDS, type Range, type Capture } from "./model";
+import { useRef, useState, type ReactNode } from "react";
+import { clampRange, MAX_VIEW_SECONDS, type Range, type Capture } from "./model";
 import { useI18n, useCaptureTime } from "./i18n";
 
 type Edge = "start" | "end";
@@ -14,6 +14,7 @@ export function OverviewViewport({ bounds, view, onView, children, data }: {
   const { t } = useI18n();
   const { clock, dateLabel } = useCaptureTime(data);
   const drag = useRef<{ edge: Edge | null; time: number; view: Range; bounds: Range } | null>(null);
+  const [pointerFocus, setPointerFocus] = useState<Edge | "window" | null>(null);
   const total = bounds.end - bounds.start;
   const percent = (time: number) => `${(time - bounds.start) / total * 100}%`;
   const resize = (edge: Edge, time: number, initial = view, limits = bounds) => onView(edge === "start"
@@ -22,6 +23,8 @@ export function OverviewViewport({ bounds, view, onView, children, data }: {
   const label = (time: number) => `${dateLabel(time)} ${clock(time, true)}`;
 
   return <div className="tx-overview-plot" role="group" aria-label={t("Overview viewport")}
+    onKeyDownCapture={() => setPointerFocus(null)}
+    onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPointerFocus(null); }}
     onPointerDown={(event) => {
       if (event.button !== 0) return;
       event.preventDefault();
@@ -34,6 +37,7 @@ export function OverviewViewport({ bounds, view, onView, children, data }: {
         : view;
       drag.current = { edge: edge ?? null, time, view: initial, bounds };
       (handle ?? event.currentTarget.querySelector<HTMLElement>(".tx-overview-window"))?.focus();
+      setPointerFocus(edge ?? "window");
       event.currentTarget.setPointerCapture(event.pointerId);
       if (initial !== view) onView(initial);
     }}
@@ -51,6 +55,7 @@ export function OverviewViewport({ bounds, view, onView, children, data }: {
     onPointerCancel={() => { drag.current = null; }}>
     {children}
     <div className="tx-overview-window" role="slider" tabIndex={0} aria-label={t("Overview viewport position")}
+      data-pointer-focus={pointerFocus === "window" || undefined}
       aria-valuemin={bounds.start} aria-valuemax={bounds.end - (view.end - view.start)} aria-valuenow={view.start}
       aria-valuetext={`${label(view.start)} — ${label(view.end)}`}
       style={{ left: percent(view.start), width: `${(view.end - view.start) / total * 100}%` }}
@@ -62,6 +67,7 @@ export function OverviewViewport({ bounds, view, onView, children, data }: {
       }} />
     {(["start", "end"] as const).map((edge) => <div key={edge} data-overview-edge={edge}
       className={`tx-overview-handle tx-overview-handle-${edge}`} role="slider" tabIndex={0}
+      data-pointer-focus={pointerFocus === edge || undefined}
       aria-label={t(edge === "start" ? "Overview range start" : "Overview range end")}
       title={t(edge === "start" ? "Drag to adjust range start" : "Drag to adjust range end")}
       aria-valuemin={edge === "start" ? bounds.start : view.start + minimumSpan}

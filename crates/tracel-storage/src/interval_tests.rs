@@ -152,6 +152,71 @@ fn overview_cpu_preview_is_bounded_weighted_and_keeps_gaps() {
 }
 
 #[test]
+fn overlapping_cpu_intervals_remain_continuous_without_double_weighting() {
+    let fixture = Fixture::new();
+    let mut store = SqliteStore::open(&fixture.0).unwrap();
+    let mut first = sample(10000);
+    first.cpu_percent = Some(0.0);
+    let mut second = sample(11000);
+    second.cpu_percent = Some(100.0);
+    store.append(&[first, second.clone(), second]).unwrap();
+    let preview = crate::history_overview(&fixture.0, &[(0, 6400000)]).unwrap();
+    assert_eq!(preview.cpu.len(), 1);
+    assert_eq!(
+        (preview.cpu[0].start_ms, preview.cpu[0].end_ms),
+        (8000, 11000)
+    );
+    assert!((preview.cpu[0].value - 100.0 / 3.0).abs() < 0.00001);
+}
+
+#[test]
+fn dense_overlapping_cpu_records_do_not_turn_into_stripes_but_real_gaps_remain() {
+    let fixture = Fixture::new();
+    let mut store = SqliteStore::open(&fixture.0).unwrap();
+    let mut rows: Vec<_> = (0..600).map(|i| sample(10000 + i * 1000)).collect();
+    rows.push(sample(800000));
+    store.append(&rows).unwrap();
+    let preview = crate::history_overview(&fixture.0, &[(0, 960000)]).unwrap();
+    assert!(preview.cpu.len() > 190 && preview.cpu.len() <= 320);
+    assert_eq!(preview.cpu[0].start_ms, 8000);
+    assert_eq!(
+        preview
+            .cpu
+            .iter()
+            .filter(|b| b.end_ms <= 609000)
+            .last()
+            .unwrap()
+            .end_ms,
+        609000
+    );
+    assert_eq!(
+        preview
+            .cpu
+            .windows(2)
+            .filter(|pair| pair[0].end_ms < pair[1].start_ms)
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn a_later_longer_interval_can_cover_a_gap_between_earlier_readings() {
+    let fixture = Fixture::new();
+    let mut store = SqliteStore::open(&fixture.0).unwrap();
+    let mut bridge = sample(16000);
+    bridge.interval_start_ms = Some(10000);
+    store
+        .append(&[sample(10000), sample(14000), bridge])
+        .unwrap();
+    let preview = crate::history_overview(&fixture.0, &[(0, 6400000)]).unwrap();
+    assert_eq!(preview.cpu.len(), 1);
+    assert_eq!(
+        (preview.cpu[0].start_ms, preview.cpu[0].end_ms),
+        (8000, 16000)
+    );
+}
+
+#[test]
 fn stationary_state_is_one_interval_and_metadata_is_interned() {
     let fixture = Fixture::new();
     let mut store = SqliteStore::open(&fixture.0).unwrap();

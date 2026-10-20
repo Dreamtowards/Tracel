@@ -5,9 +5,15 @@ import type { HistoryCpuBucket } from "./history";
 export function historyOverviewGeometry(cpu: HistoryCpuBucket[], bounds: Range) {
   const x = (seconds: number) => (seconds - bounds.start) / (bounds.end - bounds.start) * 1400;
   const outline: string[] = [], area: string[] = [];
+  const points: { x: number; y: number }[] = [];
   let run: string[] = [], first = 0, last = 0, lastY = 0, previousEnd = -Infinity;
   const finish = () => {
     if (!run.length) return;
+    if (last - first < 2) {
+      points.push({ x: (first + last) / 2, y: lastY });
+      run = [];
+      return;
+    }
     const line = `${run.join(" ")} L${last},${lastY}`;
     outline.push(line);
     area.push(`${line} L${last},42 L${first},42 Z`);
@@ -29,7 +35,7 @@ export function historyOverviewGeometry(cpu: HistoryCpuBucket[], bounds: Range) 
     // Connect adjacent means directly rather than drawing peak-to-baseline spikes.
   }
   finish();
-  return { line: outline.join(" "), area: area.join(" ") };
+  return { line: outline.join(" "), area: area.join(" "), points };
 }
 
 /** Downsample each contiguous run independently: never filter gaps before building a path. */

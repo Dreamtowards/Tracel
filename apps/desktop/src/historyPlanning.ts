@@ -16,11 +16,7 @@ export function historyTiles(range: Range) {
     return result;
 }
 
-/** Continuous context around the viewport, independent of navigation presets. */
-export function historyContext(view: Range, limit: Range): Range {
-    const padding = Math.max(3600, (view.end - view.start) / 4);
-    return { start: Math.max(limit.start, view.start - padding), end: Math.min(limit.end, view.end + padding) };
-}
+export { overviewContext as historyContext } from "@tracel/timeline/history";
 
 export function historyBudget(range: Range, viewSpan = range.end - range.start) {
     // Bound the entire view, not each day independently; quantized levels reuse nearby zooms.

@@ -50,7 +50,13 @@ impl CpuBin {
         }
     }
     fn add(&mut self, start: u64, end: u64, value: f64) {
-        if self.run.end != start {
+        // Start-ordered intervals may overlap. Count only newly covered time;
+        // overlapping archived observations are not missing-data boundaries.
+        let start = start.max(self.run.end);
+        if start >= end {
+            return;
+        }
+        if self.run.end < start {
             self.finish();
         }
         if self.run.covered == 0 {
@@ -67,7 +73,7 @@ fn cpu_preview(db: &Connection, start: u64, end: u64) -> Result<Vec<HistoryCpuBu
     let step = (end - start).div_ceil(BIN_COUNT).max(1);
     let mut bins: Vec<CpuBin> = (0..BIN_COUNT).map(|_| CpuBin::default()).collect();
     // CPU measures the preceding confirmed interval, bounded to six seconds like Timeline.
-    let mut statement = db.prepare("SELECT captured_at_ms,interval_start_ms,cpu_percent FROM system_samples WHERE captured_at_ms>?1 AND captured_at_ms<?2 AND cpu_percent IS NOT NULL ORDER BY captured_at_ms,id").map_err(|e| e.to_string())?;
+    let mut statement = db.prepare("SELECT captured_at_ms,interval_start_ms,cpu_percent FROM system_samples WHERE captured_at_ms>?1 AND captured_at_ms<?2 AND cpu_percent IS NOT NULL ORDER BY interval_start_ms,captured_at_ms,id").map_err(|e| e.to_string())?;
     let mut rows = statement
         .query(params![
             start as i64,

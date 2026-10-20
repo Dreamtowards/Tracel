@@ -286,9 +286,10 @@ export default function Explorer({
           : { start: d * DAY + 6 * 3600, end: (d + 1) * DAY },
     );
   };
-  const changeView = (next: Range) => {
+  const changeView = (next: Range, overviewContext?: Range) => {
     setFollow(false);
-    setView(next);
+    if (overviewContext && history?.onOverviewView) history.onOverviewView(next, overviewContext);
+    else setView(next);
     setPreset("Custom");
     setDay(Math.min(6, Math.floor((next.start + next.end) / 2 / DAY)));
   };

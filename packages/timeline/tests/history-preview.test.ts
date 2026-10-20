@@ -47,6 +47,17 @@ test("overview context follows continuous zoom immediately, including a full mon
   assert.ok(zoomed.end < context.end, "Geometry never depends on an older fetched preview");
 });
 
+test("overview navigation keeps its coordinate system through dragging and release, while main zoom can reframe", () => {
+  const limits = { start: 0, end: 100000 };
+  const initial = { start: 20000, end: 30000 }, context = overviewContext(initial, limits);
+  const moved = { start: 21000, end: 31000 };
+  assert.equal(overviewContext(moved, limits, context), context);
+  const fraction = (range: typeof initial) => (range.start - context.start) / (context.end - context.start);
+  assert.ok(fraction(moved) > fraction(initial), "The selection must visibly move with the pointer");
+  assert.equal(overviewContext(moved, limits, context), context, "Release must not recenter the selection");
+  assert.notDeepEqual(overviewContext(moved, limits), context, "An external navigation can choose fresh context");
+});
+
 test("CPU preview has one shared line/area boundary, preserves zero and breaks missing runs", () => {
   const geometry = historyOverviewGeometry([
     { startMs: 0, endMs: 1000, value: 0 },
@@ -66,5 +77,13 @@ test("old preview samples clip to new geometry without out-of-range paths or fab
   const points = [...geometry.line.matchAll(/[ML]([\d.]+),([\d.]+)/g)].map(match => [Number(match[1]), Number(match[2])]);
   assert.deepEqual(points.map(point => point[0]), [0, 700, 1400]);
   assert.ok(points.every(point => Math.abs(point[1] - 29.2) < 1e-10));
-  assert.deepEqual(historyOverviewGeometry(cpu, { start: 12, end: 15 }), { line: "", area: "" });
+  assert.deepEqual(historyOverviewGeometry(cpu, { start: 12, end: 15 }), { line: "", area: "", points: [] });
+});
+
+test("a sub-pixel isolated observation becomes a point without a vertical filled stripe", () => {
+  const geometry = historyOverviewGeometry([{ startMs: 100000, endMs: 102000, value: 50 }], { start: 0, end: 10000 });
+  assert.equal(geometry.line, "");
+  assert.equal(geometry.area, "");
+  assert.equal(geometry.points.length, 1);
+  assert.equal(geometry.points[0].y, 22);
 });

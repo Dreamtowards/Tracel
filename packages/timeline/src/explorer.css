@@ -453,6 +453,7 @@ summary.tx-category-heading:focus-visible { outline: 2px solid var(--tx-accent, 
   height: 20px;
 }
 .tx-overview-handle:focus-visible, .tx-overview-window:focus-visible { outline: 2px solid var(--primary, #a7c5b3); outline-offset: 2px; }
+.tx-overview-handle[data-pointer-focus]:focus-visible, .tx-overview-window[data-pointer-focus]:focus-visible { outline: none; }
 .tx-overview-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

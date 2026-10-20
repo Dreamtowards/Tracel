@@ -78,6 +78,12 @@ GPU utilization and engines cover the preceding confirmed sample interval. GPU m
 
 `audioInputPeakPercent` is a nullable 0–100 default-capture-endpoint peak meter reading, separate from existing output `audioPeakPercent`. Schema 6 adds a nullable `audio_input_peak` REAL column and extends the recent-ring view and bounded numeric query without rewriting previous values or intervals. Old rows deserialize as missing. Input follows the same capped sample-and-hold support as output audio; zero is valid, null breaks coverage. Shared Capture uses `audioInput` as the metric key and percent as the unit. Exported measurements retain the original nullable percent field, while range exports contain clipped support and weighted input analytics.
 
+## Timeline CPU overview coverage and navigation
+
+The bounded CPU preview reads intervals in start-time order and unions overlapping coverage within each display bucket. Only each interval's newly covered tail contributes to the duration-weighted mean; duplicate coverage cannot inflate its weight or introduce a false gap. Actual uncovered time still breaks the curve. Isolated runs narrower than two SVG view units render as dots rather than filled vertical strips. These are display calculations only; archived observations remain unchanged.
+
+Overview navigation keeps its existing time domain while either handle or the selected window moves, including after release. Main Timeline navigation, presets, dates and live following derive a fresh overview domain. Pointer focus does not draw an extra keyboard focus outline; keyboard navigation retains its visible focus indicator.
+
 ## GPU display identity normalization
 
 Desktop's view adapter compares GPU IDs case-insensitively and uses the canonical lowercase ID for metric keys. Existing archive JSON and raw exports remain unchanged. Resolved names replace historical fallback labels for the same identity within the loaded data; no schema migration or cross-session identity merging is performed. Missing names use short GPU-number display labels.

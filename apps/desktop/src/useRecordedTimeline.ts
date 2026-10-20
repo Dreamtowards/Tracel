@@ -55,7 +55,8 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
     const [capture, setCapture] = useState(() => combineCaptures([], seconds(today()))), [analysis, setAnalysis] = useState<HistoryControls["analysis"]>();
     const [error, setError] = useState(""), [overviewError, setOverviewError] = useState(""), [loading, setLoading] = useState(false), [progress, setProgress] = useState("");
     const [requested, setRequested] = useState(view);
-    const overviewRange = useMemo(() => overviewContext(view, bounds), [view, bounds]);
+    const [overviewNavigation, setOverviewNavigation] = useState<Range | null>(null);
+    const overviewRange = useMemo(() => overviewContext(view, bounds, overviewNavigation), [view, bounds, overviewNavigation]);
     const [previewRequest, setPreviewRequest] = useState(overviewRange), [preview, setPreview] = useState<HistoryPreview>();
     useEffect(() => { const timer = setTimeout(() => setPreviewRequest(overviewRange), 160); return () => clearTimeout(timer); }, [overviewRange]);
     useEffect(() => { const timer = setTimeout(() => setRequested(view), 160); return () => clearTimeout(timer); }, [view]);
@@ -256,8 +257,15 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
         }, 180);
         return () => { active = false; clearTimeout(timer); };
     }, [selection, visible, project]);
-    const onView = useCallback((next: Range) => setView(previous => sameRange(previous, next) ? previous : clampRange(next, bounds)), [bounds]);
-    const changeDay = useCallback((next: string) => { setDay(next); setSelection(null); setView(next === localDate() ? initialView() : seconds(dayRange(next))); }, []);
-    const history: HistoryControls = { view, onView, selection, onSelection: setSelection, overviewRange, preview, loading, progress, analysis };
+    const onView = useCallback((next: Range) => {
+        setOverviewNavigation(null);
+        setView(previous => sameRange(previous, next) ? previous : clampRange(next, bounds));
+    }, [bounds]);
+    const onOverviewView = useCallback((next: Range, context: Range) => {
+        setOverviewNavigation(context);
+        setView(previous => sameRange(previous, next) ? previous : clampRange(next, bounds));
+    }, [bounds]);
+    const changeDay = useCallback((next: string) => { setOverviewNavigation(null); setDay(next); setSelection(null); setView(next === localDate() ? initialView() : seconds(dayRange(next))); }, []);
+    const history: HistoryControls = { view, onView, onOverviewView, selection, onSelection: setSelection, overviewRange, preview, loading, progress, analysis };
     return { capture, error: error || overviewError, loading, history, calendar: { value: day, min: earliest, max: localDate(), onChange: changeDay } };
 }

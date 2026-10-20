@@ -3,11 +3,11 @@ import { Radio } from "lucide-react";
 import { useI18n, useCaptureTime } from "./i18n";
 import { OverviewViewport } from "./OverviewViewport";
 import { historyOverviewGeometry } from "./overview";
-import type { Capture } from "./model";
+import type { Capture, Range } from "./model";
 import type { HistoryControls } from "./history";
 
 export function RecordedOverview({ data, history, label, color, onView }: {
-  data: Capture; history: HistoryControls; label: string; color: string; onView: HistoryControls["onView"];
+  data: Capture; history: HistoryControls; label: string; color: string; onView: (view: Range, context?: Range) => void;
 }) {
   const { t } = useI18n();
   const { clock, dateLabel } = useCaptureTime(data);
@@ -23,10 +23,12 @@ export function RecordedOverview({ data, history, label, color, onView }: {
       <span role="status" className="tx-history-progress" title={status}>{status}</span>
       <span>{dateLabel(bounds.start)} — {dateLabel(bounds.end - 1)} <b>{t("CPU")}</b></span>
     </div>
-    <OverviewViewport data={data} bounds={bounds} view={history.view} onView={onView}>
+    <OverviewViewport data={data} bounds={bounds} view={history.view} onView={view => onView(view, bounds)}>
       <svg viewBox="0 0 1400 44" preserveAspectRatio="none" aria-label={t("CPU")} role="img">
+        <title>{t("Dots mark isolated CPU samples; gaps have no recorded coverage.")}</title>
         <path d={geometry.area} fill={color} opacity=".1" />
-        <path d={geometry.line} fill="none" stroke={color} strokeWidth="1.2" />
+        <path d={geometry.line} fill="none" stroke={color} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+        {geometry.points.map((point, i) => <circle key={i} cx={point.x} cy={point.y} r="1.3" fill={color} />)}
       </svg>
     </OverviewViewport>
     <div className="tx-history-ticks" aria-hidden="true">{Array.from({ length: 7 }, (_, i) => {
