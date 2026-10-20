@@ -1,6 +1,12 @@
 /** Interface copy only. Captured titles, URLs, app names and export data are never translated. */
 export const timelineZh: Readonly<Record<string, string>> = {
   "Categories": "分类",
+  "Loading history": "正在加载历史记录",
+  "No recorded activity in this range.": "此范围内暂无已记录的数据。",
+  "Summarized · Zoom in for detail": "已汇总显示 · 放大查看细节",
+  "CPU history": "CPU 历史曲线",
+  "CPU overview preserves peaks and gaps across the selected period.": "按时间跨度采样，保留 CPU 峰谷和未记录的空白。",
+  "Apps: {count}": "{count} 个应用",
   "of active time": "占总活跃时间",
   "Office & notes": "办公与笔记",
   "AI assistants": "AI 助手",

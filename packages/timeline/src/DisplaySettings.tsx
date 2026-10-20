@@ -114,7 +114,7 @@ export function DisplaySettings({
       <footer>
         <button
           className="tx-text-button"
-          onClick={() => { onChange(defaultAppearance); onCategoryColors?.(false); }}
+          onClick={() => { onChange(defaultAppearance); onCategoryColors?.(true); }}
         >
           <RotateCcw size={12} /> {" "}{t("Reset defaults")}</button>
         <span>{t("Session preferences")}</span>

@@ -5,6 +5,7 @@ import { dayRange, localDate } from "./recordedTimeline";
 import type { GpuDisplayOptions } from "./gpuNames";
 import { clampRange, type Capture, type Range } from "@tracel/timeline/model";
 import { combineAnalyses, combineCaptures, type HistoryAnalysis } from "./historyProjection";
+import { historyTiles, historyBudget, availableHistory, isLiveContinuation } from "./historyPlanning";
 import { overviewContext, type HistoryControls, type HistoryPreview, type HistoryCpuBucket } from "@tracel/timeline/history";
 type Result = {
     capture: Capture;
@@ -23,10 +24,6 @@ function blockStats(items: Result[]) {
     }
     return stats;
 }
-type Tile = {
-    range: Range;
-    key: string;
-};
 const sameRange = (a: Range, b: Range) => a.start === b.start && a.end === b.end;
 const seconds = (r: {
     startMs: number;
@@ -34,16 +31,6 @@ const seconds = (r: {
 }): Range => ({ start: r.startMs / 1000, end: r.endMs / 1000 });
 const today = () => dayRange(localDate());
 const initialView = () => ({ start: Date.now() / 1000 - 3600, end: Date.now() / 1000 + 120 });
-export function historyTiles(range: Range): Tile[] {
-    const result: Tile[] = [];
-    let start = Math.max(Math.floor(range.start / 3600) * 3600, dayRange(localDate(new Date(range.start * 1000))).startMs / 1000);
-    while (start < range.end) {
-        const end = Math.min(start + 3600, dayRange(localDate(new Date(start * 1000))).endMs / 1000);
-        result.push({ range: { start, end }, key: `${start}:${end}` });
-        start = end;
-    }
-    return result;
-}
 async function readChunk(range: Range): Promise<ArchivePage> {
     try {
         return await queryTimeline({ startMs: Math.floor(range.start * 1000), endMs: Math.ceil(range.end * 1000), afterId: 0 });
@@ -80,6 +67,8 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
         reject: (e: unknown) => void;
     }>());
     const cache = useRef(new Map<string, Result>());
+    const firstSample = useRef<number | null | undefined>(undefined);
+    const lastPublished = useRef<Range | null>(null);
     useEffect(() => {
         if (!nativeClient)
             return;
@@ -120,6 +109,7 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
                 }>("timeline_overview", { days: ranges });
                 if (!active)
                     return;
+                firstSample.current = overview.firstAtMs;
                 setPreview({ range: previewRequest, cpu: overview.cpu });
                 setOverviewError("");
                 if (overview.firstAtMs != null)
@@ -143,11 +133,14 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
             return;
         let active = true;
         let timer: ReturnType<typeof setTimeout>;
-        const tiles = historyTiles(requested), span = requested.end - requested.start, coarse = span > 6 * 3600, budget = Math.max(1, Math.ceil(2400 * 3600 / span));
+        const span = requested.end - requested.start, coarse = span > 6 * 3600;
         let hasPublished = false;
         const run = async () => {
+            const available = availableHistory(requested, firstSample.current);
+            const tiles = available ? historyTiles(available) : [];
+            const budget = coarse ? historyBudget(tiles[0]?.range ?? requested, span) : 2400;
             // Background polling preserves the ready UI until its replacement is complete.
-            if (!hasPublished) setLoading(true);
+            if (!hasPublished && !isLiveContinuation(lastPublished.current, requested)) setLoading(true);
             setError("");
             const results = new Map<string, Result>();
             for (const tile of tiles) {
@@ -161,24 +154,44 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
                 const edge = (latest >= today().startMs ? latest / 1000 : Math.floor(Date.now() / 2000) * 2) + 120;
                 combined.initialView = { start: edge - 3600, end: edge };
                 setCapture(combined);
+                lastPublished.current = requested;
                 setProgress(`${results.size}/${tiles.length}`);
                 viewAnalysis.current = { range: requested, stats: blockStats(ordered), pending: results.size < tiles.length };
                 if (!selected.current)
                     setAnalysis(viewAnalysis.current);
             };
             try {
-                for (const tile of tiles) {
+                const fetches = new Map<string, Promise<ArchivePage>>();
+                const prefetch = (index: number) => {
+                    const tile = tiles[index];
+                    if (!tile) return;
+                    const range = { start: Math.max(tile.range.start, requested.start), end: Math.min(tile.range.end, requested.end) };
+                    const key = `${range.start}:${range.end}:${budget}:${coarse}:${simplifyGpuNames}:${showSoftwareGpus}`;
+                    const recent = tile.range.end * 1000 > Date.now() - 6000 && tile.range.start * 1000 < Date.now() + 2000;
+                    if (!cache.current.has(key) || recent) {
+                        const promise = readChunk(range);
+                        void promise.catch(() => {});
+                        fetches.set(tile.key, promise);
+                    }
+                };
+                prefetch(0); prefetch(1);
+                for (let index = 0; index < tiles.length; index++) {
+                    const tile = tiles[index];
+                    if (!active) return;
                     const range = { start: Math.max(tile.range.start, requested.start), end: Math.min(tile.range.end, requested.end) }, key = `${range.start}:${range.end}:${budget}:${coarse}:${simplifyGpuNames}:${showSoftwareGpus}`;
                     const current = tile.range.end * 1000 > Date.now() - 6000 && tile.range.start * 1000 < Date.now() + 2000;
                     let result = cache.current.get(key);
                     if (!result || current) {
-                        const page = await readChunk(range);
+                        const page = await (fetches.get(tile.key) ?? readChunk(range));
+                        fetches.delete(tile.key);
+                        firstSample.current = page.firstAtMs;
                         if (!active)
                             return;
                         result = await project(page, range, budget, coarse);
                         if (!active)
                             return;
-                        cache.current.set(key, result);
+                        // Live windows move every poll; retaining each one only accumulates obsolete pictures.
+                        if (!current) cache.current.set(key, result);
                         let weight = 0;
                         for (const entry of cache.current.values())
                             weight += entry.capture.metrics.length + entry.capture.activity.length + entry.capture.background.length + entry.capture.media.length;
@@ -189,6 +202,7 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
                         }
                     }
                     results.set(tile.key, result);
+                    prefetch(index + 2);
                     if (!hasPublished) setProgress(`${results.size}/${tiles.length}`);
                 }
                 // Commit one complete snapshot, never a mixture of refreshed and missing tiles.
@@ -202,7 +216,7 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
             finally {
                 if (active) {
                     setLoading(false);
-                    timer = setTimeout(run, requested.end * 1000 > Date.now() - 6000 ? 2000 : 30000);
+                    if (requested.end * 1000 > Date.now() - 6000) timer = setTimeout(run, coarse ? 30000 : 2000);
                 }
             }
         };
@@ -222,7 +236,8 @@ export function useRecordedTimeline(visible: boolean, { simplifyGpuNames, showSo
             setAnalysis(previous => previous ? { ...previous, pending: true } : previous);
             const results: Result[] = [];
             try {
-                for (const tile of historyTiles(selection)) {
+                const available = availableHistory(selection, firstSample.current);
+                for (const tile of available ? historyTiles(available) : []) {
                     const range = { start: Math.max(selection.start, tile.range.start), end: Math.min(selection.end, tile.range.end) };
                     const page = await readChunk(range);
                     if (!active)

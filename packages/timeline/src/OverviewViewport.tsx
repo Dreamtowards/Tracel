@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { clampRange, clock, type Range, type Capture } from "./model";
+import { clampRange, clock, MAX_VIEW_SECONDS, type Range, type Capture } from "./model";
 import { useI18n, useCaptureTime } from "./i18n";
 
 type Edge = "start" | "end";
@@ -13,12 +13,12 @@ export function OverviewViewport({ bounds, view, onView, children, data }: {
 }) {
   const { t } = useI18n();
   const { clock, dateLabel } = useCaptureTime(data);
-  const drag = useRef<{ edge: Edge | null; time: number; view: Range } | null>(null);
+  const drag = useRef<{ edge: Edge | null; time: number; view: Range; bounds: Range } | null>(null);
   const total = bounds.end - bounds.start;
   const percent = (time: number) => `${(time - bounds.start) / total * 100}%`;
-  const resize = (edge: Edge, time: number, initial = view) => onView(edge === "start"
-    ? { start: Math.max(bounds.start, Math.min(initial.end - minimumSpan, time)), end: initial.end }
-    : { start: initial.start, end: Math.min(bounds.end, Math.max(initial.start + minimumSpan, time)) });
+  const resize = (edge: Edge, time: number, initial = view, limits = bounds) => onView(edge === "start"
+    ? { start: Math.max(limits.start, initial.end - MAX_VIEW_SECONDS, Math.min(initial.end - minimumSpan, time)), end: initial.end }
+    : { start: initial.start, end: Math.min(limits.end, initial.start + MAX_VIEW_SECONDS, Math.max(initial.start + minimumSpan, time)) });
   const label = (time: number) => `${dateLabel(time)} ${clock(time, true)}`;
 
   return <div className="tx-overview-plot" role="group" aria-label={t("Overview viewport")}
@@ -32,7 +32,7 @@ export function OverviewViewport({ bounds, view, onView, children, data }: {
       const initial = !edge && (time < view.start || time > view.end)
         ? clampRange({ start: time - (view.end - view.start) / 2, end: time + (view.end - view.start) / 2 }, bounds)
         : view;
-      drag.current = { edge: edge ?? null, time, view: initial };
+      drag.current = { edge: edge ?? null, time, view: initial, bounds };
       (handle ?? event.currentTarget.querySelector<HTMLElement>(".tx-overview-window"))?.focus();
       event.currentTarget.setPointerCapture(event.pointerId);
       if (initial !== view) onView(initial);
@@ -40,11 +40,11 @@ export function OverviewViewport({ bounds, view, onView, children, data }: {
     onPointerMove={(event) => {
       if (!drag.current || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
       const rect = event.currentTarget.getBoundingClientRect();
-      const time = bounds.start + (event.clientX - rect.left) / rect.width * total;
       const initial = drag.current;
+      const time = initial.bounds.start + (event.clientX - rect.left) / rect.width * (initial.bounds.end - initial.bounds.start);
       const delta = time - initial.time;
-      if (initial.edge) resize(initial.edge, initial.view[initial.edge] + delta, initial.view);
-      else onView(clampRange({ start: initial.view.start + delta, end: initial.view.end + delta }, bounds));
+      if (initial.edge) resize(initial.edge, initial.view[initial.edge] + delta, initial.view, initial.bounds);
+      else onView(clampRange({ start: initial.view.start + delta, end: initial.view.end + delta }, initial.bounds));
     }}
     onPointerUp={(event) => { drag.current = null; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
     onLostPointerCapture={() => { drag.current = null; }}

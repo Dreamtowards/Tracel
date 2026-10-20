@@ -35,7 +35,7 @@ import {
   Terminal,
   X,
 } from "lucide-react";
-import { categoryResolver, categoryTotals, type CategoryConfig } from "./categories";
+import { applicationGroups, categoryApplications, categoryResolver, categoryTotals, type CategoryConfig } from "./categories";
 import { analyze } from "./analytics";
 import {
   Capture,
@@ -57,8 +57,8 @@ import {
 } from "./model";
 import { Timeline, type TimelinePalette } from "./Timeline";
 import { OverviewViewport } from "./OverviewViewport";
-import { RecordedOverview } from "./RecordedOverview";
 import { overviewPath } from "./overview";
+import { RecordedOverview } from "./RecordedOverview";
 import type { TrackSource } from "./trackVisibility";
 import type { HistoryControls } from "./history";
 import { DisplaySettings, defaultAppearance } from "./DisplaySettings";
@@ -147,8 +147,9 @@ export default function Explorer({
   const { t, duration, locale } = useI18n();
   const [loadedData, setData] = useState<Capture | null>(null);
   const rawData = capture ?? loadedData;
-  const [categoryColors, setCategoryColors] = useState(false);
+  const [categoryColors, setCategoryColors] = useState(true);
   const [activityGrouping, setActivityGrouping] = useState<"apps" | "categories">("apps");
+  const classification = useMemo(() => categories ? categoryResolver(categories) : null, [categories]);
   const data = useMemo(() => {
     if (!rawData || !categories || !categoryColors) return rawData;
     const resolver = categoryResolver(categories);
@@ -240,7 +241,10 @@ export default function Explorer({
     () => history?.analysis?.stats ?? (data ? analyze(data, statsRange) : null),
     [data, statsRange, history?.analysis?.stats],
   );
+  const displayApps = useMemo(() => applicationGroups(categories, stats?.apps ?? []), [categories, stats]);
+  const focusIds = useMemo(() => displayApps.find(app => app.memberIds.includes(focus ?? ""))?.memberIds, [displayApps, focus]);
   const categoryStats = useMemo(() => categories && stats ? categoryTotals(categories, stats.apps) : [], [categories, stats]);
+  const categoryApps = useMemo(() => categories && stats ? categoryApplications(categories, stats.apps) : null, [categories, stats]);
   if (!data || !stats)
     return (
       <main className="tx-app tx-loading">
@@ -251,8 +255,8 @@ export default function Explorer({
         {loadError && <button className="tx-button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>{t("Try again")}</button>}
       </main>
     );
-  const selectedApp = stats.apps.find((a) => a.id === focus);
-  const coverage = data.kind === "recorded" ? Math.max(...Object.values(stats.metrics).map((metric) => metric.coverage)) : stats.metrics.cpu.coverage;
+  const selectedApp = displayApps.find((a) => a.memberIds.includes(focus ?? ""));
+  const coverage = data.kind === "recorded" ? Math.max(0, ...Object.values(stats.metrics).map((metric) => metric.coverage)) : stats.metrics.cpu.coverage;
   const recorded = data.kind === "recorded";
   const transferSize = (value: number) => recorded
     ? value >= 1024 ? `${(value / 1024).toFixed(2)} GiB` : `${value.toFixed(1)} MiB`
@@ -573,7 +577,7 @@ export default function Explorer({
               className="tx-icon-button"
               aria-label={t("Fit all data")}
               title={t("Fit all data")}
-              onClick={() => history ? changeView(data.bounds) : navigate(day, "Week")}
+              onClick={() => history ? changeView(history.overviewRange) : navigate(day, "Week")}
             >
               <Maximize2 size={14} />
             </button>
@@ -669,6 +673,7 @@ export default function Explorer({
                 selection={selection}
                 mode={mode}
                 focus={focus}
+                focusIds={focusIds}
                 appearance={appearance}
                 palette={palette}
                 hiddenSources={hiddenSources}
@@ -760,7 +765,7 @@ export default function Explorer({
                         </div>
                       </div>
                       <div className="tx-proportion">
-                        {stats.apps
+                        {displayApps
                           .filter((a) => a.active > 0)
                           .map((a) => (
                             <button
@@ -772,7 +777,7 @@ export default function Explorer({
                                 background: a.color,
                               }}
                               onClick={() =>
-                                setFocus(focus === a.id ? null : a.id)
+                                setFocus(a.memberIds.includes(focus ?? "") ? null : a.id)
                               }
                             />
                           ))}
@@ -784,13 +789,22 @@ export default function Explorer({
                       {activityGrouping === "categories" && categories ? <div className="tx-category-list">
                         {categoryStats.map(category => {
                           const percent = category.active / Math.max(1, stats.active) * 100;
-                          return <div className="tx-category-row" key={category.id} style={{ paddingLeft: category.depth * 12 }} title={`${category.path} · ${percent.toFixed(1)}% ${t("of active time")}${categories.categories.some(item => item.parent_id === category.id) ? ` · ${t("Includes subcategories")}` : ""}`}>
-                            <div className="tx-category-heading">
-                              <span><i style={{ background: category.color }} />{t(category.name)}</span>
+                          const members = categoryApps?.get(category.id) ?? [];
+                          const hasChildren = categories.categories.some(item => item.parent_id === category.id);
+                          return <details className="tx-category-row" key={category.id} open={!hasChildren} style={{ marginLeft: category.depth * 12 }}>
+                            <summary className="tx-category-heading" title={`${classification?.lineage(category).map(item => t(item.name)).join(" / ")} · ${t("of active time")}${hasChildren ? ` · ${t("Includes subcategories")}` : ""}`}>
+                              <span><ChevronRight className="tx-category-chevron" size={12} /><i style={{ background: category.color }} /><span>{t(category.name)}</span><small className="tx-category-count" aria-label={t("Apps: {count}", { count: members.length })}>{members.length}</small></span>
                               <strong>{duration(category.active)}<small>{Math.round(percent)}%</small></strong>
-                            </div>
+                            </summary>
                             <div className="tx-category-bar" role="meter" aria-label={t(category.name)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Number(percent.toFixed(1))} aria-valuetext={`${percent.toFixed(1)}% ${t("of active time")}`}><i style={{ width: `${percent}%`, background: category.color }} /></div>
-                          </div>;
+                            <div className="tx-app-list tx-category-apps">
+                              {members.map(app => <button key={app.id} className={app.memberIds.includes(focus ?? "") ? "selected" : ""} aria-pressed={app.memberIds.includes(focus ?? "")} onClick={() => setFocus(app.memberIds.includes(focus ?? "") ? null : app.id)} title={`${app.exe} · ${t("Focus {app}", { app: app.name })}`}>
+                                <span className="tx-app-icon" style={{ color: app.color, background: app.color + "15" }}>{renderAppIcon ? renderAppIcon(app, <AppIcon id={app.id} />) : <AppIcon id={app.id} />}</span>
+                                <span className="tx-app-name">{app.name}{hasChildren && <small className="tx-app-category">{classification?.lineage(classification.resolve(app)).map(item => t(item.name)).join(" / ")}</small>}</span>
+                                <span className="tx-app-duration" title={duration(app.active)}>{duration(app.active, true)}<small>{Math.round(app.active / Math.max(1, stats.active) * 100)}%</small></span>
+                              </button>)}
+                            </div>
+                          </details>;
                         })}
                         {!categoryStats.length && <p className="tx-empty">{t("No active time in this range.")}</p>}
                       </div> : <>
@@ -798,14 +812,14 @@ export default function Explorer({
                         {t("APPLICATIONS")}{" "}<span>{t("ACTIVE TIME")}</span>
                       </div>
                       <div className="tx-app-list">
-                        {stats.apps
+                        {displayApps
                           .filter((a) => a.foreground > 0)
                           .map((a) => (
                             <button
-                              className={focus === a.id ? "selected" : ""}
+                              className={a.memberIds.includes(focus ?? "") ? "selected" : ""}
                               key={a.id}
                               onClick={() =>
-                                setFocus(focus === a.id ? null : a.id)
+                                setFocus(a.memberIds.includes(focus ?? "") ? null : a.id)
                               }
                             >
                               <span
@@ -819,17 +833,18 @@ export default function Explorer({
                               </span>
                               <span className="tx-app-name">
                                 {a.name}
+                                {classification && <small className="tx-app-category">{classification.lineage(classification.resolve(a)).map(item => t(item.name)).join(" / ")}</small>}
                                 <span className="tx-app-bar">
                                   <i
                                     style={{
-                                      width: `${(a.active / Math.max(1, stats.apps[0].active)) * 100}%`,
+                                      width: `${(a.active / Math.max(1, displayApps[0].active)) * 100}%`,
                                       background: a.color,
                                     }}
                                   />
                                 </span>
                               </span>
-                              <span className="tx-app-duration">
-                                {duration(a.active)}
+                              <span className="tx-app-duration" title={duration(a.active)}>
+                                {duration(a.active, true)}
                                 <small>
                                   {Math.round(
                                     (a.active / Math.max(1, stats.active)) *

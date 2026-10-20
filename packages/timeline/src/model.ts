@@ -92,8 +92,7 @@ export const overlap = (a: Range, b: Range) =>
   Math.max(0, Math.min(a.end, b.end) - Math.max(a.start, b.start));
 export function clampRange(range: Range, bounds: Range): Range {
   const span = Math.min(
-    MAX_VIEW_SECONDS,
-    bounds.end - bounds.start,
+    MAX_VIEW_SECONDS, bounds.end - bounds.start,
     Math.max(2, range.end - range.start),
   );
   const start = Math.max(
@@ -122,7 +121,12 @@ export function zoomRange(
     bounds,
   );
 }
-export function duration(seconds: number) {
+export function duration(seconds: number, compact = false) {
+  if (seconds >= DAY) {
+    if (compact) return `${(seconds / DAY).toFixed(1).replace(/\.0$/, "")}d`;
+    const days = Math.floor(seconds / DAY), hours = Math.floor(seconds % DAY / 3600), minutes = Math.floor(seconds % 3600 / 60);
+    return `${days}d${hours ? ` ${hours}h` : ""}${minutes ? ` ${minutes}m` : ""}`;
+  }
   if (seconds < 60) return `${Math.round(seconds)}s`;
   if (seconds < 3600)
     return `${Math.floor(seconds / 60)}m ${Math.floor(seconds % 60)}s`;

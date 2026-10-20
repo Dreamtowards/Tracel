@@ -333,17 +333,33 @@
   color: var(--tx-label-text, #e3e9eb);
   box-shadow: 0 1px 3px #0003;
 }
-.tx-category-grouping { margin: 14px 0 8px; }
+.tx-category-grouping { margin: 8px 0 4px; }
+.tx-proportion:has(+ .tx-category-grouping) { margin: 10px 0 8px; }
+.tx-category-grouping + .tx-section-heading { margin: 8px 0 4px; }
 .tx-category-grouping button { flex: 1; }
 .tx-category-list { margin-bottom: 12px; }
-.tx-category-row { padding-top: 10px; padding-bottom: 10px; }
+.tx-category-row { padding-top: 5px; padding-bottom: 5px; }
 .tx-category-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--tx-label-muted, #8d999f); font-size: 11px; }
 .tx-category-heading > span { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .tx-category-heading > span > i { width: 6px; height: 6px; border-radius: 2px; flex-shrink: 0; }
 .tx-category-heading strong { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; font: 11px Consolas, monospace; color: var(--tx-label-text, #e3e9eb); }
 .tx-category-heading small { min-width: 28px; text-align: right; color: var(--tx-label-muted, #8d999f); font-size: 10px; }
-.tx-category-bar { margin-top: 7px; height: 3px; border-radius: 2px; background: #ffffff0b; overflow: hidden; }
+.tx-category-bar { margin-top: 4px; height: 2px; border-radius: 2px; background: #ffffff0b; overflow: hidden; }
 .tx-category-bar > i { display: block; height: 100%; border-radius: inherit; }
+summary.tx-category-heading { cursor: pointer; list-style: none; border-radius: 3px; }
+summary.tx-category-heading::-webkit-details-marker { display: none; }
+summary.tx-category-heading:focus-visible { outline: 2px solid var(--tx-accent, #92b7a5); outline-offset: 4px; }
+.tx-category-heading > span > span { min-width: 0; overflow-wrap: anywhere; }
+.tx-category-heading .tx-category-count { min-width: 0; font-size: 9px; line-height: 16px; }
+.tx-category-chevron { flex-shrink: 0; transition: transform 120ms; }
+.tx-category-row[open] > summary .tx-category-chevron { transform: rotate(90deg); }
+.tx-category-apps { margin: 3px 0 0 18px; }
+.tx-app-list.tx-category-apps > button { padding: 3px 4px; gap: 7px; }
+.tx-category-apps .tx-app-icon { width: 20px; height: 22px; }
+.tx-category-apps .tx-app-duration { display: flex; align-items: baseline; gap: 8px; }
+.tx-category-apps .tx-app-duration small { margin-top: 0; min-width: 24px; }
+.tx-category-apps .tx-app-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-app-category { display: block; color: var(--tx-label-muted, #8d999f); font-size: 9px; margin-top: 4px; line-height: 1.5; }
 .tx-tools button {
   padding: 5px 7px;
   display: flex;
@@ -366,6 +382,7 @@
 }
 .tx-overview-heading {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   color: var(--tx-label-muted, #808d94);
   font:
@@ -502,9 +519,6 @@
   height: calc(100dvh - 455px);
   overflow: auto;
 }
-.tx-overview-heading:has(.tx-history-progress) { height: 20px; align-items: center; white-space: nowrap; overflow: hidden; }
-.tx-overview-heading:has(.tx-history-progress) > span:not(.tx-history-progress) { flex-shrink: 0; }
-.tx-history-ticks { display: flex; justify-content: space-between; color: var(--tx-label-muted); font-size: 9px; line-height: 18px; white-space: nowrap; }
 .tx-timeline {
   position: relative;
   min-width: 500px;
@@ -1466,6 +1480,11 @@
 .tx-label-width-resizer { position: absolute; top: 0; bottom: 0; width: 8px; transform: translateX(-50%); z-index: 5; cursor: col-resize; touch-action: none; }
 .tx-label-width-resizer::after { content: ""; position: absolute; left: 3px; top: 0; bottom: 0; width: 2px; background: transparent; }
 .tx-label-width-resizer:hover::after, .tx-label-width-resizer:focus-visible::after { background: var(--primary, #9ba8a0); opacity: .5; }
+
+
+.tx-overview-heading:has(.tx-history-progress) { height: 20px; align-items: center; white-space: nowrap; overflow: hidden; }
+.tx-overview-heading:has(.tx-history-progress) > span:not(.tx-history-progress) { flex-shrink: 0; }
+.tx-history-ticks { display: flex; justify-content: space-between; color: var(--tx-label-muted); font-size: 9px; line-height: 18px; white-space: nowrap; }
 .tx-overview-heading > .tx-history-progress {
   display: block;
   flex: 1;

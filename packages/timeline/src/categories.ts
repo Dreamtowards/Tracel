@@ -1,4 +1,4 @@
-import type { Application } from "./model";
+import type { Application, ActivityContext } from "./model";
 
 export type Category = { id: string; name: string; parent_id?: string; color?: string };
 export type CategoryConfig = { version: 1; categories: Category[]; rules: { exe: string; category_id: string }[] };
@@ -33,12 +33,49 @@ export function parseCategories(value: unknown): CategoryConfig {
   return config;
 }
 const normalize = (exe: string) => exe.trim().replaceAll("\\", "/").toLowerCase();
+type Usage = Application & { active: number; foreground?: number; contexts?: ActivityContext[]; memberIds?: string[] };
+/** Presentation identity: app updates and pathless process observations remain one app.
+ * Full archive identities and path-specific category overrides remain intact. */
+export function applicationGroups<T extends Usage>(config: CategoryConfig | undefined, apps: readonly T[]) {
+  const resolver = config ? categoryResolver(config) : null;
+  const groups = new Map<string, T & { memberIds: string[] }>();
+  for (const app of apps) {
+    const executable = normalize(app.exe || app.executablePath || app.name).split("/").at(-1)!.replace(/\.exe$/, "").replace(/\s+/g, "");
+    const key = `${resolver?.resolve(app).id ?? ""}:${executable || app.id}`;
+    const old = groups.get(key);
+    if (old) {
+      old.active += app.active;
+      if (app.foreground !== undefined) old.foreground = (old.foreground ?? 0) + app.foreground;
+      if (app.contexts) old.contexts = [...(old.contexts ?? []), ...app.contexts];
+      old.memberIds.push(...(app.memberIds ?? [app.id]));
+      if (!old.executablePath && app.executablePath) old.executablePath = app.executablePath;
+    } else groups.set(key, { ...app, contexts: app.contexts?.slice(), memberIds: [...(app.memberIds ?? [app.id])] });
+  }
+  for (const app of groups.values()) app.contexts?.sort((a,b) => a.start - b.start);
+  return [...groups.values()].sort((a,b) => b.active - a.active || a.name.localeCompare(b.name));
+}
+/** Active applications in each category, including descendants, sorted by time. */
+export function categoryApplications<T extends Application & { active: number }>(config: CategoryConfig, apps: readonly T[]) {
+  const resolver = categoryResolver(config);
+  const groups = new Map<string, (T & { memberIds: string[] })[]>();
+  for (const app of applicationGroups(config, apps)) {
+    if (app.active <= 0) continue;
+    for (const category of resolver.lineage(resolver.resolve(app))) {
+      const members = groups.get(category.id) ?? [];
+      members.push(app);
+      groups.set(category.id, members);
+    }
+  }
+  for (const members of groups.values()) members.sort((a, b) => b.active - a.active || a.name.localeCompare(b.name));
+  return groups;
+}
 export function categoryResolver(config: CategoryConfig) {
   const byId = new Map(config.categories.map(category => [category.id, category]));
   const rules = new Map(config.rules.map(rule => [normalize(rule.exe), rule.category_id]));
   const resolve = (app: Application) => {
-    const path = normalize(app.executablePath ?? app.exe);
-    return byId.get(rules.get(path) ?? rules.get(path.split("/").at(-1) ?? "") ?? "") ?? uncategorized;
+    const path = normalize(app.executablePath || app.exe || app.name);
+    const filename = path.split("/").at(-1) ?? "";
+    return byId.get(rules.get(path) ?? rules.get(filename) ?? rules.get(`${filename}.exe`) ?? "") ?? uncategorized;
   };
   const lineage = (category: Category) => {
     const result = [category];

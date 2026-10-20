@@ -133,7 +133,7 @@ impl SqliteStore {
         let connection = connection
             .unchecked_transaction()
             .map_err(|e| e.to_string())?;
-        let mut statement = connection.prepare("SELECT id,captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,NULL,errors_json,NULL,NULL,NULL,0,cpu_frequency_mhz,gpus_json,battery_json,audio_input_peak FROM system_samples WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
+        let mut statement = connection.prepare("SELECT id,captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,NULL,errors_json,NULL,NULL,NULL,0,cpu_frequency_mhz,gpus_json,battery_json,audio_input_peak FROM system_samples INDEXED BY system_samples_time WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
         let observations: Vec<_> = statement
             .query_map(
                 params![

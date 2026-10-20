@@ -1,6 +1,16 @@
 import { analyze } from "@tracel/timeline/analytics";
 import { overlap, sampleEnd, type Capture, type MetricKey, type MetricSample, type Range } from "@tracel/timeline/model";
 export type HistoryAnalysis = ReturnType<typeof analyze>;
+/** Stitch query boundaries without erasing real changes of window, title or observation gaps. */
+function joinContexts(contexts: Capture["activity"][number]["contexts"]) {
+    const result: typeof contexts = [], tails = new Map<string, typeof contexts[number]>();
+    for (const context of [...contexts].sort((a,b) => a.start - b.start)) {
+        const key = JSON.stringify([context.kind, context.title, context.value]), previous = tails.get(key);
+        if (previous?.end === context.start) previous.end = context.end;
+        else { const copy = { ...context }; result.push(copy); tails.set(key, copy); }
+    }
+    return result;
+}
 export function absoluteCapture(data: Capture, range: Range): Capture {
     const offset = Date.parse(data.epoch) / 1000;
     const clip = <T extends Range>(item: T): T => ({ ...item, start: Math.max(range.start, item.start + offset), end: Math.min(range.end, item.end + offset) });
@@ -69,6 +79,8 @@ export function compactCapture(data: Capture, budget: number): Capture {
         background: [...presence.values()].flatMap(dominant), afk: dominant(data.afk), media: dominant(data.media), maxSampleSpan: step };
 }
 export function combineAnalyses(items: HistoryAnalysis[]): HistoryAnalysis {
+    // An entirely unrecorded range still has every standard metric, marked missing.
+    if (!items.length) return analyze(combineCaptures([], { start: 0, end: 1 }), { start: 0, end: 1 });
     const apps = new Map<string, HistoryAnalysis["apps"][number]>(), metrics: HistoryAnalysis["metrics"] = { ...items[0]?.metrics };
     for (const key of Object.keys(metrics))
         delete metrics[key as MetricKey];
@@ -115,7 +127,7 @@ export function combineAnalyses(items: HistoryAnalysis[]): HistoryAnalysis {
                 result.media.push({ ...m });
         }
     }
-    result.apps = [...apps.values()].sort((a, b) => b.active - a.active);
+    result.apps = [...apps.values()].map(app => ({ ...app, contexts: joinContexts(app.contexts) })).sort((a, b) => b.active - a.active);
     return result;
 }
 export function combineCaptures(items: Capture[], bounds: Range): Capture {
@@ -143,8 +155,18 @@ export function combineCaptures(items: Capture[], bounds: Range): Capture {
                 list.push({ ...item });
             presence.set(item.appId, list);
         }
+    const activity: Capture["activity"] = [];
+    for (const event of items.flatMap(d => d.activity).sort((a,b) => a.start - b.start)) {
+        const previous = activity.at(-1);
+        if (previous && previous.end === event.start && previous.appId === event.appId
+            && previous.windowId === event.windowId && previous.processInstanceId === event.processInstanceId
+            && previous.windowTitle === event.windowTitle) {
+            previous.end = event.end;
+            previous.contexts = joinContexts([...previous.contexts, ...event.contexts]);
+        } else activity.push({ ...event, contexts: joinContexts(event.contexts) });
+    }
     return { kind: "recorded", epoch: new Date(0).toISOString(), bounds, source: items.some(d => d.detailLevel) ? "Tracel recorded history · aggregated display" : "Tracel recorded history", samplePeriod: 2, maxSampleSpan: Math.max(6, ...items.map(d => d.maxSampleSpan ?? 6)),
         ...(items.some(d => d.detailLevel) ? { detailLevel: "aggregate" as const } : {}), apps: [...apps.values()], metricTracks: [...tracks.values()], metricOverrides: overrides,
-        metrics: items.flatMap(d => d.metrics).sort((a, b) => a.time - b.time), activity: items.flatMap(d => d.activity).sort((a, b) => a.start - b.start),
+        metrics: items.flatMap(d => d.metrics).sort((a, b) => a.time - b.time), activity,
         background: [...presence.values()].flat(), afk: items.flatMap(d => d.afk), media: items.flatMap(d => d.media), events: [] };
 }

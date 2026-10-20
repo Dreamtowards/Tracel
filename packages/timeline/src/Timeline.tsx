@@ -52,6 +52,7 @@ type Props = {
   selection: Range | null;
   mode: "select" | "pan";
   focus: string | null;
+  focusIds?: readonly string[];
   appearance: TimelineAppearance;
   palette?: TimelinePalette;
   renderTrackHeaders?: (headers: ReactElement) => ReactNode;
@@ -69,6 +70,7 @@ export function Timeline({
   selection,
   mode,
   focus,
+  focusIds,
   appearance,
   palette = defaultPalette,
   renderTrackHeaders,
@@ -351,8 +353,15 @@ export function Timeline({
         43200,
         DAY,
         DAY * 2,
+        DAY * 7,
+        DAY * 14,
+        DAY * 30,
+        DAY * 60,
+        DAY * 90,
+        DAY * 180,
+        DAY * 365,
       ];
-      const step = steps.find((s) => s >= span / (width / 95)) ?? DAY * 2;
+      const step = steps.find((s) => s >= span / (width / 95)) ?? Math.ceil(span / Math.max(1, width / 95) / DAY) * DAY;
       ctx.font = '10px "Segoe UI", "Microsoft YaHei UI", sans-serif';
       for (
         let t = Math.ceil(view.start / step) * step;
@@ -418,14 +427,14 @@ export function Timeline({
               if (event) {
                 ctx.fillStyle =
                   data.apps.find((a) => a.id === event.appId)!.color +
-                  (focus && focus !== event.appId ? "33" : "bb");
+                  (focus && focus !== event.appId && !focusIds?.includes(event.appId) ? "33" : "bb");
                 ctx.fillRect(px, y + pad, 4, height - pad * 2);
               }
             }
           } else if (row.kind === "app") {
             for (const event of appIntervals) {
               const app = data.apps.find((a) => a.id === event.appId)!;
-              ctx.globalAlpha = focus && focus !== app.id ? 0.22 : 1;
+              ctx.globalAlpha = focus && focus !== app.id && !focusIds?.includes(app.id) ? 0.22 : 1;
               const label =
                 appearance.durationLabels &&
                 x(event.end) - x(event.start) > 130
@@ -449,7 +458,7 @@ export function Timeline({
           } else {
             for (const event of intervals) {
               const app = data.apps.find((a) => a.id === event.appId)!;
-              ctx.globalAlpha = focus && focus !== app.id ? 0.22 : 1;
+              ctx.globalAlpha = focus && focus !== app.id && !focusIds?.includes(app.id) ? 0.22 : 1;
               for (const context of event.contexts)
                   rect(
                     context,
@@ -481,7 +490,7 @@ export function Timeline({
             const stripe = (height - pad * 2) / Math.max(1, presenceApps.length);
             presenceApps.forEach((app, index) => {
               const top = y + pad + index * stripe;
-              ctx.globalAlpha = focus && focus !== app.id ? 0.25 : 1;
+              ctx.globalAlpha = focus && focus !== app.id && !focusIds?.includes(app.id) ? 0.25 : 1;
               for (const lifetime of data.background.filter(
                 (b) => b.appId === app.id,
               ))
@@ -511,10 +520,10 @@ export function Timeline({
             const top = y + Math.max(3, pad),
               bottom = y + height - Math.max(2, pad),
               h = bottom - top;
-            // One min/max envelope per pixel preserves spikes without drawing every sample.
+            // One time-weighted value per pixel; the fill and outline use the same curve.
             const buckets = new Map<
               number,
-              { min: number; max: number; last: number }
+              { total: number; weight: number }
             >();
             for (const sample of metricSamples(data, key, view)) {
               const value = sample.values?.[key];
@@ -526,24 +535,16 @@ export function Timeline({
                 );
               for (let px = left; px <= right; px++) {
                 const old = buckets.get(px);
-                const low = sample.extrema?.[key]?.min ?? value, high = sample.extrema?.[key]?.max ?? value;
-                if (old) { old.min = Math.min(old.min, low); old.max = Math.max(old.max, high); old.last = value; }
-                else buckets.set(px, { min: low, max: high, last: value });
+                const weight = Math.max(0, Math.min(px + 1, x(sampleEnd(sample,data.samplePeriod))) - Math.max(px, x(sample.time)));
+                if (!weight) continue;
+                if (old) { old.total += value * weight; old.weight += weight; }
+                else buckets.set(px, { total: value * weight, weight });
               }
             }
             ctx.strokeStyle = info.color;
             ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (const [px, bucket] of buckets) {
-              ctx.moveTo(px, bottom - (bucket.min / info.max) * h);
-              ctx.lineTo(px, bottom - (bucket.max / info.max) * h);
-            }
-            ctx.globalAlpha = 0.35;
-            ctx.stroke();
-            ctx.globalAlpha = 1;
             ctx.setLineDash(key === "write" || key === "upload" || key.endsWith(":shared") || key === "charging" ? [5, 4] : []);
-            // The fill and outline share one path. The faint min/max whiskers
-            // above retain sub-pixel spikes without changing the filled curve.
+            // Peaks remain in exact statistics; no second envelope protrudes above the outline.
             const outline = new Path2D(), area = new Path2D();
             let run = new Path2D(), first = 0, last = 0, lastY = bottom;
             const finishRun = () => {
@@ -558,7 +559,7 @@ export function Timeline({
             };
             let previous = -2;
             for (const [px, bucket] of buckets) {
-              const py = bottom - (bucket.last / info.max) * h;
+              const py = bottom - Math.max(0, Math.min(1, bucket.total / bucket.weight / info.max)) * h;
               if (px !== previous + 1) {
                 finishRun();
                 run = new Path2D(); first = px;
@@ -583,13 +584,12 @@ export function Timeline({
       }
 
     };
-    // Keep the bitmap and React layout in the same painted frame.
     draw();
     window.addEventListener("resize", draw);
     return () => {
       window.removeEventListener("resize", draw);
     };
-  }, [data, view, tracks, width, totalHeight, focus, appearance, palette, duration, dateLabel, presenceApps, foregroundApps, viewport]);
+  }, [data, view, tracks, width, totalHeight, focus, focusIds, appearance, palette, duration, dateLabel, presenceApps, foregroundApps, viewport]);
 
   useEffect(() => {
     const element = canvas.current!;

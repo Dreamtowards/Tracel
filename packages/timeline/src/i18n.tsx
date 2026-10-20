@@ -14,7 +14,7 @@ function createLocale(locale: Locale, messages: Messages) {
   return {
     locale,
     t: (text: string, values?: Record<string, string | number>) => translate(locale, messages, text, values),
-    duration: (seconds: number) => locale === "en" ? formatDuration(seconds) : formatDuration(seconds).replace(/h/g, "小时").replace(/m/g, "分").replace(/s/g, "秒"),
+    duration: (seconds: number, compact = false) => locale === "en" ? formatDuration(seconds, compact) : formatDuration(seconds, compact).replace(/d/g, "天").replace(/h/g, "小时").replace(/m/g, "分").replace(/s/g, "秒"),
     dateLabel: (seconds: number) => locale === "en" ? formatDate(seconds) : `10月${8 + Math.floor(seconds / 86400)}日`,
   };
 }
