@@ -11,6 +11,7 @@ import type {
 } from "../types";
 
 const journeyTypes: Record<EventType, JourneyType> = {
+  custom: "custom",
   visitor_joined: "session_start",
   page_view: "page_view",
   navigation: "navigation",

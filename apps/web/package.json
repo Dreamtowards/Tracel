@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/prepare-map-worker.mjs",
+    "predev": "npm run build --workspace @tracel/radar-tracker && node scripts/prepare-map-worker.mjs",
     "dev": "next dev --hostname 127.0.0.1",
-    "prebuild": "node scripts/prepare-map-worker.mjs",
+    "prebuild": "npm run build --workspace @tracel/radar-tracker && node scripts/prepare-map-worker.mjs",
     "build": "next build",
     "deploy": "npm run build && wrangler pages deploy out --project-name tracel --branch main",
     "typecheck": "tsc --noEmit",
@@ -18,6 +18,8 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.4.0",
+    "@supabase/supabase-js": "^2.118.0",
+    "@tracel/timeline": "*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
@@ -28,7 +30,7 @@
     "tailwind-merge": "^3.3.1",
     "three": "^0.180.0",
     "zustand": "^5.0.8",
-    "@tracel/timeline": "*"
+    "@tracel/radar-contracts": "*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.14",

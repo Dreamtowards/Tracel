@@ -61,7 +61,7 @@ function outlineStyle(): StyleSpecification {
 function cityGroups(visitors: Record<string, Visitor>, selectedId?: string) {
   const groups = new Map<string, Visitor[]>();
   for (const visitor of Object.values(visitors)) {
-    if (visitor.status === "offline") continue;
+    if (visitor.status === "offline" || visitor.location.available === false) continue;
     const key = `${visitor.location.countryCode}:${visitor.location.city}`;
     groups.set(key, [...(groups.get(key) ?? []), visitor]);
   }
@@ -153,10 +153,10 @@ function geographicActivity() {
     return cities.get(key)!;
   };
   for (const visitor of Object.values(state.visitors))
-    if (visitor.status !== "offline") touch(visitor.location).visitors++;
+    if (visitor.status !== "offline" && visitor.location.available !== false) touch(visitor.location).visitors++;
   for (const record of state.trafficRecords)
     if (
-      record.location &&
+      record.location && record.location.available !== false &&
       record.timestamp >= state.now - 600000 &&
       record.timestamp <= state.now &&
       (record.type === "page_view" || record.type === "navigation")
@@ -889,7 +889,7 @@ export default function FlatMap({
 
   useEffect(() => {
     const visitor = useRadarStore.getState().selectedVisitor;
-    if (!visitor || !map.current) return;
+    if (!visitor || visitor.location.available === false || !map.current) return;
     map.current.resize();
     map.current.easeTo({
       center: [visitor.location.longitude, visitor.location.latitude],

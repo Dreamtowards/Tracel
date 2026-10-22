@@ -1,5 +1,6 @@
 export type VisitorStatus = "online" | "idle" | "offline";
 export interface Location {
+  available?: boolean;
   city: string;
   country: string;
   countryCode: string;
@@ -12,6 +13,7 @@ export interface Page {
   title: string;
 }
 export type JourneyType =
+  | "custom"
   | "session_start"
   | "page_view"
   | "navigation"
@@ -19,6 +21,8 @@ export type JourneyType =
   | "reactivated"
   | "session_end";
 export interface JourneyEvent extends Page {
+  name?: string;
+  properties?: Record<string, string | number | boolean | null>;
   id: string;
   visitorId: string;
   timestamp: number;
@@ -27,6 +31,7 @@ export interface JourneyEvent extends Page {
   referrer?: string;
 }
 export interface Visitor {
+  anonymousId?: string;
   id: string;
   location: Location;
   client: {
@@ -53,6 +58,7 @@ export interface Visitor {
   journey: JourneyEvent[];
 }
 export type EventType =
+  | "custom"
   | "visitor_joined"
   | "page_view"
   | "navigation"

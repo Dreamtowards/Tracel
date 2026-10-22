@@ -1,0 +1,17 @@
+{
+  "name": "@tracel/radar-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "build": "node build.mjs",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "example": "node scripts/serve-example.mjs"
+  },
+  "dependencies": {
+    "@tracel/radar-contracts": "*"
+  }
+}

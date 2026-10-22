@@ -28,6 +28,7 @@ import {
 import type { JourneyType } from "@/radar/types";
 
 const journeyLabels: Record<JourneyType, string> = {
+  custom: "Custom event",
   session_start: "Session started",
   page_view: "Page view",
   navigation: "Navigation",
@@ -36,6 +37,7 @@ const journeyLabels: Record<JourneyType, string> = {
   session_end: "Session ended",
 };
 const journeyIcons = {
+  custom: Circle,
   session_start: Circle,
   page_view: CornerDownRight,
   navigation: CornerDownRight,
@@ -90,14 +92,19 @@ export function VisitorPanel() {
         <dl className="visitor-summary">
           <div>
             <dt>Visits</dt>
-            <dd>{visitor.visitCount ?? 1}</dd>
+            <dd>
+              {visitor.anonymousId
+                ? "Not aggregated"
+                : (visitor.visitCount ?? 1)}
+            </dd>
           </div>
           <div title="Previous sessions plus this session's elapsed time, including idle time">
             <dt>Total time</dt>
             <dd>
               {totalDuration(
                 (visitor.previousSessionDurationMs ?? 0) +
-                  sessionNow - visitor.sessionStartedAt,
+                  sessionNow -
+                  visitor.sessionStartedAt,
               )}
             </dd>
           </div>
@@ -106,7 +113,9 @@ export function VisitorPanel() {
             <dd>{duration(sessionNow - visitor.sessionStartedAt)}</dd>
           </div>
           <div>
-            <dt>First visit</dt>
+            <dt>
+              {visitor.anonymousId ? "Session first seen" : "First visit"}
+            </dt>
             <dd>
               <time
                 dateTime={new Date(visitor.firstSeen).toISOString()}
@@ -126,10 +135,12 @@ export function VisitorPanel() {
             {visitor.location.city}
             <span>{visitor.location.country}</span>
           </div>
-          <div className="location-coordinates mono">
-            <span>{coordinate(visitor.location.latitude, true)}</span>
-            <span>{coordinate(visitor.location.longitude, false)}</span>
-          </div>
+          {visitor.location.available !== false && (
+            <div className="location-coordinates mono">
+              <span>{coordinate(visitor.location.latitude, true)}</span>
+              <span>{coordinate(visitor.location.longitude, false)}</span>
+            </div>
+          )}
           <p className="secondary mono">{visitor.location.timezone}</p>
         </section>
         <section className="detail-section">
@@ -149,30 +160,32 @@ export function VisitorPanel() {
               {client.os} {client.osVersion}
             </span>
           </div>
-          <dl className="client-properties">
-            <div>
-              <dt>Device</dt>
-              <dd>{client.device}</dd>
-            </div>
-            <div>
-              <dt>Screen</dt>
-              <dd>
-                {client.screenWidth} × {client.screenHeight}
-              </dd>
-            </div>
-            <div>
-              <dt>Viewport</dt>
-              <dd>
-                {client.viewportWidth} × {client.viewportHeight}
-              </dd>
-            </div>
-            <div>
-              <dt>Pixel ratio / Language</dt>
-              <dd>
-                {client.devicePixelRatio} / {client.language}
-              </dd>
-            </div>
-          </dl>
+          {!visitor.anonymousId && (
+            <dl className="client-properties">
+              <div>
+                <dt>Device</dt>
+                <dd>{client.device}</dd>
+              </div>
+              <div>
+                <dt>Screen</dt>
+                <dd>
+                  {client.screenWidth} × {client.screenHeight}
+                </dd>
+              </div>
+              <div>
+                <dt>Viewport</dt>
+                <dd>
+                  {client.viewportWidth} × {client.viewportHeight}
+                </dd>
+              </div>
+              <div>
+                <dt>Pixel ratio / Language</dt>
+                <dd>
+                  {client.devicePixelRatio} / {client.language}
+                </dd>
+              </div>
+            </dl>
+          )}
         </section>
         <section className="detail-section acquisition-section">
           <div>
@@ -225,18 +238,22 @@ export function VisitorPanel() {
                     )}
                   </div>
                   <strong className={isPage ? "mono" : ""}>
-                    {isPage ? event.pathname : journeyLabels[event.type]}
+                    {isPage
+                      ? event.pathname
+                      : event.name || journeyLabels[event.type]}
                   </strong>
                   <span className="journey-description">
-                    {isPage
-                      ? event.title
-                      : event.type === "session_start"
-                        ? visitor.acquisition.source
-                        : event.type === "idle"
-                          ? "No recent activity"
-                          : event.type === "reactivated"
-                            ? "Activity resumed"
-                            : "Visitor disconnected"}
+                    {event.type === "custom"
+                      ? JSON.stringify(event.properties || {})
+                      : isPage
+                        ? event.title
+                        : event.type === "session_start"
+                          ? visitor.acquisition.source
+                          : event.type === "idle"
+                            ? "No recent activity"
+                            : event.type === "reactivated"
+                              ? "Activity resumed"
+                              : "Visitor disconnected"}
                   </span>
                   {next && (
                     <span className="journey-dwell mono">

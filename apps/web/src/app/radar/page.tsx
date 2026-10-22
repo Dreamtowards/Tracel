@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import { RadarView } from "@/components/radar/RadarView";
+import { RadarConsole } from "@/radar/RadarConsole";
 export const metadata: Metadata = {
-  title: "Tracel Radar — Live website observation demo",
-  description: "Explore simulated visitors, events and journeys on an interactive map and globe. An independent Tracel experiment.",
+  title: "Radar — 网站访问统计",
+  description: "查看真实网站流量、匿名访客旅程，并把访问统计嵌入自己的网站。",
 };
-export default function RadarPage() { return <RadarView />; }
+export default function RadarPage() {
+  return <RadarConsole />;
+}

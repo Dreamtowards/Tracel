@@ -1,0 +1,14 @@
+{
+  "name": "@tracel/radar-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@tracel/radar-contracts": "*"
+  }
+}

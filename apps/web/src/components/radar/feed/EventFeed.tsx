@@ -16,6 +16,7 @@ import type { EventType, RadarEvent } from "@/radar/types";
 import { useLayoutEffect, useRef, useState } from "react";
 
 export const eventLabels: Record<EventType, string> = {
+  custom: "CUSTOM EVENT",
   visitor_joined: "VISITOR ARRIVED",
   page_view: "PAGE VIEW",
   navigation: "NAVIGATION",
@@ -24,6 +25,7 @@ export const eventLabels: Record<EventType, string> = {
   visitor_left: "VISITOR LEFT",
 };
 const eventIcons = {
+  custom: ScanLine,
   visitor_joined: ScanLine,
   page_view: ArrowUpRight,
   navigation: CornerDownRight,
@@ -197,7 +199,7 @@ export function EventFeed() {
       <div className="feed-footer">
         <span className={`status-dot ${paused ? "paused" : ""}`} />
         {paused ? "STREAM PAUSED" : "LISTENING FOR EVENTS"}
-        <span className="mono">LOCAL DEMO</span>
+        <span className="mono">EVENT STREAM</span>
       </div>
     </aside>
   );

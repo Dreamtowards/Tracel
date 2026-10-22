@@ -23,3 +23,8 @@ apps/web/public/downloads/*.msi
 *.sqlite3
 *.sqlite3-*
 .wrangler/
+
+.dev.vars*
+apps/web/public/radar/tracker.js
+supabase/.temp/
+supabase/.branches/

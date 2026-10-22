@@ -1,0 +1,20 @@
+project_id = "tracel-radar"
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+[db]
+port = 54322
+major_version = 17
+[studio]
+enabled = true
+port = 54323
+[inbucket]
+enabled = true
+port = 54324
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000/radar"
+additional_redirect_urls = ["http://localhost:3000/radar", "http://127.0.0.1:3000/radar"]

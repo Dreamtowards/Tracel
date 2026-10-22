@@ -28,6 +28,10 @@ import { useSimulation } from "@/radar/use-simulation";
 import { themePalettes, type ThemeColor } from "@/radar/theme";
 import { time, localTimeZone } from "@/radar/format";
 
+import type { Site } from "@tracel/radar-contracts";
+import { useApiSource } from "@/radar/data-source/use-api-source";
+import consoleStyles from "@/radar/console.module.css";
+
 const demoSites = [
   { domain: "elytra.dev", seed: 42 },
   { domain: "docs.elytra.dev", seed: 137 },
@@ -68,9 +72,14 @@ function Clock() {
   );
 }
 
-export function RadarView() {
+export function RadarView({
+  source,
+}: {
+  source?: { site: Site; token: string };
+}) {
   const [siteIndex, setSiteIndex] = useState(0);
-  const { reset, spawn } = useSimulation(demoSites[siteIndex].seed);
+  const { reset, spawn } = useSimulation(demoSites[siteIndex].seed, !source);
+  const live = useApiSource(source);
   const themeColor = useRadarStore((state) => state.themeColor);
   const setThemeColor = useRadarStore((state) => state.setThemeColor);
   const palette = themePalettes[themeColor];
@@ -136,130 +145,146 @@ export function RadarView() {
         <a className="brand" href="/" aria-label="Tracel home" title="Tracel">
           <span className="brand-symbol">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 3L22 21H2L12 3Z" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="M12 3L22 21H2L12 3Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
             </svg>
           </span>
         </a>
         <div className="site-identity">
-          <select
-            className="site-select"
-            aria-label="Switch website"
-            value={siteIndex}
-            style={{ width: `${demoSites[siteIndex].domain.length + 4}ch` }}
-            onChange={(event) => {
-              setSiteIndex(Number(event.target.value));
-              setResetKey((value) => value + 1);
-            }}
-          >
-            {demoSites.map((site, index) => (
-              <option key={site.domain} value={index}>{site.domain}</option>
-            ))}
-          </select>
-          <ChevronDown size={11} aria-hidden="true" />
+          {source ? (
+            <span>{source.site.name}</span>
+          ) : (
+            <>
+              <select
+                className="site-select"
+                aria-label="Switch website"
+                value={siteIndex}
+                style={{ width: `${demoSites[siteIndex].domain.length + 4}ch` }}
+                onChange={(event) => {
+                  setSiteIndex(Number(event.target.value));
+                  setResetKey((value) => value + 1);
+                }}
+              >
+                {demoSites.map((site, index) => (
+                  <option key={site.domain} value={index}>
+                    {site.domain}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={11} aria-hidden="true" />
+            </>
+          )}
         </div>
         <div className="header-right">
-          <span className="demo-badge">Simulated</span>
+          <span className="demo-badge">
+            {source ? "Real traffic" : "Simulated"}
+          </span>
           <span className="header-live">
             <span className={`status-dot ${paused ? "paused" : ""}`} />
             {paused ? "Paused" : "Live"}
           </span>
           <Clock />
-          <div className="simulation-controls">
-            <Button
-              variant="ghost"
-              aria-label={paused ? "Resume simulation" : "Pause simulation"}
-              onClick={() => setPaused(!paused)}
-            >
-              {paused ? <Play size={12} /> : <Pause size={12} />}
-              <span>{paused ? "Resume" : "Pause"}</span>
-            </Button>
-            <span className="control-separator" />
-            <div className="speed-controls" aria-label="Simulation speed">
-              {[1, 5, 20].map((value) => (
-                <button
-                  key={value}
-                  className={speed === value ? "active" : ""}
-                  aria-pressed={speed === value}
-                  aria-label={`Simulation speed ${value}×`}
-                  onClick={() => setSpeed(value)}
-                >
-                  {value}×
-                </button>
-              ))}
-            </div>
-            <span className="control-separator" />
-            <div className="simulation-menu">
+          {!source && (
+            <div className="simulation-controls">
               <Button
                 variant="ghost"
-                size="icon"
-                aria-label="Display and simulation settings"
-                title="Display and simulation settings"
-                aria-expanded={controlsOpen}
-                onClick={() => setControlsOpen(!controlsOpen)}
+                aria-label={paused ? "Resume simulation" : "Pause simulation"}
+                onClick={() => setPaused(!paused)}
               >
-                <SlidersHorizontal size={14} />
+                {paused ? <Play size={12} /> : <Pause size={12} />}
+                <span>{paused ? "Resume" : "Pause"}</span>
               </Button>
-              {controlsOpen && (
-                <div className="simulation-popover">
-                  <span className="eyebrow">Theme color</span>
-                  <div
-                    className="theme-options"
-                    role="group"
-                    aria-label="Theme color"
+              <span className="control-separator" />
+              <div className="speed-controls" aria-label="Simulation speed">
+                {[1, 5, 20].map((value) => (
+                  <button
+                    key={value}
+                    className={speed === value ? "active" : ""}
+                    aria-pressed={speed === value}
+                    aria-label={`Simulation speed ${value}×`}
+                    onClick={() => setSpeed(value)}
                   >
-                    {(Object.keys(themePalettes) as ThemeColor[]).map(
-                      (color) => (
-                        <button
-                          key={color}
-                          aria-pressed={themeColor === color}
-                          onClick={() => {
-                            setThemeColor(color);
-                            try {
-                              localStorage.setItem("tracel-theme", color);
-                            } catch {}
-                          }}
-                        >
-                          <i
-                            style={{ background: themePalettes[color].live }}
-                          />
-                          {themePalettes[color].label}
-                        </button>
-                      ),
-                    )}
+                    {value}×
+                  </button>
+                ))}
+              </div>
+              <span className="control-separator" />
+              <div className="simulation-menu">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Display and simulation settings"
+                  title="Display and simulation settings"
+                  aria-expanded={controlsOpen}
+                  onClick={() => setControlsOpen(!controlsOpen)}
+                >
+                  <SlidersHorizontal size={14} />
+                </Button>
+                {controlsOpen && (
+                  <div className="simulation-popover">
+                    <span className="eyebrow">Theme color</span>
+                    <div
+                      className="theme-options"
+                      role="group"
+                      aria-label="Theme color"
+                    >
+                      {(Object.keys(themePalettes) as ThemeColor[]).map(
+                        (color) => (
+                          <button
+                            key={color}
+                            aria-pressed={themeColor === color}
+                            onClick={() => {
+                              setThemeColor(color);
+                              try {
+                                localStorage.setItem("tracel-theme", color);
+                              } catch {}
+                            }}
+                          >
+                            <i
+                              style={{ background: themePalettes[color].live }}
+                            />
+                            {themePalettes[color].label}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                    <span className="eyebrow simulation-tools-label">
+                      Simulation
+                    </span>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        spawn();
+                        setControlsOpen(false);
+                      }}
+                    >
+                      <Plus size={14} />
+                      Spawn visitor
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        reset();
+                        setControlsOpen(false);
+                        setResetKey((value) => value + 1);
+                      }}
+                    >
+                      <RotateCcw size={14} />
+                      Reset simulation
+                    </Button>
+                    <p>
+                      Speed changes simulated time.
+                      <br />
+                      Local clock remains real time.
+                    </p>
                   </div>
-                  <span className="eyebrow simulation-tools-label">
-                    Simulation
-                  </span>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      spawn();
-                      setControlsOpen(false);
-                    }}
-                  >
-                    <Plus size={14} />
-                    Spawn visitor
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      reset();
-                      setControlsOpen(false);
-                      setResetKey((value) => value + 1);
-                    }}
-                  >
-                    <RotateCcw size={14} />
-                    Reset simulation
-                  </Button>
-                  <p>
-                    Speed changes simulated time.
-                    <br />
-                    Local clock remains real time.
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -271,6 +296,15 @@ export function RadarView() {
           </Button>
         </div>
       </header>
+      {source && (
+        <div className={consoleStyles.banner} role="status">
+          {live.error
+            ? `连接失败：${live.error}`
+            : live.loading
+              ? "正在加载真实流量…"
+              : "最近 200 条事件 / 会话 · 图表为列表样本 · 完整统计请返回后台 · 位置仅为粗粒度估计"}
+        </div>
+      )}
       <div className="workspace">
         <main
           className="globe-view"
@@ -468,12 +502,17 @@ export function RadarView() {
             }
           }}
         />
-        <TrafficChart />
+        <TrafficChart real={!!source} />
         <AudienceRankings />
       </div>
 
       <span className="sr-only" role="status" aria-live="polite">
-        {paused ? "Simulation paused" : "Simulation running"}.{" "}
+        {source
+          ? "Real traffic sample"
+          : paused
+            ? "Simulation paused"
+            : "Simulation running"}
+        .{" "}
         {selected
           ? `Selected visitor ${selected.id.slice(0, 6)} in ${selected.location.city}.`
           : "No visitor selected."}

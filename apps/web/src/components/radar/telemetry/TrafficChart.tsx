@@ -10,7 +10,7 @@ const LEFT = 30,
   TOP = 10,
   BOTTOM = 24;
 
-export function TrafficChart() {
+export function TrafficChart({ real = false }: { real?: boolean }) {
   const plot = useRef<HTMLDivElement>(null);
   const [H, setPlotHeight] = useState(186);
   const [W, setPlotWidth] = useState(760);
@@ -105,7 +105,7 @@ export function TrafficChart() {
           <i className="visitors-key" />
           Visitors / 15s
         </button>
-        <span>Local · simulated time</span>
+        <span>{real ? "Local · recent event sample" : "Local · simulated time"}</span>
       </div>
       <div
         className="traffic-plot"

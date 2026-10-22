@@ -142,7 +142,7 @@ function VisitorLayer({ reducedMotion }: { reducedMotion: boolean }) {
   const visitorsRecord = useRadarStore((state) => state.visitors);
   const selected = useRadarStore((state) => state.selectedVisitor);
   const visitors = useMemo(
-    () => Object.values(visitorsRecord).slice(0, 200),
+    () => Object.values(visitorsRecord).filter(v => v.location.available !== false).slice(0, 200),
     [visitorsRecord],
   );
   const placements = useMemo(() => {
@@ -384,7 +384,7 @@ function Camera({
   const lastSelectedId = selected?.id;
   useEffect(() => {
     const state = useRadarStore.getState();
-    if (state.selectedVisitor)
+    if (state.selectedVisitor && state.selectedVisitor.location.available !== false)
       target.current = position(
         state.selectedVisitor.location.latitude,
         state.selectedVisitor.location.longitude,
@@ -486,7 +486,7 @@ export default function Globe({
   const [visible, setVisible] = useState(true);
   const visitorRecord = useRadarStore((state) => state.visitors);
   const selected = useRadarStore((state) => state.selectedVisitor);
-  const labelVisitors = useMemo(() => (selected ? [selected] : []), [selected]);
+  const labelVisitors = useMemo(() => (selected && selected.location.available !== false ? [selected] : []), [selected]);
   const labelElements = useRef(new Map<string, HTMLSpanElement>());
   useEffect(() => {
     const update = () => setVisible(!document.hidden);

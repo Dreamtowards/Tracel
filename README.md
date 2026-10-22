@@ -73,4 +73,4 @@ npm run dev
 - [桌面端与发布说明](apps/desktop/README.md)
 - [架构](docs/architecture.md) · [数据模型](docs/data-model.md) · [共享时间轴组件](packages/timeline/README.md)
 
-仓库还保留了早期的 **Radar** 地球仪与地图演示，位于网站 `/radar` 路径，使用模拟访客数据。它是独立的网页体验；Tracel 桌面端不包含 Radar。相关说明见 [Radar 文档](apps/web/README.md)。
+**Radar** 网站统计 MVP 位于 `/radar`，使用独立 Cloudflare Worker 与 Supabase；配置后可采集网页访问、自定义事件和匿名访客旅程，并公开嵌入汇总组件。原模拟地图与地球仪保留在 `/radar/demo`。它是独立的网页体验；Tracel 桌面端不包含 Radar。接入步骤见 [Radar 开发指南](docs/radar-development.md)。

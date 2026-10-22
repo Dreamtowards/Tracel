@@ -5,11 +5,14 @@
   "workspaces": [
     "apps/web",
     "apps/desktop",
-    "packages/timeline"
+    "packages/timeline",
+    "apps/radar-worker",
+    "packages/radar-contracts",
+    "packages/radar-tracker"
   ],
   "scripts": {
     "dev": "npm run dev --workspace @tracel/web --",
-    "build": "npm run build:web && npm run build:desktop",
+    "build": "npm run build:web && npm run build:desktop && npm run build --workspace @tracel/radar-worker",
     "dev:web": "npm run dev --workspace @tracel/web --",
     "build:web": "npm run build --workspace @tracel/web",
     "deploy": "npm run deploy --workspace @tracel/web",
@@ -27,6 +30,12 @@
     "test:core": "cargo test --package tracel-agent --package tracel-core --package tracel-storage --package tracel-query",
     "agent": "cargo run --package tracel-agent",
     "verify": "npm run typecheck && npm test && npm run build && npm run check:rust && npm run test:rust",
-    "icons:generate": "node apps/desktop/scripts/generate-icons.mjs"
+    "icons:generate": "node apps/desktop/scripts/generate-icons.mjs",
+    "dev:radar": "npm run dev --workspace @tracel/radar-worker"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "esbuild": "^0.28.2",
+    "prettier": "^3.6.2"
   }
 }

@@ -1,0 +1,12 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Radar 接入测试网站</title>
+<style>body{font:16px system-ui;max-width:760px;margin:40px auto;padding:20px;background:#0c1520;color:#dce8f4}input{display:block;width:95%;margin:6px 0 18px;padding:10px}button{padding:12px;margin:5px}iframe{border:0;width:340px;height:160px;max-width:100%}code{overflow-wrap:anywhere}label{display:block}</style>
+<h1>Radar 真实接入测试站</h1><p>分别使用 localhost 和 127.0.0.1 打开本页，配合两个站点 key 验证隔离。仅使用合成测试信息。</p>
+<label>站点 key<input id="site" placeholder="在 Radar 后台复制"></label><label>Radar 网站地址<input id="web" value="http://127.0.0.1:3000"></label><label>API 地址<input id="api" value="http://127.0.0.1:8787"></label>
+<button id="install">同意并加载脚本</button><button id="navigate">SPA 导航</button><button id="custom">触发 demo_clicked 事件</button><button id="stop">停止采集</button><button id="start">恢复采集</button><button id="embed">加载公开组件</button><p id="status" role="status">尚未加载采集脚本</p><div id="widget"></div>
+<script>
+const get=id=>document.getElementById(id);let route=0;
+get('install').onclick=()=>{if(window.radar)return;const script=document.createElement('script');script.async=true;script.src=get('web').value.replace(/\/$/,'')+'/radar/tracker.js';script.dataset.site=get('site').value.trim();script.dataset.endpoint=get('api').value.replace(/\/$/,'')+'/v1/collect';script.onload=()=>get('status').textContent='采集已启动，请在 Network 和 Radar 后台核对';script.onerror=()=>get('status').textContent='脚本加载失败';document.head.append(script);};
+get('navigate').onclick=()=>{history.pushState({},'',`/demo-page-${++route}?ignored=secret`);get('status').textContent='已导航到 '+location.pathname;};
+get('custom').onclick=()=>window.radar?.track('demo_clicked',{count:1,success:true});get('stop').onclick=()=>window.radar?.stop();get('start').onclick=()=>window.radar?.start();
+get('embed').onclick=()=>{const frame=document.createElement('iframe');frame.title='公开网站统计';frame.src=get('web').value.replace(/\/$/,'')+'/radar/embed?site='+encodeURIComponent(get('site').value.trim());get('widget').replaceChildren(frame);};
+</script></html>
