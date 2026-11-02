@@ -17,7 +17,7 @@ function Download() {
 }
 const sources = [
   { icon: Layers3, name: "应用与窗口", details: "前台应用 · 窗口标题 · 桌面应用存在状态 · 空闲时段", color: "#b8a2dc" },
-  { icon: Cpu, name: "系统与性能", details: "CPU 与频率 · RAM · GPU 与引擎 · 专用 / 共享显存", color: "#83b8c5" },
+  { icon: Cpu, name: "系统与性能", details: "CPU 与频率 · RAM · GPU 总利用率 · 专用 / 共享显存", color: "#83b8c5" },
   { icon: Waves, name: "网络与磁盘", details: "物理网络收发速率 · 物理磁盘读写速率", color: "#bca2ce" },
   { icon: AudioLines, name: "音频与媒体", details: "麦克风电平 · 输出电平 · 媒体标题 · 播放与暂停", color: "#a6b5d0" },
   { icon: BatteryMedium, name: "电池与供电", details: "电量百分比 · 插电状态 · 充电状态", color: "#d1b781" },
@@ -25,9 +25,10 @@ const sources = [
 const faqs = [
   ["需要安装吗？支持哪些系统？", <>下载 Windows x64 的 EXE 后直接运行，无需安装器。需要 Microsoft Edge WebView2 Runtime；如果电脑中没有，请先从 <a href="https://developer.microsoft.com/en-us/microsoft-edge/webview2/">Microsoft 官网</a>安装。当前没有 macOS、Linux 或移动版。</>],
   ["数据会上传吗？可以关闭采集吗？", <>桌面活动记录保存在本机，不需要账号，也没有活动数据的云端上传。首次启动默认关闭采集；右键轨道表头可控制总开关和各类来源。窗口标题可能包含文档名称，请按需要选择是否记录。</>],
-  ["关闭客户端以后，还会继续记录吗？", <>当前退出客户端就会停止采集，已保存的历史保留。独立后台服务和自动启动还未实现。</>],
-  ["时间轴可以放得多大？数据有多精确？", <>支持连续缩放，最小可见范围约两秒；常规采集间隔约两秒，放大不会补出采样之间的事件。原生历史目前按天加载；在线演示可以浏览多天示例数据。</>],
+  ["关闭客户端以后，还会继续记录吗？", <>当前退出客户端就会停止采集，已保存的历史保留。设置中可以选择登录 Windows 时启动；关闭后不会在后台继续采集。</>],
+  ["时间轴可以放得多大？数据有多精确？", <>支持连续缩放，最小可见范围约两秒，上限约 5000 小时；常规采集间隔约两秒，放大不会补出采样之间的事件。原生历史可以跨天连续查看。在线演示可以浏览多天示例数据。</>],
   ["能记录浏览器网址、所有后台程序吗？", <>当前记录前台窗口标题，不提取浏览器 URL 或文件内容。应用存在状态覆盖带桌面窗口的应用，包括最小化窗口，并不是完整的后台进程或服务清单。媒体信息和 GPU 指标取决于应用和系统驱动的支持。</>],
+  ["历史文件会一直增长吗？升级会影响旧存档吗？", <>数值采用无损压缩，保留读数、峰值和范围统计；GPU 历史保留总利用率与显存，不再保存各引擎明细。文件仍会随记录时长增长，目前不会自动删除历史或升级备份。升级旧档前会自动创建完整备份，升级后的存档需要 0.2.24 或更新版本读取。空间回收方法见 <a href="https://github.com/Dreamtowards/Tracel/releases/tag/v0.2.24">0.2.24 发布说明</a>。</>],
 ] as const;
 
 export default function Home() {
@@ -61,8 +62,8 @@ export default function Home() {
       <section id="features" className={`${s.section} ${s.container}`} aria-labelledby="features-title">
         <div className={s.sectionHeading}><div><p className={s.eyebrow}>02 / EXPLORE YOUR TIME</p><h2 id="features-title">让线索，出现在同一个时间位置。</h2></div><a className={s.textLink} href="/timeline">打开交互演示<ArrowUpRight size={14} /></a></div>
         <div className={s.featureGrid}>
-          <article className={s.feature}><Layers3 size={21} /><h3>一条时间轴，更多上下文</h3><p>应用、窗口、性能和播放状态沿时间对齐。展开应用看上下文，展开 GPU 看引擎，把分散的线索放在一起。</p><div className={s.miniLanes} aria-hidden="true"><div><span>Code</span><i style={{ left: "25%", width: "40%", background: "#a99bc5" }} /><i style={{ left: "78%", width: "20%", background: "#a99bc5" }} /></div><div><span>Browser</span><i style={{ left: "65%", width: "13%", background: "#8da9b8" }} /></div><div><span>CPU</span><svg viewBox="0 0 220 35" preserveAspectRatio="none"><path d="M0 30L12 27L21 29L35 23L43 26L51 6L61 8L70 2L79 20L91 25L106 20L120 26L130 12L141 18L150 9L161 29L175 22L189 27L205 19L220 24" /></svg></div></div></article>
-          <article className={s.feature}><Maximize2 size={21} /><h3>从一天，到几秒钟</h3><p>连续缩放、平移，自己决定看多大的范围、追到多细。原生历史按天查看，放大后仍保留真实的采样边界。</p><div className={s.zoomIllustration} aria-hidden="true"><div><span>一天</span><span>一小时</span><span>几秒钟</span></div><div className={s.zoomLine}>{Array.from({length:13},(_,i)=><i key={i} />)}</div><p><Maximize2 size={14} />细节，由你决定</p></div></article>
+          <article className={s.feature}><Layers3 size={21} /><h3>一条时间轴，更多上下文</h3><p>应用、窗口、性能和播放状态沿时间对齐。展开应用看上下文，对照各显卡的利用率与显存，把分散的线索放在一起。</p><div className={s.miniLanes} aria-hidden="true"><div><span>Code</span><i style={{ left: "25%", width: "40%", background: "#a99bc5" }} /><i style={{ left: "78%", width: "20%", background: "#a99bc5" }} /></div><div><span>Browser</span><i style={{ left: "65%", width: "13%", background: "#8da9b8" }} /></div><div><span>CPU</span><svg viewBox="0 0 220 35" preserveAspectRatio="none"><path d="M0 30L12 27L21 29L35 23L43 26L51 6L61 8L70 2L79 20L91 25L106 20L120 26L130 12L141 18L150 9L161 29L175 22L189 27L205 19L220 24" /></svg></div></div></article>
+          <article className={s.feature}><Maximize2 size={21} /><h3>从一天，到几秒钟</h3><p>连续缩放、平移，自己决定看多大的范围、追到多细。原生历史可以跨天回看，放大后仍保留真实的采样边界。</p><div className={s.zoomIllustration} aria-hidden="true"><div><span>一天</span><span>一小时</span><span>几秒钟</span></div><div className={s.zoomLine}>{Array.from({length:13},(_,i)=><i key={i} />)}</div><p><Maximize2 size={14} />细节，由你决定</p></div></article>
           <article className={s.feature}><MousePointer2 size={21} /><h3>选中一段，就分析这一段</h3><p>拖选一个区间，查看应用与分类排行、性能统计、媒体记录。没有选区时，就分析当前可见的时间范围。</p><div className={s.miniStats}><div><span>Visual Studio Code</span><span>56%</span></div><i style={{ width: "56%" }} /><div><span>Microsoft Edge</span><span>28%</span></div><i style={{ width: "28%", background: "#8da9b8" }} /><small>示意数据 · 随选择范围更新</small></div></article>
         </div>
         <div className={s.analysisShowcase}><div><span className={s.detailLabel}>SELECT → UNDERSTAND</span><h3>把一个下午，<br />变成可以回答的问题。</h3><p>那段时间在用什么应用？机器什么时候忙起来？听了什么？选中感兴趣的一段，沿着线索回头看看。</p><a className={s.textLink} href="/timeline">试试拖选时间段<ArrowRight size={16} /></a></div><figure><img src="/images/tracel-selection.png" width={1600} height={1100} loading="lazy" alt="使用示例数据演示时间轴选区，右侧分析随选定范围更新。" /><figcaption>真实桌面界面 · 使用示例数据展示选区分析</figcaption></figure></div>
