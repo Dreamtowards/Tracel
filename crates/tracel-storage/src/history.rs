@@ -73,7 +73,8 @@ fn cpu_preview(db: &Connection, start: u64, end: u64) -> Result<Vec<HistoryCpuBu
     let step = (end - start).div_ceil(BIN_COUNT).max(1);
     let mut bins: Vec<CpuBin> = (0..BIN_COUNT).map(|_| CpuBin::default()).collect();
     // CPU measures the preceding confirmed interval, bounded to six seconds like Timeline.
-    let mut statement = db.prepare("SELECT captured_at_ms,interval_start_ms,cpu_percent FROM system_samples WHERE captured_at_ms>?1 AND captured_at_ms<?2 AND cpu_percent IS NOT NULL ORDER BY interval_start_ms,captured_at_ms,id").map_err(|e| e.to_string())?;
+    let mut statement = db.prepare("SELECT captured_at_ms,interval_start_ms,cpu_percent,id FROM system_samples WHERE captured_at_ms>?1 AND captured_at_ms<?2 ORDER BY interval_start_ms,captured_at_ms,id").map_err(|e| e.to_string())?;
+    let mut reader = super::compact::Reader::new(db);
     let mut rows = statement
         .query(params![
             start as i64,
@@ -87,7 +88,10 @@ fn cpu_preview(db: &Connection, start: u64, end: u64) -> Result<Vec<HistoryCpuBu
             .map_err(|e| e.to_string())?
             .filter(|s| *s >= 0)
             .map(|s| s as u64);
-        let value: f64 = row.get(2).map_err(|e| e.to_string())?;
+        let id: i64 = row.get(3).map_err(|e| e.to_string())?;
+        let Some(value) = reader.cpu(id as u64, row.get(2).map_err(|e| e.to_string())?)? else {
+            continue;
+        };
         let Some(interval) = interval.filter(|s| *s < captured && captured - *s <= 6000) else {
             continue;
         };

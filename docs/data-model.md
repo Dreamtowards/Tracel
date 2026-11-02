@@ -1,5 +1,9 @@
 # Data model
 
+## Compact numeric archive, schema 7 (current)
+
+Desktop 0.2.24 retires GPU engine history; adapter utilization and dedicated/shared memory remain. `gpu_adapters` interns identity/name pairs. All numeric observations are losslessly delta-coded and compressed in `numeric_blocks` of at most 256 rows. Original sample IDs, UTC timestamps, interval starts, missing/zero distinctions, errors and state tables are preserved. Identical values reuse a baseline; small CPU/GPU (0.1 percentage point) and RAM/VRAM (1 MiB) changes use exact residuals rather than being dropped. All numeric values, peaks and partial-range statistics remain recoverable. Legacy numeric/JSON columns become NULL after conversion; `numeric_encoded` identifies converted rows. Query DTOs remain compatible, with empty archived engine arrays. Startup backs up pre-7 archives before transactional migration. VACUUM is explicit offline maintenance, not automatic startup work. See [storage compaction](storage-compaction.md). Schema 4–6 descriptions below document the older physical layout.
+
 ## Range history display projection
 
 Native Desktop history now uses a stable Unix epoch coordinate system and an archive-wide axis, with hour-block queries that may span multiple local dates. Source UTC timestamps, database tables and retention are unchanged. `query_timeline` provides a presentation union of contiguous/overlapping presence for the same process, while the existing raw query retains writer-session boundaries.

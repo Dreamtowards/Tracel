@@ -68,6 +68,9 @@ a { color: inherit; text-decoration: none; }
 .ui-switch-thumb { display: block; width: 12px; height: 12px; border-radius: 50%; background: #b5b7c0; transition: transform .15s; }
 .ui-switch[data-state="checked"] .ui-switch-thumb { transform: translateX(14px); background: var(--primary-foreground); }
 .settings-footnote { border-top: 1px solid var(--border); padding: 12px 0 0; font-size: 11px !important; }
+.settings-startup-repair { border-top: 1px solid var(--border); padding: 12px 0 16px; }
+.settings-startup-repair p { margin: 0 0 8px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.settings-startup-repair small { display: block; overflow-wrap: anywhere; color: var(--muted); margin-bottom: 10px; }
 .settings-banner, .settings-error { margin: 0 0 16px; padding: 10px 12px; border: 1px solid #3b3e48; background: #202229; color: #b4b8c3; border-radius: 6px; line-height: 1.6; font-size: 12px; }
 .settings-error { color: #e9b4aa !important; border-color: #654a45; background: #2b2121; overflow-wrap: anywhere; }
 .settings-debug { font-size: 12px; margin: 8px 0 16px; }

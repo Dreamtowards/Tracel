@@ -1,9 +1,11 @@
 import { createContext, useContext, type ReactNode } from "react";
-import type { DisplayTimeout, EnvironmentReport, FileUsage, ForegroundInfo, UpdatePolicy } from "./platformTypes";
+import type { AutostartStatus, DisplayTimeout, EnvironmentReport, FileUsage, ForegroundInfo, UpdatePolicy } from "./platformTypes";
 
 /** Platform operations are injected by the host; shared pages never import Tauri. */
 export type PlatformServices = {
   nativeClient: boolean;
+  readAutostart: () => Promise<AutostartStatus>;
+  setAutostart: (enabled: boolean) => Promise<AutostartStatus>;
   chooseFile: (title: string) => Promise<string | null>;
   inspectFileUsers: (path: string) => Promise<FileUsage>;
   readDisplayTimeout: () => Promise<DisplayTimeout>;
@@ -19,7 +21,8 @@ export type PlatformServices = {
 };
 const unsupported = async (): Promise<never> => { throw new Error("This operation requires the Windows client."); };
 export const browserPlatform: PlatformServices = Object.freeze({
-  nativeClient: false, chooseFile: unsupported, inspectFileUsers: unsupported,
+  nativeClient: false, readAutostart: unsupported, setAutostart: unsupported,
+  chooseFile: unsupported, inspectFileUsers: unsupported,
   readDisplayTimeout: unsupported, setDisplayTimeout: unsupported,
   inspectEnvironment: unsupported, updatePolicy: unsupported, openSystemShortcut: unsupported,
   openCategoryFolder: unsupported, inspectForeground: unsupported,

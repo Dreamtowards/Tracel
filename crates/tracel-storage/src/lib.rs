@@ -1,4 +1,5 @@
 //! Local SQLite persistence and bounded system-observation queries.
+mod compact;
 mod history;
 mod intervals;
 pub use history::{overview as history_overview, HistoryDay, HistoryOverview};
@@ -36,6 +37,10 @@ pub const MIGRATIONS: &[Migration] = &[
     Migration {
         version: 6,
         sql: include_str!("../migrations/0006_audio_input.sql"),
+    },
+    Migration {
+        version: 7,
+        sql: include_str!("../migrations/0007_compact_metrics.sql"),
     },
 ];
 

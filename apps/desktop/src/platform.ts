@@ -6,6 +6,8 @@ import * as native from "./native";
 /** Only the Desktop host knows how these capabilities reach Windows. */
 export const desktopPlatform: PlatformServices = {
   nativeClient: native.nativeClient,
+  readAutostart: native.readAutostart,
+  setAutostart: native.setAutostart,
   inspectFileUsers: native.inspectFileUsers,
   readDisplayTimeout: native.readDisplayTimeout,
   setDisplayTimeout: native.setDisplayTimeout,

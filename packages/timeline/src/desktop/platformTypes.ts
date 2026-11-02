@@ -2,6 +2,7 @@
 export type EnvironmentReport = { entries: { kind: string; version: string; path: string; source: string }[]; warnings: string[] };
 export type UpdatePolicy = { edition: string; supported: boolean; administrator: boolean; disabled: boolean; owned: boolean; since: string | null };
 export type AppInfo = { version: string; platform: string; deviceName: string };
+export type AutostartStatus = { enabled: boolean; needsRepair: boolean; executablePath: string; registeredPath: string | null };
 export type CollectionSettings = { enabled: boolean; cpuFrequency?: boolean; gpu?: boolean; battery?: boolean; cpu: boolean; ram: boolean; network: boolean; disk: boolean; audio: boolean; audioInput?: boolean; media: boolean; foreground?: boolean; background?: boolean; idle?: boolean };
 export type ObservedProcess = { instanceId: string; processId: number; name: string; executable: string | null };
 export type ObservedActivity = { foreground: { process: ObservedProcess; windowId: string; title: string } | null; background: ObservedProcess[] | null; idleMs: number | null };

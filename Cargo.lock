@@ -3703,7 +3703,7 @@ dependencies = [
 
 [[package]]
 name = "tracel-desktop"
-version = "0.2.23"
+version = "0.2.24"
 dependencies = [
  "png 0.17.16",
  "serde",
@@ -3731,6 +3731,7 @@ dependencies = [
 name = "tracel-storage"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "rusqlite",
  "serde",
  "serde_json",

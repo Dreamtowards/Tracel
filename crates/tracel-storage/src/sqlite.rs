@@ -7,6 +7,7 @@ use tracel_core::SystemObservation;
 pub struct SqliteStore {
     connection: Connection,
     continuation: bool,
+    numeric_tail: super::compact::Block,
 }
 #[derive(Debug, Serialize)]
 pub struct StoredObservation {
@@ -46,6 +47,23 @@ impl SqliteStore {
         connection
             .pragma_update(None, "foreign_keys", "ON")
             .map_err(|e| e.to_string())?;
+        // Preserve a consistent pre-upgrade archive, including committed WAL data.
+        // A failed backup prevents migration. Existing backups are never overwritten.
+        if version > 0 && version < 7 {
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_nanos();
+            let backup = path.with_file_name(format!(
+                "{}.schema-{version}-{stamp}.backup.sqlite3",
+                path.file_name()
+                    .ok_or("Missing database filename")?
+                    .to_string_lossy()
+            ));
+            connection
+                .backup(rusqlite::MAIN_DB, &backup, None)
+                .map_err(|e| format!("Archive backup failed: {e}"))?;
+        }
         let transaction = connection.transaction().map_err(|e| e.to_string())?;
         for migration in MIGRATIONS.iter().filter(|m| m.version > version) {
             if migration.version == 4 {
@@ -62,6 +80,9 @@ impl SqliteStore {
             if migration.version == 4 {
                 super::intervals::migrate(&transaction)?;
             }
+            if migration.version == 7 {
+                super::compact::migrate(&transaction)?;
+            }
             transaction
                 .pragma_update(None, "user_version", migration.version)
                 .map_err(|e| e.to_string())?;
@@ -70,17 +91,33 @@ impl SqliteStore {
         Ok(Self {
             connection,
             continuation: false,
+            numeric_tail: super::compact::Block::default(),
         })
     }
     pub fn append(&mut self, samples: &[SystemObservation]) -> Result<(), String> {
         let transaction = self.connection.transaction().map_err(|e| e.to_string())?;
         let mut continuation = self.continuation;
+        let mut numeric_tail = self.numeric_tail.clone();
         for sample in samples {
-            super::intervals::write(&transaction, sample, None, continuation)?;
+            // Live diagnostics may expose engines; the archive never writes their JSON.
+            let mut state_sample = sample.clone();
+            state_sample.gpus = None;
+            state_sample.battery = None;
+            super::intervals::write(&transaction, &state_sample, None, continuation)?;
+            let id: i64 = transaction
+                .query_row(
+                    "SELECT id FROM system_samples ORDER BY id DESC LIMIT 1",
+                    [],
+                    |r| r.get(0),
+                )
+                .map_err(|e| e.to_string())?;
+            numeric_tail.push(&transaction, id as u64, sample)?;
             continuation = true;
         }
+        numeric_tail.flush(&transaction)?;
         transaction.commit().map_err(|e| e.to_string())?;
         self.continuation = continuation;
+        self.numeric_tail = numeric_tail;
         Ok(())
     }
     pub fn count(&self) -> Result<u64, String> {
@@ -91,11 +128,47 @@ impl SqliteStore {
             .map(|v| v as u64)
             .map_err(|e| e.to_string())
     }
+    /// Offline maintenance only: caller must stop all Tracel clients first.
+    /// VACUUM is separate from migration so normal startup never needs a second
+    /// database-sized temporary file or a long exclusive maintenance operation.
+    pub fn reclaim_space(&self) -> Result<(), String> {
+        self.connection
+            .execute_batch(
+                "PRAGMA wal_checkpoint(TRUNCATE); VACUUM; PRAGMA wal_checkpoint(TRUNCATE);",
+            )
+            .map_err(|e| e.to_string())?;
+        let result: String = self
+            .connection
+            .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+            .map_err(|e| e.to_string())?;
+        if result != "ok" {
+            return Err(format!("Archive integrity check failed: {result}"));
+        }
+        let violations: i64 = self
+            .connection
+            .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| {
+                r.get(0)
+            })
+            .map_err(|e| e.to_string())?;
+        if violations != 0 {
+            return Err("Archive foreign-key check failed".into());
+        }
+        Ok(())
+    }
+    /// Read-only full comparison with a schema-6 backup for offline maintenance.
+    pub fn verify_legacy_archive(&self, backup: &Path) -> Result<(), String> {
+        super::compact::verify_legacy(&self.connection, backup)
+    }
     pub fn recent(&self) -> Result<Vec<SystemObservation>, String> {
         let mut statement = self.connection.prepare("SELECT * FROM (SELECT * FROM archived_observations ORDER BY id DESC LIMIT 1800) ORDER BY id").map_err(|e|e.to_string())?;
         let rows = statement.query_map([], decode).map_err(|e| e.to_string())?;
-        rows.map(|r| r.map(|v| v.sample).map_err(|e| e.to_string()))
-            .collect()
+        let mut reader = super::compact::Reader::new(&self.connection);
+        rows.map(|r| {
+            let mut row = r.map_err(|e| e.to_string())?;
+            reader.restore(&mut row)?;
+            Ok(row.sample)
+        })
+        .collect()
     }
     /// One local calendar day (including DST), never unbounded history over IPC.
     /// Cursor is a row identity, independent of wall-clock changes and timestamps.
@@ -134,7 +207,7 @@ impl SqliteStore {
             .unchecked_transaction()
             .map_err(|e| e.to_string())?;
         let mut statement = connection.prepare("SELECT id,captured_at_ms,interval_start_ms,cpu_percent,memory_used_bytes,memory_total_bytes,network_receive,network_send,disk_read,disk_write,audio_peak,NULL,errors_json,NULL,NULL,NULL,0,cpu_frequency_mhz,gpus_json,battery_json,audio_input_peak FROM system_samples INDEXED BY system_samples_time WHERE id > ?1 AND captured_at_ms >= ?2 AND captured_at_ms < ?3 ORDER BY id LIMIT 50001").map_err(|e|e.to_string())?;
-        let observations: Vec<_> = statement
+        let mut observations: Vec<_> = statement
             .query_map(
                 params![
                     after_id as i64,
@@ -148,6 +221,10 @@ impl SqliteStore {
             .map_err(|e| e.to_string())?;
         if observations.len() > 50000 {
             return Err("Too many observations for this day. A finer query is required.".into());
+        }
+        let mut reader = super::compact::Reader::new(&connection);
+        for row in &mut observations {
+            reader.restore(row)?;
         }
         let first_at_ms = connection
             .query_row("SELECT MIN(captured_at_ms) FROM system_samples", [], |r| {
@@ -345,13 +422,15 @@ mod tests {
         store.append(&[sample.clone()]).unwrap();
         drop(store);
         let reopened = SqliteStore::open(&path).unwrap();
-        assert_eq!(reopened.recent().unwrap()[1], sample);
+        let mut archived = sample.clone();
+        archived.gpus.as_mut().unwrap()[0].engines.clear();
+        assert_eq!(reopened.recent().unwrap()[1], archived);
         assert_eq!(
             SqliteStore::query(&path, 11000, 13000, 1)
                 .unwrap()
                 .observations[0]
                 .sample,
-            sample
+            archived
         );
         drop(reopened);
         std::fs::remove_file(path).unwrap();
@@ -383,7 +462,7 @@ mod tests {
                 .connection
                 .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
                 .unwrap(),
-            6
+            7
         );
         drop(migrated);
         std::fs::remove_file(path).unwrap();

@@ -3,10 +3,11 @@ import { AppearanceSettings } from "./AppearanceSettings";
 import { useI18n, type Locale, type CategoryConfig } from "@tracel/timeline";
 import { Button } from "./components/ui/Button";
 import { SettingsGroup } from "./components/SettingsGroup";
-import { useState } from "react";
+import { Switch } from "./components/ui/Switch";
+import { useEffect, useRef, useState } from "react";
 import { FolderOpen } from "lucide-react";
 import { InfoTip } from "./components/ui/InfoTip";
-import type { CollectionStatus, ForegroundInfo } from "./platformTypes";
+import type { AutostartStatus, CollectionStatus, ForegroundInfo } from "./platformTypes";
 
 export default function Settings({ categories, status, error, onTimeline, zoom, onZoom, accent, onAccent, language, onLanguage }: {
   categories: { config: CategoryConfig; path: string; error: string };
@@ -15,7 +16,7 @@ export default function Settings({ categories, status, error, onTimeline, zoom, 
   language: Locale; onLanguage: (language: Locale) => void;
   zoom: number; onZoom: (zoom: number) => void; accent: string; onAccent: (accent: string) => void;
 }) {
-  const { openCategoryFolder, inspectForeground, openDatabaseFolder, nativeClient } = usePlatform();
+  const { openCategoryFolder, inspectForeground, openDatabaseFolder, readAutostart, setAutostart, nativeClient } = usePlatform();
   const { t, locale } = useI18n();
   const unavailable = !nativeClient || !status?.supported;
   const [debug, setDebug] = useState<ForegroundInfo | null>(null);
@@ -25,6 +26,31 @@ export default function Settings({ categories, status, error, onTimeline, zoom, 
   const [folderError, setFolderError] = useState("");
   const [categoryFolderError, setCategoryFolderError] = useState("");
   const [openingFolder, setOpeningFolder] = useState(false);
+  const [autostart, setAutostartStatus] = useState<AutostartStatus | null>(null);
+  const [autostartError, setAutostartError] = useState("");
+  const [autostartBusy, setAutostartBusy] = useState(false);
+  const autostartRequest = useRef(false);
+  useEffect(() => {
+    if (!nativeClient) return;
+    let active = true;
+    void readAutostart().then(
+      (result) => { if (active) setAutostartStatus(result); },
+      (reason: unknown) => { if (active) setAutostartError(String(reason)); },
+    );
+    return () => { active = false; };
+  }, [nativeClient, readAutostart]);
+  const changeAutostart = async (enabled: boolean) => {
+    if (autostartRequest.current) return;
+    autostartRequest.current = true;
+    setAutostartBusy(true);
+    setAutostartError("");
+    try { setAutostartStatus(await setAutostart(enabled)); }
+    catch (reason) {
+      setAutostartError(String(reason));
+      try { setAutostartStatus(await readAutostart()); } catch { setAutostartStatus(null); }
+    }
+    finally { autostartRequest.current = false; setAutostartBusy(false); }
+  };
   const openFolder = async () => {
     setFolderError(""); setOpeningFolder(true);
     try { await openDatabaseFolder(); }
@@ -44,6 +70,14 @@ export default function Settings({ categories, status, error, onTimeline, zoom, 
     {status?.storageError && <p role="alert" className="settings-error">{t("Storage unavailable:")} {status.storageError}</p>}
     {status?.startupWarning && <p role="alert" className="settings-error">{status.startupWarning}</p>}
     <AppearanceSettings language={language} onLanguage={onLanguage} zoom={zoom} onZoom={onZoom} accent={accent} onAccent={onAccent} />
+    <SettingsGroup title={t("Startup")}>
+      <div className="settings-toggle"><label htmlFor="launch-at-sign-in"><strong>{t("Launch at Windows sign-in")}</strong><small>{t("Opens Tracel after you sign in. Collection follows your existing switches; closing Tracel stops collection.")}</small></label>
+        <Switch id="launch-at-sign-in" checked={autostart?.enabled ?? false} disabled={!nativeClient || !autostart || autostartBusy} onCheckedChange={(enabled) => { void changeAutostart(enabled); }} aria-label={t("Launch at Windows sign-in")} />
+      </div>
+      {autostart?.needsRepair && <div className="settings-startup-repair"><p>{t("Startup points to another Tracel executable. Update it if you moved or replaced the portable EXE.")}</p><small>{autostart.registeredPath}</small><Button disabled={autostartBusy} onClick={() => { void changeAutostart(true); }}>{t("Update startup path")}</Button></div>}
+      {!nativeClient && <p className="settings-footnote">{t("Available in the Windows client.")}</p>}
+      {autostartError && <p role="alert" className="settings-error">{t("Could not change startup setting.")} {autostartError}</p>}
+    </SettingsGroup>
     <SettingsGroup title={t("Categories")}>
       <div className="settings-action"><div><strong>categories.json</strong><small>{t("Edit this file, then return to Tracel to reload categories.")}</small><small style={{ overflowWrap: "anywhere" }}>{categories.path || t("Browser preview uses the default categories.")}</small></div></div>
       {categories.error && <p role="alert" className="settings-error">{categories.error}</p>}

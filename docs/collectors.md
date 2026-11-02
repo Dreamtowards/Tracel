@@ -1,8 +1,16 @@
 # Collectors
 
+## Compact archive (Desktop 0.2.24)
+
+The two-second sampler and optional live GPU diagnostics are unchanged. Storage stops recording per-engine GPU detail and retains per-adapter utilization and dedicated/shared memory. Schema 7 normalizes GPU names and losslessly delta-encodes all numeric readings in bounded compressed blocks; small changes and observed zeros are recoverable without rounding. Missing readings, pauses and state intervals retain their existing semantics. Existing archives receive a consistent backup before transactional conversion; offline VACUUM reclaims physical file space. See [storage compaction](storage-compaction.md). Earlier schema descriptions below are historical.
+
 ## History loading
 
 The CPU overview and cross-date Timeline change queries/presentation only. Collector cadence, opt-in switches, privacy and archived observations are unchanged. A native blocking worker supplies at most 320 time-weighted CPU preview bins for the current zoom context, using only numeric columns and preserving missing intervals. Bounded hour queries feed a frontend Web Worker for clipping, exact statistics and display LOD. Over-budget slices are subdivided rather than rejecting the whole day. Adjacent app-presence fragments are combined only in the Timeline query projection; raw archive APIs retain their original boundaries. No migration, historical rewrite, retention rule or added runtime is introduced.
+
+## Windows sign-in launch
+
+Settings offers an opt-in launch at Windows sign-in. The current user's `Run` registry value stores the quoted absolute path of the current EXE. Reading Settings checks the actual registry value; a moved portable EXE is shown as needing repair. Removing the switch deletes only that value. No administrator permission, scheduled task or service is used. The app prevents a second copy from starting within the same Windows session. Sign-in launch does not enable collection or keep collecting after the app closes.
 
 ## Implemented in Desktop 0.2
 
@@ -12,7 +20,7 @@ The worker samples selected sources at a nominal two-second period. CPU calls [G
 
 RAM separately calls [GlobalMemoryStatusEx](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-globalmemorystatusex), returning physical total and total-minus-available in bytes. Disabling CPU skips its OS call; disabling RAM skips its OS call. Disabling the master switch or selecting no sources suspends metric queries entirely. These choices control collection rather than discarding unwanted measurements after querying everything. No process enumeration is performed for metrics.
 
-Accepted observations are committed to a local SQLite archive on the collector worker (WAL, FULL synchronization). The latest 1,800 observations also remain in memory, about one continuous hour, and are restored on startup. Pauses retain history; this ring limit does not expire or delete database records. Closing the client stops collection but retains committed history. Native Timeline reads one local day at a time, incrementally receives new rows, and supports date navigation, live following, selection analytics and range export. System metrics exports the recent ring. Web and browser preview retain demo providers. Autostart and an independent background agent are not implemented.
+Accepted observations are committed to a local SQLite archive on the collector worker (WAL, FULL synchronization). The latest 1,800 observations also remain in memory, about one continuous hour, and are restored on startup. Pauses retain history; this ring limit does not expire or delete database records. Closing the client stops collection but retains committed history. Native Timeline reads bounded time blocks, incrementally receives new rows, and supports date navigation, live following, selection analytics and range export. System metrics exports the recent ring. Web and browser preview retain demo providers. An independent background agent is not implemented.
 
 ## Diagnostics and power tools
 

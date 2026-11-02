@@ -1,4 +1,11 @@
 export const desktopZh: Readonly<Record<string, string>> = {
+  "Startup": "启动",
+  "Launch at Windows sign-in": "登录 Windows 时启动",
+  "Opens Tracel after you sign in. Collection follows your existing switches; closing Tracel stops collection.": "登录 Windows 后打开 Tracel。是否采集仍取决于现有开关；关闭 Tracel 后采集停止。",
+  "Startup points to another Tracel executable. Update it if you moved or replaced the portable EXE.": "启动项指向另一个 Tracel 程序。如果移动或更换了便携版 EXE，请更新路径。",
+  "Update startup path": "更新启动路径",
+  "Available in the Windows client.": "仅 Windows 客户端可用。",
+  "Could not change startup setting.": "无法修改开机启动设置。",
   "Daily active time": "每日活动时长",
   "Activity overview period": "活动概览范围",
   "30 days": "30 天",

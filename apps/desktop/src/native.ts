@@ -1,11 +1,13 @@
-import type { EnvironmentReport, UpdatePolicy, AppInfo, CollectionSettings, ObservedProcess, ObservedActivity, GpuObservation, BatteryObservation, SystemObservation, CollectionStatus, StoredObservation, StateInterval, StateIntervals, ArchivePage, ForegroundInfo, FileUsage, DisplayTimeout, AudioDevice, AudioSession, AudioSnapshot, MediaSessions } from "@tracel/timeline/desktop/platformTypes";
-export type { EnvironmentReport, UpdatePolicy, AppInfo, CollectionSettings, ObservedProcess, ObservedActivity, GpuObservation, BatteryObservation, SystemObservation, CollectionStatus, StoredObservation, StateInterval, StateIntervals, ArchivePage, ForegroundInfo, FileUsage, DisplayTimeout, AudioDevice, AudioSession, AudioSnapshot, MediaSessions } from "@tracel/timeline/desktop/platformTypes";
+import type { AutostartStatus, EnvironmentReport, UpdatePolicy, AppInfo, CollectionSettings, ObservedProcess, ObservedActivity, GpuObservation, BatteryObservation, SystemObservation, CollectionStatus, StoredObservation, StateInterval, StateIntervals, ArchivePage, ForegroundInfo, FileUsage, DisplayTimeout, AudioDevice, AudioSession, AudioSnapshot, MediaSessions } from "@tracel/timeline/desktop/platformTypes";
+export type { AutostartStatus, EnvironmentReport, UpdatePolicy, AppInfo, CollectionSettings, ObservedProcess, ObservedActivity, GpuObservation, BatteryObservation, SystemObservation, CollectionStatus, StoredObservation, StateInterval, StateIntervals, ArchivePage, ForegroundInfo, FileUsage, DisplayTimeout, AudioDevice, AudioSession, AudioSnapshot, MediaSessions } from "@tracel/timeline/desktop/platformTypes";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { RangeExport } from "@tracel/timeline";
 
 export const nativeClient = isTauri();
+export const readAutostart = () => invoke<AutostartStatus>("autostart_status");
+export const setAutostart = (enabled: boolean) => invoke<AutostartStatus>("set_autostart", { enabled });
 export const openCategoryFolder = () => invoke<void>("open_category_folder");
 
 export const inspectEnvironment = () => invoke<EnvironmentReport>("developer_environment");

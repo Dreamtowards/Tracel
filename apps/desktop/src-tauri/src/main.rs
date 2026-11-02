@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod app_icons;
 mod audio;
+mod autostart;
 mod categories;
 mod file_usage;
+mod instance;
 mod screen_timeout;
 mod startup;
 mod storage_tools;
@@ -46,6 +48,16 @@ fn app_info(app: tauri::AppHandle) -> AppInfo {
             .or_else(|_| std::env::var("HOSTNAME"))
             .unwrap_or_else(|_| "This device".into()),
     }
+}
+
+#[tauri::command]
+fn autostart_status() -> Result<autostart::Status, String> {
+    autostart::status()
+}
+
+#[tauri::command]
+fn set_autostart(enabled: bool) -> Result<autostart::Status, String> {
+    autostart::set(enabled)
 }
 
 #[tauri::command]
@@ -224,6 +236,11 @@ async fn open_category_folder(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn main() {
+    let _instance = match instance::acquire() {
+        Ok(Some(guard)) => guard,
+        Ok(None) => return,
+        Err(error) => panic!("{error}"),
+    };
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -248,6 +265,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             startup::frontend_ready,
             app_info,
+            autostart_status,
+            set_autostart,
             application_icon,
             category_configuration,
             open_category_folder,
