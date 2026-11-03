@@ -16,7 +16,7 @@ test("website downloads reference a versioned GitHub Release asset", () => {
   const parts = url.pathname.split("/");
   assert.equal(parts.length, 7);
   assert.ok(parts[1] && parts[2]);
-  assert.deepEqual(parts.slice(3), ["releases", "download", `v${release.version}`, `Tracel-${release.version}-windows-x64.exe`]);
+  assert.deepEqual(parts.slice(3), ["releases", "download", `v${release.version}`, `Tracel-${release.version}-windows-x64.zip`]);
 });
 
 test("public website assets do not bundle release binaries", () => {

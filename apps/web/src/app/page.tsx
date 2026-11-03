@@ -23,7 +23,7 @@ const sources = [
   { icon: BatteryMedium, name: "电池与供电", details: "电量百分比 · 插电状态 · 充电状态", color: "#d1b781" },
 ];
 const faqs = [
-  ["需要安装吗？支持哪些系统？", <>下载 Windows x64 的 EXE 后直接运行，无需安装器。需要 Microsoft Edge WebView2 Runtime；如果电脑中没有，请先从 <a href="https://developer.microsoft.com/en-us/microsoft-edge/webview2/">Microsoft 官网</a>安装。当前没有 macOS、Linux 或移动版。</>],
+  ["需要安装吗？支持哪些系统？", <>下载 Windows x64 的 ZIP，解压后双击 Tracel.exe，无需安装器。需要 Microsoft Edge WebView2 Runtime；如果电脑中没有，请先从 <a href="https://developer.microsoft.com/en-us/microsoft-edge/webview2/">Microsoft 官网</a>安装。当前没有 macOS、Linux 或移动版。</>],
   ["数据会上传吗？可以关闭采集吗？", <>桌面活动记录保存在本机，不需要账号，也没有活动数据的云端上传。首次启动默认关闭采集；右键轨道表头可控制总开关和各类来源。窗口标题可能包含文档名称，请按需要选择是否记录。</>],
   ["关闭客户端以后，还会继续记录吗？", <>当前退出客户端就会停止采集，已保存的历史保留。设置中可以选择登录 Windows 时启动；关闭后不会在后台继续采集。</>],
   ["时间轴可以放得多大？数据有多精确？", <>支持连续缩放，最小可见范围约两秒，上限约 5000 小时；常规采集间隔约两秒，放大不会补出采样之间的事件。原生历史可以跨天连续查看。在线演示可以浏览多天示例数据。</>],
@@ -43,7 +43,7 @@ export default function Home() {
       <section className={`${s.hero} ${s.container}`} aria-labelledby="hero-title">
         <div className={s.heroText}>
           <div><p className={s.eyebrow}><i />YOUR DAY, IN FOCUS</p><h1 id="hero-title">看见时间<br /><span>去了哪里。</span></h1></div>
-          <div className={s.heroIntro}><p>你的一天，电脑的状态，<br />一条时间轴。</p><p className={s.description}>把应用、窗口、系统性能和媒体状态放在一起。<br />回看发生过的事情，找回对时间的掌控感。</p><div className={s.actions}><Download /><a href="/timeline">在线体验<ArrowRight size={16} /></a></div><p className={s.releaseNote}>v{release.version}<span>·</span>Windows x64<span>·</span>本地存储</p></div>
+          <div className={s.heroIntro}><p>你的一天，电脑的状态，<br />一条时间轴。</p><p className={s.description}>把应用、窗口、系统性能和媒体状态放在一起。<br />回看发生过的事情，找回对时间的掌控感。</p><div className={s.actions}><Download /><a href="/timeline">在线体验<ArrowRight size={16} /></a></div><p className={s.releaseNote}>v{release.version}<span>·</span>Windows x64<span>·</span>ZIP {(release.bytes / 1000000).toFixed(2)} MB<span>·</span>解压即用</p></div>
         </div>
         <figure className={s.product}>
           <div className={s.productBar}><span><SquareActivity size={14} />TRACEL / ACTIVITY & PERFORMANCE</span><span>真实界面 · 示例数据</span></div>
@@ -83,7 +83,7 @@ export default function Home() {
 
       <section className={`${s.section} ${s.container} ${s.faq}`} aria-labelledby="faq-title"><div><p className={s.eyebrow}>GOOD TO KNOW</p><h2 id="faq-title">开始之前。</h2><p>目前是持续开发中的 Windows 桌面应用。</p></div><div className={s.questions}>{faqs.map(([question,answer])=><details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</div></section>
 
-      <section id="download" className={`${s.download} ${s.container}`} aria-labelledby="download-title"><div><p className={s.eyebrow}>START WITH TODAY</p><h2 id="download-title">让今天，留下清晰的轨迹。</h2><p>从打开第一条轨道开始。</p></div><div className={s.downloadActions}><Download /><p>v{release.version} · Windows x64 · {(release.bytes / 1000000).toFixed(1)} MB</p><div><a href={github}><Github size={14} />查看源码</a><a href={release.url.replace(/\.exe$/, ".exe.sha256")}>SHA-256</a></div><small>开发中版本 · 发布于 {release.date}{release.visibility === "private" && " · 下载需要 GitHub 仓库访问权限"}</small></div></section>
+      <section id="download" className={`${s.download} ${s.container}`} aria-labelledby="download-title"><div><p className={s.eyebrow}>START WITH TODAY</p><h2 id="download-title">让今天，留下清晰的轨迹。</h2><p>解压后双击 Tracel.exe，从打开第一条轨道开始。</p></div><div className={s.downloadActions}><Download /><p>v{release.version} · Windows x64 · ZIP 下载 {(release.bytes / 1000000).toFixed(2)} MB</p><div><a href={github}><Github size={14} />查看源码</a><a href={`${release.url}.sha256`}>SHA-256</a></div><small>开发中版本 · 发布于 {release.date}{release.visibility === "private" && " · 下载需要 GitHub 仓库访问权限"}</small></div></section>
     </main>
     <footer className={`${s.footer} ${s.container}`}><a className={s.brand} href="/"><Mark /><span>Tracel</span></a><span>你的一天，值得回看。</span><nav aria-label="页脚导航"><a href={github}>GitHub</a><a href="/timeline">时间轴演示</a><a href="/radar">Radar 实验</a></nav></footer>
   </div>;

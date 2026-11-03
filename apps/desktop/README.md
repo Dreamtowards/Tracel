@@ -19,7 +19,8 @@ npm ci
 npm run dev:desktop:ui       # Browser preview; native collection/tools disabled
 npm run dev:desktop          # Native Windows client
 npm run build:desktop:native # Release executable; no installer
-npm run build:desktop:portable # Executable + extract-and-run ZIP (Windows)
+npm run build:desktop:portable # Build + versioned EXE, ZIP and ZIP SHA-256 (Windows)
+npm run package:desktop:portable # Package existing versioned EXE without rebuilding
 npm run build:desktop:installer # Optional NSIS setup; only build on explicit request
 cargo run -p tracel-agent -- --sample     # One CPU/RAM reading
 cargo run -p tracel-agent -- --foreground # One foreground window snapshot
@@ -27,8 +28,8 @@ cargo run -p tracel-agent -- --foreground # One foreground window snapshot
 
 Native prerequisites: Rust MSVC, C++ Build Tools/Windows SDK and WebView2. Outputs:
 
-- target/release/tracel-desktop.exe: current build output; WebView2 required. Versioned release copy: target/portable/Tracel-0.2.20-windows-x64/Tracel.exe.
-- Optional build:desktop:portable output, target/portable/Tracel-0.2.12-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
+- target/release/tracel-desktop.exe: current build output; WebView2 required. Versioned release copy: target/portable/Tracel-0.2.24-windows-x64/Tracel.exe.
+- Public release output, target/portable/Tracel-0.2.24-windows-x64.zip: extract and double-click Tracel.exe; no installer. WebView2 must already be present. Preferences/window placement and the SQLite archive still use the Windows user application-data directory, so this is installation-free rather than a self-contained data directory.
 - Existing 0.2.0 NSIS installer artifacts and installer configuration are retained, but that version contains the reported display-off problem and should not be used. Default builds do not invoke NSIS.
 
 ## Collection and Settings
@@ -121,6 +122,6 @@ To inspect storage after running the native client with collection enabled: open
 
 ## EXE release rule
 
-When several commits have accumulated since the previous EXE, increase at least the Desktop patch version before building (unless the user specifies a version). Keep npm, npm lockfile, Cargo, Cargo lockfile and Tauri versions consistent. Preserve earlier versioned artifacts and save each new EXE under target/portable/Tracel-<version>-windows-x64/Tracel.exe; do not overwrite a previous release there. target/release/tracel-desktop.exe is only the current build output. Default to EXE only; ZIP or installers require an explicit request.
+When several commits have accumulated since the previous EXE, increase at least the Desktop patch version before building (unless the user specifies a version). Keep npm, npm lockfile, Cargo, Cargo lockfile and Tauri versions consistent. Preserve earlier versioned artifacts and save each new EXE under target/portable/Tracel-<version>-windows-x64/Tracel.exe; do not overwrite a previous release there. target/release/tracel-desktop.exe is only the current build output. Public releases use a versioned ZIP containing only Tracel.exe at its root, plus a matching .zip.sha256 file. The packaging script refuses to overwrite existing EXEs, ZIPs or checksums. Use npm run package:desktop:portable to package an already preserved versioned EXE; no rebuild or version bump is needed for a packaging-only change. Installers require an explicit request.
 
 Microphone input level is an independent opt-in collection source (off by default). Native Timeline places Audio input immediately above Audio output. Settings, recent metrics, archive and exports retain its sampled peak percentage; no audio is recorded and no capture stream is started. Idle or exclusive microphone usage can report zero. No new runtime or driver is bundled.

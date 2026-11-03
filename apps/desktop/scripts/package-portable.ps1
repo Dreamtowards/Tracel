@@ -1,3 +1,5 @@
+param([switch]$PackageOnly)
+
 $ErrorActionPreference = 'Stop'
 $repoPath = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 $desktopManifest = Get-Content -Raw (Join-Path $repoPath 'apps/desktop/package.json') | ConvertFrom-Json
@@ -5,19 +7,23 @@ $releaseName = "Tracel-$($desktopManifest.version)-windows-x64"
 $portableRoot = Join-Path $repoPath 'target/portable'
 $releasePath = Join-Path $portableRoot $releaseName
 $exePath = Join-Path $repoPath 'target/release/tracel-desktop.exe'
-if (-not (Test-Path -LiteralPath $exePath)) { throw 'Build the native executable first.' }
-New-Item -ItemType Directory -Force -Path $releasePath | Out-Null
-Copy-Item -LiteralPath $exePath -Destination (Join-Path $releasePath 'Tracel.exe') -Force
-@'
-Tracel Activity: extract this ZIP and double-click Tracel.exe. No installer required.
-Requires Windows x64 and Microsoft Edge WebView2 Runtime (normally installed on Windows 11).
-Preferences, window placement and the SQLite archive use the Windows user application-data directory.
-Prevent automatic sleep allows normal display timeout. It resets off on restart.
-The manual display-off action is disabled after a wake-up reliability issue.
-Closing the application stops collection. Recorded Timeline history persists in local SQLite.
-Settings shows the database path. Close Tracel before copying the database for backup.
-Audio diagnostics use temporary recent-signal history and do not record sound.
-'@ | Set-Content -LiteralPath (Join-Path $releasePath 'README.txt') -Encoding UTF8
+$portableExe = Join-Path $releasePath 'Tracel.exe'
 $zipPath = Join-Path $portableRoot "$releaseName.zip"
-Compress-Archive -LiteralPath (Join-Path $releasePath 'Tracel.exe'), (Join-Path $releasePath 'README.txt') -DestinationPath $zipPath -Force
+$hashPath = "$zipPath.sha256"
+if ((Test-Path -LiteralPath $zipPath) -or (Test-Path -LiteralPath $hashPath)) {
+    throw 'This ZIP release already exists. Preserve it and use a new version.'
+}
+if ($PackageOnly) {
+    if (-not (Test-Path -LiteralPath $portableExe)) { throw 'No versioned Tracel.exe to package.' }
+} else {
+    if (Test-Path -LiteralPath $portableExe) { throw 'This versioned EXE already exists. Use -PackageOnly to package it without rebuilding.' }
+    if (-not (Test-Path -LiteralPath $exePath)) { throw 'Build the native executable first.' }
+    New-Item -ItemType Directory -Force -Path $releasePath | Out-Null
+    Copy-Item -LiteralPath $exePath -Destination $portableExe
+}
+# The archive root always contains exactly Tracel.exe, independent of release version.
+Compress-Archive -LiteralPath $portableExe -DestinationPath $zipPath -CompressionLevel Optimal
+$hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+"$hash  $releaseName.zip" | Set-Content -LiteralPath $hashPath -Encoding ascii
 Write-Output $zipPath
+Write-Output $hashPath
