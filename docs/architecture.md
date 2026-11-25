@@ -1,5 +1,11 @@
 # Architecture
 
+## Quota website
+
+Web `/quota` (Quota) consumes the same `packages/timeline/src/Timeline.tsx` Canvas renderer as Desktop Activity. Optional `Capture.metricGroups` replaces the default system rows; `metric:` keys, per-metric metadata, and independent confirmed/projected markers support business metrics without introducing quota concepts into Desktop. The shared `MetricOverview` uses the existing overview geometry and viewport handles. One controlled range connects overview, main Canvas, presets and selection. Optional label rendering and initial column width let the Web host present compact account/status/reset badges without adding quota semantics to the shared renderer. Existing captures retain their default layout.
+
+`apps/web/src/quota` owns quota accounts, windows, the source interface and the Capture adapter. The default source generates seeded 30-day examples at five-minute cadence in the browser. It does not access accounts or collect data in the background. Replacing `QuotaDataSource.load()` supplies another dataset without changing the renderer. Real collection, persistence and authentication await the existing source's API contract. There is no new database, native dependency or deployment in this implementation.
+
 ## Compact numeric archive
 
 Desktop 0.2.24 / schema 7 moves numeric archive encoding into `tracel-storage`: at most 256 original observations per lossless delta/zlib block, with adapter metadata interned independently. GPU engine history is retired; aggregate adapter utilization/VRAM remain. Sampling and live diagnostics are unchanged. Readers reconstruct the existing observation DTOs, retaining exact measurements and coverage for shared UI statistics. Overview CPU reads stream decoded blocks. Automatic pre-upgrade SQLite backups precede transactional migration; physical space reclamation is explicit offline maintenance. Web and shared Timeline contracts are unchanged. See [storage compaction](storage-compaction.md).

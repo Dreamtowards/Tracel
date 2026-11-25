@@ -1,5 +1,11 @@
 # Data model
 
+## Quota demonstration
+
+Web quota records use UTC Unix milliseconds, stable account IDs and independent quota-window IDs. Account metadata contains current enabled/draining/disabled status, plan, optional available Reset count and optional `resetExpiresAtMs` (earliest expiry among available Reset credits). Expiry is supplied by the source, never inferred from a cycle-reset event; unknown expiry remains unspecified. Five-minute samples store timestamps and numeric readings only; resets are separate confirmed/projected events. Percent values use 0–100, balance/credits retain their units, null means missing and zero is observed exhaustion. Optional capacity supports absolute amounts in historical tooltips. These are explicit examples, not persisted account records.
+
+The Web adapter converts UTC timestamps to Capture epoch-relative seconds, sets a five-minute support limit, and supplies `metricGroups`, `metricOverrides` and `metricMarkers`. Shared Activity/desktop contracts are additive and existing system captures are unchanged. Quota range statistics use original samples and show coverage, boundary readings, minimum and confirmed reset count; changes include resets and are not presented as consumption.
+
 ## Compact numeric archive, schema 7 (current)
 
 Desktop 0.2.24 retires GPU engine history; adapter utilization and dedicated/shared memory remain. `gpu_adapters` interns identity/name pairs. All numeric observations are losslessly delta-coded and compressed in `numeric_blocks` of at most 256 rows. Original sample IDs, UTC timestamps, interval starts, missing/zero distinctions, errors and state tables are preserved. Identical values reuse a baseline; small CPU/GPU (0.1 percentage point) and RAM/VRAM (1 MiB) changes use exact residuals rather than being dropped. All numeric values, peaks and partial-range statistics remain recoverable. Legacy numeric/JSON columns become NULL after conversion; `numeric_encoded` identifies converted rows. Query DTOs remain compatible, with empty archived engine arrays. Startup backs up pre-7 archives before transactional migration. VACUUM is explicit offline maintenance, not automatic startup work. See [storage compaction](storage-compaction.md). Schema 4–6 descriptions below document the older physical layout.

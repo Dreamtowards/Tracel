@@ -36,7 +36,7 @@ export default function Home() {
     <a className={s.skip} href="#main">跳到主要内容</a>
     <header className={s.header}>
       <a className={s.brand} href="/" aria-label="Tracel 首页"><Mark /><span>Tracel</span></a>
-      <nav aria-label="主导航"><a href="#features">功能</a><a href="#compare">为什么选 Tracel</a><a href="/timeline">在线演示</a><a href={github} aria-label="GitHub 仓库"><Github size={18} /><span>GitHub</span></a></nav>
+      <nav aria-label="主导航"><a href="#features">功能</a><a href="#compare">为什么选 Tracel</a><a href="/timeline">在线演示</a><a href="/quota">AI 额度</a><a href={github} aria-label="GitHub 仓库"><Github size={18} /><span>GitHub</span></a></nav>
       <a href="#download" className={s.navDownload}>下载<ArrowDownToLine size={14} /></a>
     </header>
     <main id="main">

@@ -61,6 +61,8 @@ Tracel 想把这种回看做得更直观。不仅知道当时在用什么应用�
 
 网站首页介绍 Tracel，`/timeline` 在线演示复用桌面 App 的界面，并单独注入虚构数据。演示不会监测访问者的电脑，不支持的系统操作会禁用。
 
+`/quota` 是 Quota，直接复用同一个主时间轴，提供 30 天、五分钟采样的模拟账号额度。支持多账号、多周期、余额、重置标记、缺采与选区统计。数据源接口和映射位于 `apps/web/src/quota`，真实额度采集尚未接入。
+
 本地启动网站：
 
 ```sh
@@ -68,7 +70,7 @@ npm ci
 npm run dev
 ```
 
-启动后打开[产品首页](http://127.0.0.1:3000/)或[时间轴演示](http://127.0.0.1:3000/timeline)。原生 Windows 开发使用 `npm run dev:desktop`，需要 Rust MSVC、Windows SDK 等构建工具，详见[开发与部署指南](docs/development.md)。
+启动后打开[产品首页](http://127.0.0.1:3000/)、[时间轴演示](http://127.0.0.1:3000/timeline)或[Quota](http://127.0.0.1:3000/quota)。原生 Windows 开发使用 `npm run dev:desktop`，需要 Rust MSVC、Windows SDK 等构建工具，详见[开发与部署指南](docs/development.md)。
 
 - [桌面端与发布说明](apps/desktop/README.md)
 - [架构](docs/architecture.md) · [数据模型](docs/data-model.md) · [共享时间轴组件](packages/timeline/README.md)

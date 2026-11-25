@@ -29,7 +29,10 @@ export type ActivityInterval = Range & {
 export type AfkInterval = Range & { reason: string };
 export type BackgroundLifetime = Range & { appId: string };
 export type MetricKey =
-  "cpu" | "ram" | "gpu" | "download" | "upload" | "read" | "write" | "audio" | "audioInput" | "cpuFrequency" | "battery" | "pluggedIn" | "charging" | `gpu:${string}`;
+  "cpu" | "ram" | "gpu" | "download" | "upload" | "read" | "write" | "audio" | "audioInput" | "cpuFrequency" | "battery" | "pluggedIn" | "charging" | `gpu:${string}` | `metric:${string}`;
+export type MetricTrack = { id: string; name: string; keys: MetricKey[]; details?: MetricKey[]; subtitle?: string; after?: string };
+export type MetricTrackGroup = { id: string; name: string; subtitle?: string; tracks: MetricTrack[] };
+export type MetricMarker = { id: string; key: MetricKey; time: number; label: string; kind: "confirmed" | "projected" };
 export type MetricSample = {
   /** Coarse display bins carry exact per-metric covered seconds and extrema. */
   coverage?: Partial<Record<MetricKey, number>>;
@@ -58,7 +61,10 @@ export type Capture = {
   maxSampleSpan?: number;
   metricOverrides?: Partial<Record<MetricKey, Partial<MetricInfo>>>;
   /** Host-provided hardware tracks; absent in the Web demo. */
-  metricTracks?: { id: string; name: string; keys: MetricKey[]; details?: MetricKey[]; subtitle?: string; after?: string }[];
+  metricTracks?: MetricTrack[];
+  /** Optional business tracks replace the default Activity/system layout. */
+  metricGroups?: MetricTrackGroup[];
+  metricMarkers?: MetricMarker[];
   epoch: string;
   bounds: Range;
   apps: Application[];
@@ -72,16 +78,19 @@ export type Capture = {
 };
 export const sampleEnd = (sample: MetricSample, period: number) => sample.end ?? sample.time + period;
 /** Samples are sorted by time, but need not be dense or start at the epoch. */
-export function metricAt(data: Capture, time: number, key: MetricKey): number | null {
+export function metricSampleAt(data: Capture, time: number, key: MetricKey): MetricSample | null {
   let low = 0, high = data.metrics.length;
   while (low < high) { const mid = (low + high) >>> 1; if (data.metrics[mid].time <= time) low = mid + 1; else high = mid; }
   for (let i = low - 1; i >= 0; i--) {
     const sample = data.metrics[i];
     if (sample.time < time - (data.maxSampleSpan ?? data.samplePeriod)) break;
     const value = sample.values?.[key];
-    if (sampleEnd(sample,data.samplePeriod) > time && value != null && Number.isFinite(value)) return value;
+    if (sampleEnd(sample,data.samplePeriod) > time && value != null && Number.isFinite(value)) return sample;
   }
   return null;
+}
+export function metricAt(data: Capture, time: number, key: MetricKey): number | null {
+  return metricSampleAt(data, time, key)?.values?.[key] ?? null;
 }
 export interface DataProvider {
   load(): Promise<Capture>;
@@ -149,7 +158,7 @@ export function bytes(mb: number) {
   return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(1)} MB`;
 }
 export type MetricInfo = { name: string; color: string; max: number; unit: string; boolean?: boolean };
-export const metricInfo: Record<Exclude<MetricKey, `gpu:${string}`>, MetricInfo> = {
+export const metricInfo: Record<Exclude<MetricKey, `gpu:${string}` | `metric:${string}`>, MetricInfo> = {
   cpu: { name: "CPU", color: "#54bdd6", max: 100, unit: "%" },
   ram: { name: "Memory", color: "#5485df", max: 32, unit: "GB" },
   cpuFrequency: { name: "CPU frequency", color: "#9dacce", max: 6, unit: "GHz" },

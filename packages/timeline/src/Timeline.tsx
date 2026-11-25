@@ -23,6 +23,8 @@ import {
   DAY,
   sampleEnd,
   metricAt,
+  metricSampleAt,
+  type MetricSample,
   getMetricInfo,
 } from "./model";
 
@@ -46,6 +48,11 @@ const defaultPalette: TimelinePalette = {
   background: "#101416", grid: "#22292d", divider: "#242b2e", group: "#151a1d", focus: "#bacbbd12", selection: "#d7b17a",
 };
 type Props = {
+  initialLabelWidth?: number;
+  renderTrackLabel?: (track: Pick<Track, "id" | "kind" | "name" | "subtitle">) => ReactNode;
+  activeMetric?: MetricKey;
+  onMetricFocus?: (key: MetricKey) => void;
+  formatMetricSample?: (key: MetricKey, sample: MetricSample | null) => string;
   hiddenSources?: readonly TrackSource[];
   data: Capture;
   view: Range;
@@ -64,6 +71,11 @@ const defaultLabelWidth = 192;
 const noHiddenSources: readonly TrackSource[] = [];
 
 export function Timeline({
+  initialLabelWidth = defaultLabelWidth,
+  renderTrackLabel,
+  activeMetric,
+  onMetricFocus,
+  formatMetricSample,
   hiddenSources = noHiddenSources,
   data,
   view,
@@ -80,7 +92,7 @@ export function Timeline({
 }: Props) {
   const { t, duration } = useI18n();
   const { clock, dateLabel } = useCaptureTime(data);
-  const [labelWidth, setLabelWidth] = useState(defaultLabelWidth);
+  const [labelWidth, setLabelWidth] = useState(initialLabelWidth);
   const labelDrag = useRef<{ x: number; width: number; scale: number } | null>(null);
   const [hostWidth, setHostWidth] = useState(900);
   const maximumLabelWidth = Math.max(128, Math.min(360, hostWidth - 180));
@@ -109,7 +121,7 @@ export function Timeline({
     data.background.some((interval) => interval.appId === app.id)), [data]);
   const foregroundApps = useMemo(() => foregroundAppIntervals(data.activity, data.apps), [data.activity, data.apps]);
   const tracks = useMemo(() => {
-    const all: Track[] = [
+    let all: Track[] = [
       {
         id: "activity",
         name: "ACTIVITY",
@@ -245,6 +257,12 @@ export function Timeline({
       }
     }
     const hasAdapterTracks = data.metricTracks?.some(track => track.keys.some(key => key.startsWith("gpu:")));
+    if (data.metricGroups) {
+      all = data.metricGroups.flatMap(group => [
+        { id: group.id, name: group.name, subtitle: group.subtitle, height: 32, kind: "group" as const },
+        ...(!closed.includes(group.id) ? group.tracks.map(track => ({ ...track, group: group.id, kind: "metric" as const, height: 62 })) : []),
+      ]);
+    }
     const visible = data.kind === "recorded" || hasAdapterTracks ? all.filter((track) => track.id !== "gpu") : all;
     let y = 32;
     return visible.filter(track => !isTrackHidden(track.id, hiddenSources)).map((track) => {
@@ -265,7 +283,7 @@ export function Timeline({
   useEffect(() => {
     if (cursor.current) cursor.current.style.display = "none";
     if (tip.current) tip.current.style.display = "none";
-  }, [view]);
+  }, [view, activeMetric]);
 
   useEffect(() => {
     const element = host.current;
@@ -580,6 +598,18 @@ export function Timeline({
           ctx.fillStyle = palette.muted ?? "#839198";
           ctx.fillText(scale.boolean ? t("Yes / No") : `${Number(scale.max.toFixed(2))} ${scale.unit}`, width - 7, y + 13);
           ctx.textAlign = "left";
+          for (const marker of data.metricMarkers ?? []) {
+            if (!row.keys?.includes(marker.key) || marker.time < view.start || marker.time >= view.end) continue;
+            const px = x(marker.time);
+            ctx.strokeStyle = marker.kind === "confirmed" ? "#c4c4cf" : "#d4ab72";
+            ctx.setLineDash(marker.kind === "confirmed" ? [2, 3] : [6, 4]);
+            ctx.beginPath(); ctx.moveTo(px, y + 3); ctx.lineTo(px, y + height - 3); ctx.stroke();
+            ctx.setLineDash([]);
+            if (span <= DAY * 2 && px < width - 65) {
+              ctx.fillStyle = palette.muted ?? "#a1a1aa";
+              ctx.fillText(marker.label, px + 4, y + 13);
+            }
+          }
         }
       }
 
@@ -650,15 +680,23 @@ export function Timeline({
         executable = app.exe;
         timing = intervalTiming(interval);
         lines = [...new Set([event.windowTitle, context?.value].filter(Boolean))].join("\n");
-      } else if (row.keys)
+      } else if (row.keys) {
+        const sample = metricSampleAt(data, time, row.keys[0]);
+        if (formatMetricSample) timing = sample ? `${dateLabel(sample.time)} · ${clock(sample.time, true)} · ${t("Sample")}` : `${dateLabel(time)} · ${clock(time, true)}`;
         lines +=
           "\n" +
           row.keys
             .map((key) => {
+              if (formatMetricSample) return formatMetricSample(key, metricSampleAt(data, time, key));
               const info = getMetricInfo(data, key), value = metricAt(data, time, key);
               return `${t(info.name)}: ${value != null ? (info.boolean ? data.detailLevel ? `${(value*100).toFixed(0)}%` : t(value ? "Yes" : "No") : value.toFixed(2) + " " + info.unit) : t("No sample · asleep / capture gap")}`;
             })
             .join("\n");
+        for (const marker of data.metricMarkers ?? []) {
+          if (row.keys.includes(marker.key) && Math.abs(marker.time - time) / (view.end - view.start) * rect.width <= 6)
+            lines += `\n${marker.label} · ${dateLabel(marker.time)} ${clock(marker.time, true)}`;
+        }
+      }
       else if (row.kind === "media") {
         const media = data.media.find((m) => m.start <= time && m.end > time);
         if (media) { timing = intervalTiming(media); title = t(media.state === "paused" ? "Paused" : "Now playing"); }
@@ -752,12 +790,13 @@ export function Timeline({
         {tracks.map((row) => (
           <div
             key={row.id}
-            className={`tx-track-label ${row.kind === "group" ? "tx-group" : ""}`}
+            className={`tx-track-label ${row.kind === "group" ? "tx-group" : ""} ${activeMetric && row.keys?.includes(activeMetric) ? "tx-metric-active" : ""}`}
             style={{ top: row.y, height: row.height }}
           >
             <button
+              aria-pressed={row.keys && onMetricFocus ? activeMetric !== undefined && row.keys.includes(activeMetric) : undefined}
               onClick={() =>
-                row.kind === "group" ||
+                row.keys && onMetricFocus ? onMetricFocus(row.keys[0]) : row.kind === "group" ||
                 row.id === "foreground" ||
                 row.id === "background" || !!row.details?.length
                   ? toggle(row.id, row.kind === "group")
@@ -771,7 +810,7 @@ export function Timeline({
               aria-expanded={
                 row.kind === "group"
                   ? !closed.includes(row.id)
-                  : expanded.includes(row.id)
+                  : row.keys && onMetricFocus ? undefined : expanded.includes(row.id)
               }
             >
               {row.kind === "group" ? (
@@ -796,12 +835,12 @@ export function Timeline({
                   }}
                 />
               )}
-              <span>
+              {renderTrackLabel ? renderTrackLabel(row) : <span>
                 {row.appId ? row.name : t(row.name)}
                 {row.subtitle && row.height >= 38 && (
                   <small>{t(row.subtitle)}</small>
                 )}
-              </span>
+              </span>}
             </button>
             {row.kind !== "group" && (
               <div
@@ -873,7 +912,7 @@ export function Timeline({
           }}
           onPointerUp={(event) => { labelDrag.current = null; event.currentTarget.releasePointerCapture(event.pointerId); }}
           onLostPointerCapture={() => { labelDrag.current = null; }}
-          onDoubleClick={() => setLabelWidth(defaultLabelWidth)}
+          onDoubleClick={() => setLabelWidth(initialLabelWidth)}
           onKeyDown={(event) => {
             const next = event.key === "ArrowLeft" ? LABEL - 8 : event.key === "ArrowRight" ? LABEL + 8 : event.key === "Home" ? 128 : event.key === "End" ? maximumLabelWidth : null;
             if (next !== null) { event.preventDefault(); setLabelWidth(Math.max(128, Math.min(maximumLabelWidth, next))); }

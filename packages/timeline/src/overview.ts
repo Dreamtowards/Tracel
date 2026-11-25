@@ -1,4 +1,5 @@
-import { sampleEnd, type Capture, type Range } from "./model";
+import { sampleEnd, getMetricInfo, type Capture, type Range, type MetricKey } from "./model";
+import { metricSamples } from "./metricIndex";
 import type { HistoryCpuBucket } from "./history";
 
 /** The stroke and area share the same boundary; missing intervals break both paths. */
@@ -63,4 +64,33 @@ export function overviewPath(data: Capture): string {
     previousEnd = sampleEnd(sample,data.samplePeriod);
   }
   return commands.join(" ");
+}
+
+/** Bounded, duration-weighted overview for any numeric metric. Gaps split runs. */
+export function metricOverviewGeometry(data: Capture, key: MetricKey, resolution = 600) {
+  const max = getMetricInfo(data, key).max;
+  const step = (data.bounds.end - data.bounds.start) / Math.max(1, resolution);
+  const bins: HistoryCpuBucket[] = [];
+  let bin: { index: number; start: number; end: number; total: number; weight: number } | null = null;
+  const flush = () => {
+    if (bin) bins.push({ startMs: bin.start * 1000, endMs: bin.end * 1000, value: bin.total / bin.weight / max * 100 });
+    bin = null;
+  };
+  for (const sample of metricSamples(data, key, data.bounds)) {
+    const value = sample.values?.[key];
+    if (value == null || !Number.isFinite(value)) continue;
+    let start = Math.max(data.bounds.start, sample.time);
+    const end = Math.min(data.bounds.end, sampleEnd(sample, data.samplePeriod));
+    while (start < end) {
+      const index = Math.floor((start - data.bounds.start) / step);
+      const right = Math.min(end, data.bounds.start + (index + 1) * step);
+      if (right <= start) break;
+      if (bin && (bin.index !== index || start > bin.end + .001)) flush();
+      if (!bin) bin = { index, start, end: right, total: 0, weight: 0 };
+      bin.total += value * (right - start); bin.weight += right - start; bin.end = right;
+      start = right;
+    }
+  }
+  flush();
+  return historyOverviewGeometry(bins, data.bounds);
 }
