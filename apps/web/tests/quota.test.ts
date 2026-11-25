@@ -4,6 +4,7 @@ import { metricAt, metricSampleAt } from "@tracel/timeline/model";
 import { createQuotaDemo } from "../src/quota/demo";
 import { quotaCapture, quotaKey } from "../src/quota/model";
 import { quotaStatistics } from "../src/quota/statistics";
+import { quotaDateKey, quotaDayRange, quotaDuration, quotaRangeLabel } from "../src/quota/time";
 
 const now = Date.parse("2026-11-26T04:00:00Z");
 const dataset = createQuotaDemo(now);
@@ -47,4 +48,24 @@ test("range details count coverage and confirmed resets without treating gaps as
   assert.equal(full.coverage, 1 - 3 / (30 * 24));
   assert.equal(full.resets, dataset.resets.filter(reset => reset.trackId === "kimi-week" && reset.kind === "confirmed").length);
   assert.equal(quotaStatistics(capture, quotaKey("glm-week"), { start: 29 * 86400, end: 30 * 86400 }).minimum, 0);
+});
+
+test("quota calendar clips partial first/last days to recorded bounds", () => {
+  const first = new Date(2026, 10, 24, 6), last = new Date(2026, 10, 26, 9);
+  const epoch = first.toISOString(), bounds = { start: 0, end: (last.getTime() - first.getTime()) / 1000 };
+  const range = quotaDayRange(quotaDateKey(first.getTime()), epoch, bounds);
+  assert.equal(range.start, 0);
+  assert.equal(first.getTime() + range.end * 1000, new Date(2026, 10, 25).getTime());
+  const finalDay = quotaDayRange(quotaDateKey(last.getTime()), epoch, bounds);
+  assert.equal(first.getTime() + finalDay.start * 1000, new Date(2026, 10, 26).getTime());
+  assert.equal(finalDay.end, bounds.end);
+});
+
+test("range labels omit duplicate dates and seconds, including a full calendar day", () => {
+  const start = new Date(2026, 10, 25, 9), epoch = start.toISOString();
+  assert.equal(quotaRangeLabel(epoch, { start: 0, end: 3.5 * 3600 }), "11月25日 09:00 — 12:30");
+  const midnight = new Date(2026, 10, 25).toISOString();
+  assert.equal(quotaRangeLabel(midnight, { start: 0, end: 86400 }), "11月25日 00:00 — 24:00");
+  assert.equal(quotaRangeLabel(epoch, { start: 0, end: 86400 }), "11月25日 09:00 — 11月26日 09:00");
+  assert.equal(quotaDuration(3.5 * 3600), "3小时 30分");
 });

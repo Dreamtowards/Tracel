@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { metricOverviewGeometry } from "../src/overview";
+import { constrainOverviewRange, metricOverviewGeometry } from "../src/overview";
 import { metricAt, type Capture } from "../src/model";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -29,6 +29,30 @@ test("overview remains bounded at month scale and keeps gaps within a display bu
   assert.ok((geometry.line.match(/L/g) ?? []).length <= 102);
   const gap = metricOverviewGeometry(capture, "metric:balance", 1);
   assert.equal((gap.line.match(/M/g) ?? []).length, 2);
+});
+
+test("zoomed overview clips to its own context and retains gaps and original units", () => {
+  const geometry = metricOverviewGeometry(capture, "metric:balance", 3, { start: 300, end: 1200 });
+  assert.ok(geometry.line.startsWith("M0,22"));
+  assert.equal((geometry.line.match(/M/g) ?? []).length, 2);
+  assert.ok(geometry.line.endsWith("L1400,4"));
+});
+
+test("fractional overview buckets never introduce gaps in a continuously observed series", () => {
+  const dense: Capture = { ...capture, bounds: { start: 0, end: 6000 }, metrics: Array.from({ length: 20 }, (_, index) => ({ time: index * 300, subject: { kind: "system", id: "test" }, values: { "metric:balance": 250 } })) };
+  const geometry = metricOverviewGeometry(dense, "metric:balance", 600, { start: 105.234, end: 5713.829 });
+  assert.equal((geometry.line.match(/M/g) ?? []).length, 1);
+  assert.ok(geometry.line.startsWith("M0,22"));
+  assert.ok(geometry.line.endsWith("L1400,22"));
+});
+
+test("overview zoom and pan keep the main viewport visible without changing it", () => {
+  const view = { start: 800, end: 900 }, bounds = { start: 0, end: 1200 };
+  assert.deepEqual(constrainOverviewRange({ start: 100, end: 200 }, view, bounds), view);
+  assert.deepEqual(constrainOverviewRange({ start: 0, end: 500 }, view, bounds), { start: 400, end: 900 });
+  assert.deepEqual(constrainOverviewRange({ start: 1000, end: 1600 }, view, bounds), { start: 600, end: 1200 });
+  assert.deepEqual(view, { start: 800, end: 900 });
+  assert.deepEqual(constrainOverviewRange({ start: 400, end: 600 }, { start: 200, end: 1100 }, bounds), { start: 200, end: 1100 });
 });
 
 test("the shared Timeline replaces system rows only when custom groups are supplied", () => {
