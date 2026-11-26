@@ -25,11 +25,11 @@ export const accountStatus = { enabled: "启用", draining: "排空", disabled: 
 export const quotaAccountName = (account: QuotaAccount) => [account.name, account.plan].filter(Boolean).join(" ");
 /** One compact duration convention for both cycle resets and Reset-credit expiry. */
 export function quotaTimeLeft(at: number, now: number) {
-  const minutes = Math.max(0, Math.ceil((at - now) / 60000));
-  const days = Math.floor(minutes / 1440), hours = Math.floor(minutes % 1440 / 60), rest = minutes % 60;
-  if (days) return `${days}天${hours ? ` ${hours}小时` : ""}`;
-  if (hours) return `${hours}小时${rest ? ` ${rest}分` : ""}`;
-  return `${minutes}分`;
+  const remaining = Math.max(0, at - now);
+  const days = remaining / 86400000, hours = remaining / 3600000;
+  if (days >= 1) return `${days.toFixed(1)}天`;
+  if (hours >= 1) return `${hours.toFixed(1)}小时`;
+  return `${Math.ceil(remaining / 60000)}分钟`;
 }
 export function quotaDeadlineTone(at: number | undefined, now: number) {
   if (at === undefined) return "muted";

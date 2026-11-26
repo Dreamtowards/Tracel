@@ -142,7 +142,7 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
             <Timeline data={timelineData} view={view} selection={selection} mode={mode} focus={null} appearance={appearance} palette={palette} onView={changeView} onSelect={next => { setSelection(next); if (next) setFollowing(false); }} onFocus={noFocus} activeMetric={metric} onMetricFocus={setMetric} formatMetricSample={formatSample} initialLabelWidth={280}
               renderTrackLabel={row => {
                 const item = row.kind === "group" ? dataset.accounts.find(item => `account:${item.id}` === row.id) : undefined;
-                if (item) return <span className="quota-account-label"><span className="quota-account-name" title={quotaAccountName(item)}>{quotaAccountName(item)}</span><span className={`quota-badge quota-status quota-status-${item.status}`}>{accountStatus[item.status]}</span>{resetCreditsBadge(item)}</span>;
+                if (item) return <span className="quota-account-label"><span className="quota-account-name" title={quotaAccountName(item)}>{quotaAccountName(item)}</span>{resetCreditsBadge(item)}<span className={`quota-badge quota-status quota-status-${item.status}`}>{accountStatus[item.status]}</span></span>;
                 return <span className="quota-lane-label"><span className="quota-lane-name">{row.name}</span>{resetBadge(row.id)}{row.subtitle && <small>{row.subtitle}</small>}</span>;
               }} />
           </section>

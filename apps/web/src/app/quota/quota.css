@@ -30,7 +30,7 @@
 .quota-overview-select select:hover { color: #fafafa; }
 .quota-overview-select option { background: #202023; color: #ececef; }
 .quota-overview-select > svg { position: absolute; right: 2px; pointer-events: none; }
-.quota-root .tx-timeline-heading, .quota-root .tx-inspector-title { height: 36px; min-height: 36px; }
+.quota-root .tx-timeline-heading, .quota-root .tx-inspector-title { height: 36px; min-height: 36px; padding-right: 6px; }
 .quota-root .tx-timeline-heading small { font: 400 12px/18px Consolas, "Microsoft YaHei UI", monospace; margin-left: 0; }
 .quota-range-duration { margin-left: 4px; padding-left: 12px; border-left: 1px solid #3a3a42; font: 400 12px/18px Consolas, "Microsoft YaHei UI", monospace; color: #a1a1aa; white-space: nowrap; }
 .quota-root .tx-track-label button { font-size: 13px; }
@@ -74,6 +74,6 @@
   .quota-root .quota-toolbar { gap: 6px; padding-inline: 10px; }.quota-header-end { gap: 6px; max-width: 48%; }.quota-toolbar-tools { overflow-x: auto; scrollbar-width: thin; }
   .quota-main { overflow: auto; }.quota-root .tx-main-timeline .tx-content { flex: none; flex-direction: column; min-height: 0; }.quota-root .tx-main-timeline .tx-timeline-scroll { flex: none; height: 460px; }
   .quota-root .tx-main-timeline .tx-inspector { width: 100%; border-left: 0; border-top: 1px solid #303034; }.quota-inspector-scroll { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; }.quota-range-info { border-top: 0; border-left: 1px solid #303034; }
-  .quota-overview-heading > span { display: none; }.quota-overview-select select { min-width: 0; max-width: calc(100vw - 130px); }.quota-root .tx-timeline-heading small, .quota-range-duration { font-size: 11px; }.quota-root .tx-timeline-heading { height: auto; min-height: 32px; padding: 6px 12px; }.quota-root .tx-timeline-heading > span:first-child { flex-wrap: wrap; gap: 4px 8px; }.quota-range-duration { margin-left: 0; padding-left: 8px; }
+  .quota-overview-heading > span { display: none; }.quota-overview-select select { min-width: 0; max-width: calc(100vw - 130px); }.quota-root .tx-timeline-heading small, .quota-range-duration { font-size: 11px; }.quota-root .tx-timeline-heading { height: auto; min-height: 32px; padding: 6px 6px 6px 12px; }.quota-root .tx-timeline-heading > span:first-child { flex-wrap: wrap; gap: 4px 8px; }.quota-range-duration { margin-left: 0; padding-left: 8px; }
 }
 @media (max-width: 420px) { .quota-inspector-scroll { grid-template-columns: 1fr; }.quota-range-info { border-left: 0; border-top: 1px solid #303034; }.quota-root .tx-timeline { min-width: 360px; }.quota-account-label { gap: 4px; }.quota-account-name { font-size: 12px; }.quota-account-label .quota-reset-count { display: none; } }
