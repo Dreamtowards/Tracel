@@ -8,6 +8,8 @@ Web `/quota` (Quota) consumes the same `packages/timeline/src/Timeline.tsx` Canv
 
 Quota controls an independent overview context through optional `MetricOverview.bounds/onBoundsChange`. Wheel zoom and Shift-wheel pan are coalesced per frame and keep the main viewport visible without changing it; main navigation expands or moves the context when needed. Geometry reads only this context from the shared metric index and preserves missing runs even at fractional bucket boundaries. Existing overview consumers retain their full-capture behavior. The quota inspector can collapse without changing viewport or selection.
 
+Optional `MetricOverview.calendar` replaces decorative grid spacing with local calendar day and Monday-week boundaries. Sparse month/day labels adapt to the measured width; pointer dates use the same context and epoch as the plot. Calendar increments preserve daylight-saving boundaries, and hover updates are coalesced per frame.
+
 ## Compact numeric archive
 
 Desktop 0.2.24 / schema 7 moves numeric archive encoding into `tracel-storage`: at most 256 original observations per lossless delta/zlib block, with adapter metadata interned independently. GPU engine history is retired; aggregate adapter utilization/VRAM remain. Sampling and live diagnostics are unchanged. Readers reconstruct the existing observation DTOs, retaining exact measurements and coverage for shared UI statistics. Overview CPU reads stream decoded blocks. Automatic pre-upgrade SQLite backups precede transactional migration; physical space reclamation is explicit offline maintenance. Web and shared Timeline contracts are unchanged. See [storage compaction](storage-compaction.md).

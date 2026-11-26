@@ -104,3 +104,29 @@ export function constrainOverviewRange(context: Range, view: Range, bounds: Rang
   const result = clampRange({ start, end: start + span }, bounds);
   return context.start === result.start && context.end === result.end ? context : result;
 }
+
+/** Local calendar boundaries follow the same wall clock as the main timeline. */
+export function overviewCalendarTicks(epoch: string, bounds: Range, width: number) {
+  const ticks: { time: number; position: number; week: boolean }[] = [];
+  const labels: { time: number; position: number }[] = [];
+  const origin = Date.parse(epoch), start = origin + bounds.start * 1000, end = origin + bounds.end * 1000;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || width <= 0) return { ticks, labels };
+  const pixelsPerDay = width * 86400000 / (end - start);
+  // Keep wide archives bounded, retaining weekly boundaries when days become sub-pixel.
+  const gridDays = pixelsPerDay >= 3 ? 1 : 7 * Math.max(1, Math.ceil(3 / (7 * pixelsPerDay)));
+  const labelDays = [1, 2, 3, 7, 14, 28].find(days => days * pixelsPerDay >= 72)
+    ?? 7 * Math.ceil(72 / (7 * pixelsPerDay));
+  const day = new Date(start); day.setHours(0, 0, 0, 0);
+  if (day.getTime() < start) day.setDate(day.getDate() + 1);
+  if (gridDays > 1) day.setDate(day.getDate() + (8 - day.getDay()) % 7);
+  for (; day.getTime() < end; day.setDate(day.getDate() + gridDays)) {
+    const time = (day.getTime() - origin) / 1000, position = (day.getTime() - start) / (end - start);
+    const ordinal = Math.round(Date.UTC(day.getFullYear(), day.getMonth(), day.getDate()) / 86400000);
+    ticks.push({ time, position, week: day.getDay() === 1 });
+    // Multiples of seven are anchored to Monday (1970-01-05), independent of panning.
+    if ((ordinal - (labelDays % 7 === 0 ? 4 : 0)) % labelDays === 0
+      && (!labels.length || (position - labels[labels.length - 1].position) * width >= 64)) labels.push({ time, position });
+  }
+  if (!labels.length || labels[0].position * width >= 72) labels.unshift({ time: bounds.start, position: 0 });
+  return { ticks, labels };
+}

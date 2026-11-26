@@ -6,11 +6,13 @@ import { constrainOverviewRange, metricOverviewGeometry } from "./overview";
 import { clampRange, getMetricInfo, zoomRange, type Capture, type MetricKey, type Range } from "./model";
 import { frameQueue } from "./frameQueue";
 import { useI18n } from "./i18n";
+import { OverviewCalendar } from "./OverviewCalendar";
 
 /** Uses the same range handles and geometry as the Activity overview. */
-export function MetricOverview({ data, metric, view, onView, bounds = data.bounds, onBoundsChange }: {
+export function MetricOverview({ data, metric, view, onView, bounds = data.bounds, onBoundsChange, calendar = false }: {
   data: Capture; metric: MetricKey; view: Range; onView: (view: Range) => void;
   bounds?: Range; onBoundsChange?: (bounds: Range) => void;
+  calendar?: boolean;
 }) {
   const { t } = useI18n();
   const host = useRef<HTMLDivElement>(null);
@@ -45,21 +47,23 @@ export function MetricOverview({ data, metric, view, onView, bounds = data.bound
   }, [interactive]);
   const geometry = useMemo(() => metricOverviewGeometry(data, metric, 600, bounds), [data, metric, bounds]);
   const info = getMetricInfo(data, metric);
+  const plot = <OverviewViewport data={data} bounds={bounds} view={view} onView={onView}>
+    <svg viewBox="0 0 1400 44" preserveAspectRatio="none" aria-hidden="true">
+      <path d={geometry.area} fill={info.color} opacity=".12" />
+      <path d={geometry.line} stroke={info.color} strokeWidth="1.2" fill="none" />
+      {geometry.points.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r="1.2" fill={info.color} />)}
+    </svg>
+  </OverviewViewport>;
   return <div ref={host} tabIndex={interactive ? 0 : undefined} role={interactive ? "group" : undefined}
     aria-label={interactive ? t("Overview time range") : undefined}
-    title={interactive ? t("Scroll to zoom overview; Shift-scroll to pan") : undefined}
+    title={interactive && !calendar ? t("Scroll to zoom overview; Shift-scroll to pan") : undefined}
+    aria-description={interactive && calendar ? t("Scroll to zoom overview; Shift-scroll to pan") : undefined}
     onKeyDown={event => {
       if (!onBoundsChange || !["+", "=", "-"].includes(event.key)) return;
       event.preventDefault();
       const next = zoomRange(bounds, event.key === "-" ? 1.5 : 1 / 1.5, (bounds.start + bounds.end) / 2, data.bounds);
       onBoundsChange(constrainOverviewRange(next, view, data.bounds));
     }}>
-    <OverviewViewport data={data} bounds={bounds} view={view} onView={onView}>
-    <svg viewBox="0 0 1400 44" preserveAspectRatio="none" aria-hidden="true">
-      <path d={geometry.area} fill={info.color} opacity=".12" />
-      <path d={geometry.line} stroke={info.color} strokeWidth="1.2" fill="none" />
-      {geometry.points.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r="1.2" fill={info.color} />)}
-    </svg>
-    </OverviewViewport>
+    {calendar ? <OverviewCalendar epoch={data.epoch} bounds={bounds}>{plot}</OverviewCalendar> : plot}
   </div>;
 }

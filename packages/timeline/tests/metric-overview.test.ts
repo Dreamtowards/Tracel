@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { constrainOverviewRange, metricOverviewGeometry } from "../src/overview";
+import { constrainOverviewRange, metricOverviewGeometry, overviewCalendarTicks } from "../src/overview";
 import { metricAt, type Capture } from "../src/model";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -53,6 +53,47 @@ test("overview zoom and pan keep the main viewport visible without changing it",
   assert.deepEqual(constrainOverviewRange({ start: 1000, end: 1600 }, view, bounds), { start: 600, end: 1200 });
   assert.deepEqual(view, { start: 800, end: 900 });
   assert.deepEqual(constrainOverviewRange({ start: 400, end: 600 }, { start: 200, end: 1100 }, bounds), { start: 200, end: 1100 });
+});
+
+test("overview calendar marks local days and Monday weeks at actual epoch-relative positions", () => {
+  const origin = new Date(2026, 10, 2, 6).getTime(), epoch = new Date(origin).toISOString();
+  const bounds = { start: 0, end: 20 * 86400 };
+  const full = overviewCalendarTicks(epoch, bounds, 1200);
+  assert.equal(full.ticks.length, 20);
+  assert.equal(full.ticks[0].time, (new Date(2026, 10, 3).getTime() - origin) / 1000);
+  for (const tick of full.ticks) {
+    const day = new Date(origin + tick.time * 1000);
+    assert.equal(day.getHours(), 0);
+    assert.equal(tick.week, day.getDay() === 1);
+  }
+  const zoomBounds = { start: 2 * 86400, end: 9 * 86400 };
+  const zoomed = overviewCalendarTicks(epoch, zoomBounds, 1200);
+  const sameDay = full.ticks.find(tick => tick.time === zoomed.ticks[0].time)!;
+  assert.notEqual(sameDay.position, zoomed.ticks[0].position);
+  assert.equal(zoomed.ticks[0].position, (sameDay.time - zoomBounds.start) / (zoomBounds.end - zoomBounds.start));
+});
+
+test("overview calendar labels become sparse on small screens and retain a date within one day", () => {
+  const bounds = { start: 0, end: 30 * 86400 };
+  const wide = overviewCalendarTicks(capture.epoch, bounds, 1200), narrow = overviewCalendarTicks(capture.epoch, bounds, 320);
+  assert.ok(narrow.labels.length < wide.labels.length);
+  for (let i = 1; i < narrow.labels.length; i++) assert.ok((narrow.labels[i].position - narrow.labels[i - 1].position) * 320 >= 64);
+  const short = overviewCalendarTicks(new Date(2026, 10, 12, 10).toISOString(), { start: 0, end: 3600 }, 320);
+  assert.deepEqual(short.labels, [{ time: 0, position: 0 }]);
+  assert.equal(short.ticks.length, 0);
+});
+
+test("overview calendar advances by calendar days through daylight saving transitions", () => {
+  const previous = process.env.TZ;
+  process.env.TZ = "America/New_York";
+  try {
+    const origin = new Date(2026, 2, 7).getTime(), end = new Date(2026, 2, 11).getTime();
+    const { ticks } = overviewCalendarTicks(new Date(origin).toISOString(), { start: 0, end: (end - origin) / 1000 }, 800);
+    assert.deepEqual(ticks.map(tick => new Date(origin + tick.time * 1000).getDate()), [7, 8, 9, 10]);
+    assert.equal(ticks[2].time - ticks[1].time, 23 * 3600);
+  } finally {
+    if (previous === undefined) delete process.env.TZ; else process.env.TZ = previous;
+  }
 });
 
 test("the shared Timeline replaces system rows only when custom groups are supplied", () => {

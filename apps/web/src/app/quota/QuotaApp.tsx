@@ -132,9 +132,9 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
             <button className="tx-icon-button" aria-label={inspector ? "收起范围详情" : "展开范围详情"} title={inspector ? "收起范围详情" : "展开范围详情"} aria-expanded={inspector} aria-controls="quota-inspector" onClick={() => setInspector(value => !value)}>{inspector ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}</button>
           </div>
         </header>
-        <section className="tx-overview" aria-label="长期额度总览">
-          <div className="tx-overview-heading"><label className="quota-overview-select">长期总览<select aria-label="总览额度轨道" value={metric} onChange={event => setMetric(event.target.value as MetricKey)}>{dataset.tracks.map(item => <option key={item.id} value={quotaKey(item.id)}>{quotaAccountName(dataset.accounts.find(account => account.id === item.accountId)!)} · {item.name}</option>)}</select><ChevronDown size={13} /></label><span data-quota-overview-range>{quotaRangeLabel(capture.epoch, overviewBounds)}<b>{quotaDuration(overviewBounds.end - overviewBounds.start)}</b></span></div>
-          <MetricOverview data={capture} metric={metric} bounds={overviewBounds} onBoundsChange={setOverviewRange} view={view} onView={changeView} />
+        <section className="tx-overview" aria-label="额度总览">
+          <div className="tx-overview-heading"><label className="quota-overview-select">总览<select aria-label="总览额度轨道" value={metric} onChange={event => setMetric(event.target.value as MetricKey)}>{dataset.tracks.map(item => <option key={item.id} value={quotaKey(item.id)}>{quotaAccountName(dataset.accounts.find(account => account.id === item.accountId)!)} · {item.name}</option>)}</select><ChevronDown size={13} /></label><span data-quota-overview-range>{quotaRangeLabel(capture.epoch, overviewBounds)}<b>{quotaDuration(overviewBounds.end - overviewBounds.start)}</b></span></div>
+          <MetricOverview data={capture} metric={metric} bounds={overviewBounds} onBoundsChange={setOverviewRange} view={view} onView={changeView} calendar />
         </section>
         <div className="tx-content">
           <section className="tx-timeline-panel" aria-label="额度主时间轴">

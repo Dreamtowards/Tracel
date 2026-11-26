@@ -419,6 +419,15 @@ summary.tx-category-heading:focus-visible { outline: 2px solid var(--tx-accent, 
   height: 100%;
   display: block;
 }
+.tx-overview-calendar { position: relative; }
+.tx-overview-calendar .tx-overview-plot { background: none; }
+.tx-overview-calendar-grid { position: absolute; inset: 0 0 20px; pointer-events: none; }
+.tx-overview-calendar-grid i { position: absolute; top: 0; bottom: 0; border-left: 1px dashed #a1a1aa22; }
+.tx-overview-calendar-grid .tx-overview-week { border-left: 1px solid #a1a1aa55; }
+.tx-overview-calendar-labels { position: relative; height: 20px; pointer-events: none; color: var(--tx-label-muted, #9aa6ad); font: 10px/20px "Segoe UI", sans-serif; }
+.tx-overview-calendar-labels time { position: absolute; top: 0; white-space: nowrap; transform: translateX(-50%); }
+.tx-overview-calendar-hover { position: absolute; top: 0; bottom: 20px; pointer-events: none; border-left: 1px solid #c4c4cf66; z-index: 3; }
+.tx-overview-calendar-hover > span { position: absolute; bottom: calc(100% + 7px); width: max-content; box-sizing: border-box; padding: 5px 8px; border: 1px solid #41414a; border-radius: 4px; background: #242429; color: #ececef; font: 11px/18px "Segoe UI", sans-serif; white-space: nowrap; box-shadow: 0 3px 12px #0004; }
 .tx-overview-window {
   position: absolute;
   top: -2px;
