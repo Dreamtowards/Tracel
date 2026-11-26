@@ -20,6 +20,8 @@
 .quota-root .tx-segmented button { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; font-size: 13px; }
 .quota-root .quota-follow { display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; min-height: 30px; white-space: nowrap; color: #a1a1aa; }
 .quota-root .quota-follow[aria-pressed="true"] { color: #e4e4e7; }
+.quota-follow-controls { display: flex; align-items: center; }
+.quota-freshness { padding-right: 8px; color: #93939f; font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .quota-root .quota-modes button { justify-content: center; min-width: 30px; padding: 5px 8px; }
 .quota-root .tx-date-controls { gap: 2px; }
 .quota-root .tx-overview { padding-top: 10px; padding-bottom: 10px; }
@@ -38,12 +40,12 @@
 .quota-root .tx-track-label small { font: 11px/1.4 "Segoe UI", "Microsoft YaHei UI", sans-serif; }
 .quota-root .tx-track-label.tx-group button { font: 600 13px/1.3 "Segoe UI", "Microsoft YaHei UI", sans-serif; }
 .quota-root .tx-track-label.tx-metric-active { background: #25252c; box-shadow: inset 2px 0 #b5b5c6; }
-.quota-account-label { display: flex; flex: 1; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; overflow: hidden; }
-.quota-account-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.quota-account-label { display: flex; flex: 1; align-items: center; gap: 9px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.quota-account-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.quota-account-label > .quota-reset-count { margin-left: auto; }
 .quota-badge { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; border: 1px solid #ffffff20; border-radius: 999px; padding: 2px 7px; background: #ffffff0c; color: #c1c1cd; font: 400 11px/1.3 "Segoe UI", "Microsoft YaHei UI", sans-serif; white-space: nowrap; letter-spacing: 0; }
-.quota-status-enabled { background: #4caa7c2b; color: #a7e4c1; border-color: #69c58d55; }
 .quota-status-draining { background: #c08e362b; color: #f2d293; border-color: #d9ad5655; }
-.quota-status-disabled { background: #7d7d922b; color: #c1c1d1; border-color: #9696aa55; }
+.quota-status-disabled { background: #c761612b; color: #f0a3a3; border-color: #df797955; }
 .quota-reset-count { gap: 3px; }
 .quota-expiry-time { font-size: 10px; }
 .quota-lane-label { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; gap: 5px 7px; width: 100%; min-width: 0; height: 100%; }
@@ -66,24 +68,38 @@
 .quota-inspector { display: flex; flex-direction: column; overflow: hidden; }
 .quota-inspector-actions { display: flex; align-items: center; gap: 4px; }
 .quota-inspector-scroll { flex: 1; overflow: auto; }
-.quota-account-info, .quota-range-info { padding: 20px; }
+.quota-account-info, .quota-range-info { padding: 16px; }
 .quota-kicker { font-size: 12px; color: #9797a4; }
-.quota-account-info h2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 18px; margin: 8px 0 3px; font-weight: 600; }
-.quota-account-info h3 { margin: 20px 0 8px; font-size: 14px; font-weight: 500; }
+.quota-account-info h2 { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0; font-weight: 500; }
+.quota-account-info h3 { margin: 5px 0 10px; font-size: 13px; font-weight: 400; }
 .quota-account-info p, .quota-range-info p { font-size: 12px; color: #a1a1aa; line-height: 1.8; margin: 4px 0; }
-.quota-current { font-size: 29px; letter-spacing: -.8px; margin: 0 0 6px; font-variant-numeric: tabular-nums; }
+.quota-summary-reading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; line-height: 20px; }
+.quota-summary-reading strong { font-size: 13px; font-weight: 400; color: #e4e4eb; font-variant-numeric: tabular-nums; }
+.quota-summary-reading time { color: #9797a4; font-size: 12px; white-space: nowrap; }
+.quota-summary-resets { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .quota-account-info .quota-stale { color: #edc17b; }
 .quota-range-info { border-top: 1px solid #303034; }
-.quota-range-info h3 { font-size: 22px; margin: 8px 0; font-weight: 500; }
+.quota-range-heading, .quota-range-heading-end { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.quota-range-heading-end { font-size: 13px; color: #c4c4cf; }
+.quota-range-heading .info-tip-trigger { width: 22px; height: 22px; }
+.quota-range-info .quota-range-dates { margin-top: 5px; }
+.quota-balance-comparison { display: grid; grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr); align-items: center; gap: 10px; padding: 15px 0 12px; }
+.quota-balance-comparison > div { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.quota-balance-comparison > div:last-child { text-align: right; }
+.quota-balance-comparison > div > span { font-size: 12px; color: #9797a4; }
+.quota-balance-comparison strong { font-size: 13px; line-height: 20px; font-weight: 500; color: #e4e4eb; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.quota-balance-comparison > svg { color: #70707f; }
 .quota-range-info .tx-button { margin-top: 10px; }
-.quota-range-info dl { margin: 16px 0; font-size: 13px; }
-.quota-range-info dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #ffffff09; }
+.quota-range-info dl { margin: 0; font-size: 13px; }
+.quota-range-info dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #ffffff09; }
 .quota-range-info dt { color: #a1a1aa; }.quota-range-info dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-.quota-explanation { font-size: 12px; }
+.quota-coverage-notice { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; margin-top: 12px; font-size: 12px; line-height: 20px; color: #d2bb8b; }
+.quota-stat-help-copy { color: #c4c4cf; }
+.quota-stat-help-copy p { margin: 4px 0; }
 @media (max-width: 760px) {
   .quota-root .quota-toolbar { gap: 6px; padding-inline: 10px; }.quota-header-end { gap: 6px; max-width: 48%; }.quota-toolbar-tools { overflow-x: auto; scrollbar-width: thin; }
   .quota-main { overflow: auto; }.quota-root .tx-main-timeline .tx-content { flex: none; flex-direction: column; min-height: 0; }.quota-root .tx-main-timeline .tx-timeline-scroll { flex: none; height: 460px; }
   .quota-root .tx-main-timeline .tx-inspector { width: 100%; border-left: 0; border-top: 1px solid #303034; }.quota-inspector-scroll { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; }.quota-range-info { border-top: 0; border-left: 1px solid #303034; }
   .quota-root .tx-overview-heading > span { display: none; }.quota-overview-select { white-space: nowrap; }.quota-overview-select select { min-width: 0; max-width: calc(100vw - 130px); }.quota-root .tx-timeline-heading small, .quota-range-duration { font-size: 11px; }.quota-root .tx-timeline-heading { height: auto; min-height: 32px; padding: 6px 6px 6px 12px; }.quota-root .tx-timeline-heading > span:first-child { flex-wrap: wrap; gap: 4px 8px; }.quota-range-duration { margin-left: 0; padding-left: 8px; }
 }
-@media (max-width: 420px) { .quota-inspector-scroll { grid-template-columns: 1fr; }.quota-range-info { border-left: 0; border-top: 1px solid #303034; }.quota-root .tx-timeline { min-width: 360px; }.quota-account-label { gap: 4px; }.quota-account-name { font-size: 12px; }.quota-account-label .quota-reset-count { display: none; } }
+@media (max-width: 420px) { .quota-inspector-scroll { grid-template-columns: 1fr; }.quota-range-info { border-left: 0; border-top: 1px solid #303034; }.quota-root .tx-timeline { min-width: 360px; }.quota-account-name { font-size: 12px; }.quota-account-label .quota-reset-count { display: none; } }

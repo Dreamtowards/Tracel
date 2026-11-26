@@ -6,10 +6,12 @@ import { I18nProvider, MetricOverview, Timeline, clampRange, constrainOverviewRa
 import DatePicker from "@tracel/timeline/desktop/DatePicker";
 import { useDesktopTheme } from "@tracel/timeline/desktop/DesktopExplorer";
 import { ContextMenu, ContextMenuContent, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuTrigger } from "@tracel/timeline/desktop/components/ui/ContextMenu";
+import { InfoTip, TooltipProvider } from "@tracel/timeline/desktop/components/ui/InfoTip";
 import { quotaDemoSource } from "../../quota/demo";
 import { accountStatus, quotaAccountName, quotaCapture, quotaDeadlineTone, quotaKey, quotaTimeLeft, quotaValue, type QuotaAccount, type QuotaDataset, type QuotaDataSource } from "../../quota/model";
 import { quotaStatistics } from "../../quota/statistics";
 import { quotaDateKey, quotaDayRange, quotaDuration, quotaRangeLabel } from "../../quota/time";
+import QuotaFreshness from "./QuotaFreshness";
 import "@tracel/timeline/styles.css";
 import "@tracel/timeline/desktop.css";
 import "./quota.css";
@@ -41,7 +43,7 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
   const [overviewRange, setOverviewRange] = useState(capture.bounds);
   const overviewBounds = useMemo(() => constrainOverviewRange(overviewRange, view, capture.bounds), [overviewRange, view, capture.bounds]);
   useEffect(() => { setOverviewRange(overviewBounds); }, [overviewBounds]);
-  const [inspector, setInspector] = useState(true);
+  const [inspector, setInspector] = useState(false);
   const [selection, setSelection] = useState<Range | null>(null);
   const [metric, setMetric] = useState<MetricKey>(quotaKey(dataset.tracks[0].id));
   const [mode, setMode] = useState<"select" | "pan">("pan");
@@ -61,6 +63,8 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(timer); }, []);
   const historyDays = Math.round((capture.bounds.end - capture.bounds.start) / 86400);
+  const sourceSampledAt = useMemo(() => dataset.samples.reduce<number | undefined>((latest, sample) =>
+    Number.isFinite(sample.at) && (latest === undefined || sample.at > latest) ? sample.at : latest, undefined), [dataset.samples]);
   const track = dataset.tracks.find(item => quotaKey(item.id) === metric)!;
   const account = dataset.accounts.find(item => item.id === track.accountId)!;
   const range = selection ?? view;
@@ -72,6 +76,7 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
   const currentReadings = useMemo(() => new Map(dataset.tracks.map(item => [item.id,
     metricSampleAt(capture, capture.bounds.end - .001, quotaKey(item.id)),
   ])), [capture, dataset.tracks]);
+  const currentTrackReading = currentReadings.get(track.id);
   const latest = useMemo(() => {
     for (let index = capture.metrics.length - 1; index >= 0; index--)
       if (capture.metrics[index].values?.[metric] != null) return capture.metrics[index];
@@ -99,6 +104,7 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
   const zoom = (factor: number) => changeView(zoomRange(view, factor, (view.start + view.end) / 2, capture.bounds));
   const span = view.end - view.start;
   const delta = stats.change === null ? "—" : `${stats.change > 0 ? "+" : ""}${stats.change.toFixed(1)} ${track.unit === "%" ? "个百分点" : track.unit}`;
+  const missingSeconds = (statsRange.end - statsRange.start) * (1 - stats.coverage);
   const resetBadge = (trackId: string) => {
     const reset = dataset.resets.find(item => item.trackId === trackId && item.kind === "projected" && item.at >= dataset.endMs);
     if (!reset) return null;
@@ -113,6 +119,8 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
     const description = `当前可用 Reset ${item.resetsRemaining} 次${expiresAt !== undefined ? ` · 最早过期 ${date((expiresAt - dataset.startMs) / 1000)} · ${remaining}` : item.resetsRemaining > 0 ? " · 未提供过期时间" : ""}`;
     return <span className={`quota-badge quota-reset-count quota-deadline-${quotaDeadlineTone(expiresAt, now)}`} title={description} aria-label={description}><RotateCcw size={10} />{item.resetsRemaining}{remaining && <span className="quota-expiry-time">· {remaining}</span>}</span>;
   };
+  const statusBadge = (item: QuotaAccount) => item.status === "enabled" ? null
+    : <span className={`quota-badge quota-status quota-status-${item.status}`}>{accountStatus[item.status]}</span>;
   const informationTip = <div className="quota-info">
     <button className="tx-icon-button" aria-label="页面信息" aria-describedby="quota-info-content"><Info size={15} /></button>
     <div className="quota-info-content" id="quota-info-content" role="tooltip">
@@ -120,9 +128,9 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
       <p>{historyDays} 天历史 · 每 {dataset.samplePeriodSeconds / 60} 分钟采样 · {dataset.accounts.length} 个账号 · {dataset.tracks.length} 条额度</p>
       <p>默认拖动平移；滚轮缩放，切换选区图标后拖动选择，Esc 清除。</p>
       <p>在总览上滚轮缩放总览跨度，Shift + 滚轮平移；主图选中的时段保持不变。</p>
-      <p>“最新”跟随当前数据源提供的最新记录；手动浏览历史时暂停。</p>
+      <p>“跟随”使时间轴停留在最新记录；手动浏览历史时暂停。</p>
       <p>循环图标旁的时长表示距离重置；次数标签的时长表示距最早过期。悬停查看具体时间。</p>
-      <p>留空表示缺采。更新于 {date(capture.bounds.end)}。</p>
+      <p>留空表示缺采。{sourceSampledAt === undefined ? "暂无采样" : `最近采样于 ${date((sourceSampledAt - originMs) / 1000)}`}。</p>
     </div>
   </div>;
   return <div className="desktop-ui quota-root" style={{ "--ui-scale": 1 } as CSSProperties}>
@@ -133,7 +141,7 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
           <div className="tx-date-controls"><button className="tx-icon-button" aria-label="前一天" title="前一天" disabled={dateValue <= firstDate} onClick={() => shiftDate(-1)}><ChevronLeft size={15} /></button><DatePicker value={dateValue} min={firstDate} max={lastDate} onChange={chooseDate} /><button className="tx-icon-button" aria-label="后一天" title="后一天" disabled={dateValue >= lastDate} onClick={() => shiftDate(1)}><ChevronRight size={15} /></button></div>
           <div className="tx-separator" />
           <div className="tx-segmented">{presets.map(item => <button key={item.label} className={Math.abs(span - item.seconds) < 1 ? "active" : ""} aria-pressed={Math.abs(span - item.seconds) < 1} onClick={() => preset(item.seconds)}>{item.label}</button>)}</div>
-          <button className="tx-text-button quota-follow" aria-label="跟随最新记录" aria-pressed={following} title={following ? "暂停跟随最新记录" : "定位最新记录并跟随数据更新"} onClick={() => { setSelection(null); setFollowing(value => !value); }}><Radio size={14} opacity={following ? 1 : .35} />最新</button>
+          <div className="quota-follow-controls"><button className="tx-text-button quota-follow" aria-label="跟随最新记录" aria-pressed={following} title={following ? "暂停跟随最新记录" : "定位最新记录并跟随数据更新"} onClick={() => { setSelection(null); setFollowing(value => !value); }}><Radio size={14} opacity={following ? 1 : .35} />跟随</button><QuotaFreshness sampledAt={sourceSampledAt} /></div>
           </div>
           <div className="quota-header-end">
           {informationTip}
@@ -166,7 +174,7 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
               </ContextMenu>}
               renderTrackLabel={row => {
                 const item = row.kind === "group" ? dataset.accounts.find(item => `account:${item.id}` === row.id) : undefined;
-                if (item) return <span className="quota-account-label"><span className="quota-account-name" title={quotaAccountName(item)}>{quotaAccountName(item)}</span>{resetCreditsBadge(item)}<span className={`quota-badge quota-status quota-status-${item.status}`}>{accountStatus[item.status]}</span></span>;
+                if (item) return <span className="quota-account-label"><span className="quota-account-name" title={quotaAccountName(item)}>{quotaAccountName(item)}</span>{statusBadge(item)}{resetCreditsBadge(item)}</span>;
                 const lane = dataset.tracks.find(item => item.id === row.id)!;
                 const reading = currentReadings.get(row.id);
                 const value = reading?.values?.[quotaKey(row.id)] ?? null;
@@ -174,8 +182,8 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
                 return <span className="quota-lane-label">
                   {fill > 0 && <span className={`quota-lane-fill quota-lane-fill-${fillDirection}`} aria-hidden="true" style={{ "--quota-fill": `${fill}%`, backgroundColor: lane.color } as CSSProperties} />}
                   <span className="quota-lane-name">{row.name}</span>{resetBadge(row.id)}
-                  <span className={`quota-lane-current${value === null ? " quota-lane-missing" : ""}`} title={value === null ? "当前没有有效读数" : `当前剩余 ${quotaValue(value, lane)} · 采样于 ${date(reading!.time)}`}>
-                    <span>当前剩余</span>
+                  <span className={`quota-lane-current${value === null ? " quota-lane-missing" : ""}`} title={value === null ? "暂无有效读数" : `剩余 ${quotaValue(value, lane)} · 采样于 ${date(reading!.time)}`}>
+                    <span>剩余</span>
                     <strong>{value === null ? "暂无读数" : <>{lane.unit === "%" ? value.toFixed(1) : value.toLocaleString("zh-CN", { maximumFractionDigits: 2 })}<span className="quota-lane-unit">{lane.unit}</span></>}</strong>
                   </span>
                 </span>;
@@ -184,14 +192,24 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
           {inspector && <aside id="quota-inspector" className="tx-inspector quota-inspector" aria-label="额度详情">
             <div className="tx-inspector-title"><span><Focus size={15} />{selection ? "选区详情" : "范围详情"}</span><div className="quota-inspector-actions">{selection && <button className="tx-icon-button" aria-label="清除选区" title="清除选区" onClick={() => setSelection(null)}><Eraser size={14} /></button>}<button className="tx-icon-button" aria-label="关闭范围详情" title="关闭范围详情" onClick={() => setInspector(false)}><X size={14} /></button></div></div>
             <div className="quota-inspector-scroll">
-              <section className="quota-account-info"><span className="quota-kicker">当前账号</span><h2>{quotaAccountName(account)}<span className={`quota-badge quota-status quota-status-${account.status}`}>{accountStatus[account.status]}</span></h2><h3 style={{ color: track.color }}>{track.name}</h3><div className="quota-current">{quotaValue(latest?.values?.[metric] ?? null, track)}</div><p>{latest ? `最后有效采样 ${date(latest.time)}` : "尚无有效采样"}</p>{latest && !metricSampleAt(capture, capture.bounds.end - .001, metric) && <p className="quota-stale">当前读数缺失，以上为上次有效值</p>}
-                {nextReset && <p>{resetBadge(track.id)}</p>}{account.resetsRemaining !== undefined && <p>{resetCreditsBadge(account)}</p>}
+              <section className="quota-account-info">
+                <h2>{quotaAccountName(account)}{statusBadge(account)}</h2>
+                <h3 style={{ color: track.color }}>{track.name}</h3>
+                <div className="quota-summary-reading">
+                  <span><span className="quota-kicker">{!currentTrackReading && latest ? "上次有效" : "剩余"}</span> <strong>{quotaValue(latest?.values?.[metric] ?? null, track)}</strong></span>
+                  {latest && <time title={`最后有效采样 ${date(latest.time)}`}>采样 {date(latest.time)}</time>}
+                </div>
+                {!latest && <p>尚无有效采样</p>}
+                {latest && !currentTrackReading && <p className="quota-stale">最新采样缺失</p>}
+                {(nextReset || (account.resetsRemaining ?? 0) > 0) && <div className="quota-summary-resets">{nextReset && resetBadge(track.id)}{(account.resetsRemaining ?? 0) > 0 && resetCreditsBadge(account)}</div>}
               </section>
               <section className="quota-range-info" aria-busy={range.start !== statsRange.start || range.end !== statsRange.end}>
-                <span className="quota-kicker">{selection ? "选中时段" : "可见时段"}</span><h3>{quotaDuration(statsRange.end - statsRange.start)}</h3><p>{quotaRangeLabel(capture.epoch, statsRange)}</p>
+                <div className="quota-range-heading"><span className="quota-kicker">{selection ? "选中时段" : "可见时段"}</span><span className="quota-range-heading-end"><span>{quotaDuration(statsRange.end - statsRange.start)}</span><TooltipProvider delayDuration={150}><InfoTip label="范围统计说明"><div className="quota-stat-help-copy"><p>起始和结束余额取时段内首末有效采样；缺采时可能不在时段边界。</p><p>净变化包含周期重置，不能直接当作消耗。0% 表示已用尽，缺采不按零计算。</p></div></InfoTip></TooltipProvider></span></div>
+                <p className="quota-range-dates">{quotaRangeLabel(capture.epoch, statsRange)}</p>
                 {selection && <button className="tx-button" onClick={() => { changeView(selection); setSelection(null); }}><ZoomIn size={13} />放大到选区</button>}
-                <dl><div><dt>起始读数</dt><dd>{quotaValue(stats.first, track)}</dd></div><div><dt>末尾读数</dt><dd>{quotaValue(stats.last, track)}</dd></div><div><dt>读数变化</dt><dd>{delta}</dd></div><div><dt>最低剩余</dt><dd>{quotaValue(stats.minimum, track)}</dd></div><div><dt>有效覆盖</dt><dd>{(stats.coverage * 100).toFixed(1)}%</dd></div></dl>
-                <p className="quota-explanation">变化包含周期重置。缺采留空；0% 表示已用尽。点按左侧额度行可切换总览与详情。</p>
+                <div className="quota-balance-comparison"><div><span>起始余额</span><strong>{quotaValue(stats.first, track)}</strong></div><ArrowRight size={14} aria-hidden="true" /><div><span>结束余额</span><strong>{quotaValue(stats.last, track)}</strong></div></div>
+                <dl><div><dt>净变化</dt><dd>{delta}</dd></div><div><dt>最低剩余</dt><dd>{quotaValue(stats.minimum, track)}</dd></div></dl>
+                {stats.coverage < .999999 && <div className="quota-coverage-notice" role="note"><span>缺采 {quotaDuration(missingSeconds)}</span><span>有效覆盖 {(stats.coverage * 100).toFixed(1)}%</span></div>}
               </section>
             </div>
           </aside>}

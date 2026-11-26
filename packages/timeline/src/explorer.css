@@ -689,8 +689,8 @@ summary.tx-category-heading:focus-visible { outline: 2px solid var(--tx-accent, 
   padding: 12px 14px;
   color: var(--tx-label-text, #dce6e8);
   font:
-    11px/1.8 Consolas,
-    monospace;
+    12px/1.7 "Segoe UI",
+    "Microsoft YaHei UI", sans-serif;
   white-space: pre-line;
   max-width: 340px;
   overflow-wrap: anywhere;
