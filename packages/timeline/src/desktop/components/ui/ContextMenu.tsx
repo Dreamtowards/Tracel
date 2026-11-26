@@ -8,6 +8,7 @@ export const ContextMenuTrigger = Primitive.Trigger;
 export const ContextMenuLabel = Primitive.Label;
 export const ContextMenuSeparator = Primitive.Separator;
 export const ContextMenuSub = Primitive.Sub;
+export const ContextMenuRadioGroup = Primitive.RadioGroup;
 export function ContextMenuSubTrigger({ children, ...props }: ComponentProps<typeof Primitive.SubTrigger>) {
   return <Primitive.SubTrigger {...props} className="ui-context-item">{children}<ChevronRight size={14} style={{ marginLeft: "auto" }} /></Primitive.SubTrigger>;
 }
@@ -21,4 +22,9 @@ export function ContextMenuCheckboxItem({ children, ...props }: ComponentProps<t
   return <Primitive.CheckboxItem {...props} className="ui-context-item">
     <span className="ui-context-indicator"><Primitive.ItemIndicator><Check /></Primitive.ItemIndicator></span>{children}
   </Primitive.CheckboxItem>;
+}
+export function ContextMenuRadioItem({ children, ...props }: ComponentProps<typeof Primitive.RadioItem>) {
+  return <Primitive.RadioItem {...props} className="ui-context-item">
+    <span className="ui-context-indicator"><Primitive.ItemIndicator><Check /></Primitive.ItemIndicator></span>{children}
+  </Primitive.RadioItem>;
 }

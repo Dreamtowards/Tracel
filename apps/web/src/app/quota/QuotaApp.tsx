@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Eraser, Focus, Hand, Info, Maximize2, MousePointer2, PanelRightClose, PanelRightOpen, Radio, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowRight, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, Eraser, Focus, Hand, Info, Maximize2, MousePointer2, PanelRightClose, PanelRightOpen, Radio, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
 import { I18nProvider, MetricOverview, Timeline, clampRange, constrainOverviewRange, followRange, metricSampleAt, zoomRange, type Capture, type MetricKey, type MetricSample, type Range } from "@tracel/timeline";
 import DatePicker from "@tracel/timeline/desktop/DatePicker";
 import { useDesktopTheme } from "@tracel/timeline/desktop/DesktopExplorer";
+import { ContextMenu, ContextMenuContent, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuTrigger } from "@tracel/timeline/desktop/components/ui/ContextMenu";
 import { quotaDemoSource } from "../../quota/demo";
 import { accountStatus, quotaAccountName, quotaCapture, quotaDeadlineTone, quotaKey, quotaTimeLeft, quotaValue, type QuotaAccount, type QuotaDataset, type QuotaDataSource } from "../../quota/model";
 import { quotaStatistics } from "../../quota/statistics";
@@ -18,6 +19,7 @@ const appearance = { padding: 3, backgroundHeight: 16, contextOpacity: 72, durat
 const presets = [{ label: "1 小时", seconds: 3600 }, { label: "1 天", seconds: 86400 }, { label: "7 天", seconds: 7 * 86400 }, { label: "30 天", seconds: 30 * 86400 }];
 const messages = { "Sample": "采样", "TRACKS": "额度轨道", "Capture date": "日期", "Choose capture date": "选择日期", "Overview time range": "总览时间范围", "Scroll to zoom overview; Shift-scroll to pan": "滚轮缩放总览跨度；Shift + 滚轮平移总览" };
 const noFocus = () => {};
+const fillDirectionKey = "quota.lane-fill-direction";
 
 export default function QuotaApp({ source = quotaDemoSource }: { source?: QuotaDataSource }) {
   const [loaded, setLoaded] = useState<{ dataset: QuotaDataset; capture: Capture } | null>(null);
@@ -43,6 +45,14 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
   const [selection, setSelection] = useState<Range | null>(null);
   const [metric, setMetric] = useState<MetricKey>(quotaKey(dataset.tracks[0].id));
   const [mode, setMode] = useState<"select" | "pan">("pan");
+  const [fillDirection, setFillDirection] = useState<"horizontal" | "vertical">(() => {
+    try { return localStorage.getItem(fillDirectionKey) === "vertical" ? "vertical" : "horizontal"; }
+    catch { return "horizontal"; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(fillDirectionKey, fillDirection); }
+    catch { /* The setting still works when browser storage is unavailable. */ }
+  }, [fillDirection]);
   const [following, setFollowing] = useState(true);
   useEffect(() => {
     if (following) setView(current => followRange(current, capture.bounds.end, capture.bounds));
@@ -58,6 +68,10 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
   const [statsRange, setStatsRange] = useState(range);
   useEffect(() => { const timer = setTimeout(() => setStatsRange(range), 100); return () => clearTimeout(timer); }, [range]);
   const stats = useMemo(() => quotaStatistics(capture, metric, statsRange), [capture, metric, statsRange]);
+  // Current balances stay tied to the source's latest reading while browsing history.
+  const currentReadings = useMemo(() => new Map(dataset.tracks.map(item => [item.id,
+    metricSampleAt(capture, capture.bounds.end - .001, quotaKey(item.id)),
+  ])), [capture, dataset.tracks]);
   const latest = useMemo(() => {
     for (let index = capture.metrics.length - 1; index >= 0; index--)
       if (capture.metrics[index].values?.[metric] != null) return capture.metrics[index];
@@ -140,10 +154,31 @@ function QuotaExplorer({ dataset, capture }: { dataset: QuotaDataset; capture: C
           <section className="tx-timeline-panel" aria-label="额度主时间轴">
             <div className="tx-timeline-heading"><span><small data-quota-view>{quotaRangeLabel(capture.epoch, view)}</small><span className="quota-range-duration">{quotaDuration(span)}</span></span>{!inspector && <button className="tx-icon-button" aria-label="打开范围详情" title="打开范围详情" aria-expanded={false} aria-controls="quota-inspector" onClick={() => setInspector(true)}><PanelRightOpen size={16} /></button>}</div>
             <Timeline data={timelineData} view={view} selection={selection} mode={mode} focus={null} appearance={appearance} palette={palette} onView={changeView} onSelect={next => { setSelection(next); if (next) setFollowing(false); }} onFocus={noFocus} activeMetric={metric} onMetricFocus={setMetric} formatMetricSample={formatSample} initialLabelWidth={280}
+              renderTrackHeaders={headers => <ContextMenu>
+                <ContextMenuTrigger asChild tabIndex={0} aria-label="额度轨道设置" title="右键设置余额背景方向">{headers}</ContextMenuTrigger>
+                <ContextMenuContent aria-label="额度轨道设置" className="quota-context-menu">
+                  <ContextMenuLabel className="ui-context-label">全部轨道 · 余额背景</ContextMenuLabel>
+                  <ContextMenuRadioGroup value={fillDirection} onValueChange={value => { if (value === "horizontal" || value === "vertical") setFillDirection(value); }}>
+                    <ContextMenuRadioItem value="horizontal"><ArrowRight style={{ marginRight: 8 }} />横向填充</ContextMenuRadioItem>
+                    <ContextMenuRadioItem value="vertical"><ArrowUp style={{ marginRight: 8 }} />竖向填充</ContextMenuRadioItem>
+                  </ContextMenuRadioGroup>
+                </ContextMenuContent>
+              </ContextMenu>}
               renderTrackLabel={row => {
                 const item = row.kind === "group" ? dataset.accounts.find(item => `account:${item.id}` === row.id) : undefined;
                 if (item) return <span className="quota-account-label"><span className="quota-account-name" title={quotaAccountName(item)}>{quotaAccountName(item)}</span>{resetCreditsBadge(item)}<span className={`quota-badge quota-status quota-status-${item.status}`}>{accountStatus[item.status]}</span></span>;
-                return <span className="quota-lane-label"><span className="quota-lane-name">{row.name}</span>{resetBadge(row.id)}{row.subtitle && <small>{row.subtitle}</small>}</span>;
+                const lane = dataset.tracks.find(item => item.id === row.id)!;
+                const reading = currentReadings.get(row.id);
+                const value = reading?.values?.[quotaKey(row.id)] ?? null;
+                const fill = value !== null && lane.unit === "%" ? Math.max(0, Math.min(100, value)) : 0;
+                return <span className="quota-lane-label">
+                  {fill > 0 && <span className={`quota-lane-fill quota-lane-fill-${fillDirection}`} aria-hidden="true" style={{ "--quota-fill": `${fill}%`, backgroundColor: lane.color } as CSSProperties} />}
+                  <span className="quota-lane-name">{row.name}</span>{resetBadge(row.id)}
+                  <span className={`quota-lane-current${value === null ? " quota-lane-missing" : ""}`} title={value === null ? "当前没有有效读数" : `当前剩余 ${quotaValue(value, lane)} · 采样于 ${date(reading!.time)}`}>
+                    <span>当前剩余</span>
+                    <strong>{value === null ? "暂无读数" : <>{lane.unit === "%" ? value.toFixed(1) : value.toLocaleString("zh-CN", { maximumFractionDigits: 2 })}<span className="quota-lane-unit">{lane.unit}</span></>}</strong>
+                  </span>
+                </span>;
               }} />
           </section>
           {inspector && <aside id="quota-inspector" className="tx-inspector quota-inspector" aria-label="额度详情">

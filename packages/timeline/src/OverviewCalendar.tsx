@@ -25,7 +25,15 @@ export function OverviewCalendar({ epoch, bounds, children }: { epoch: string; b
   const { ticks, labels } = useMemo(() => overviewCalendarTicks(epoch, bounds, width), [epoch, bounds, width]);
   const origin = Date.parse(epoch);
   const date = (time: number) => new Date(origin + time * 1000);
-  const fullDate = (time: number) => date(time).toLocaleString(locale, { year: "numeric", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const formats = useMemo(() => [
+    new Intl.DateTimeFormat(locale, { year: "numeric", month: "long", day: "numeric" }),
+    new Intl.DateTimeFormat(locale, { weekday: "short" }),
+    new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
+  ], [locale]);
+  const fullDate = (time: number) => {
+    const value = date(time);
+    return formats.map(format => format.format(value)).join(" ");
+  };
   const hoverTime = hover === null ? null : bounds.start + hover * (bounds.end - bounds.start);
   const hoverLabel = hoverTime === null ? "" : fullDate(hoverTime);
   useLayoutEffect(() => {
